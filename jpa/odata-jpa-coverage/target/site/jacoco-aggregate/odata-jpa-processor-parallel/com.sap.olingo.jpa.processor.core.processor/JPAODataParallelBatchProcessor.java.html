@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataParallelBatchProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-parallel</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPAODataParallelBatchProcessor.java</span></div><h1>JPAODataParallelBatchProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPABatchException.MessageKeys.UNSUPPORTED_BATCH_PARTS;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+
+import org.apache.olingo.commons.api.http.HttpMethod;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ODataLibraryException;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.batch.BatchFacade;
+import org.apache.olingo.server.api.deserializer.batch.BatchRequestPart;
+import org.apache.olingo.server.api.deserializer.batch.ODataResponsePart;
+
+import com.sap.olingo.jpa.processor.core.api.JPAODataBatchProcessor;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.api.JPAODataSessionContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPABatchException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPABatchRuntimeException;
+
+/**
+ * Process parts of a batch request in parallel. This is possible for GET requests until the first request with side
+ * effects  comes. In case a request with side effect is followed by a set of request without side effect, they are processed in
+ * parallel again.
+ * &lt;p&gt;
+ * Please note that this is, according to the OData specification,only allowed:
+ * &lt;ol&gt;
+ * &lt;li&gt; In case the client sends an continue-on-error=true&lt;/li&gt;
+ * &lt;li&gt; It is guaranteed that the GET do not fail
+ * &lt;/ol&gt;
+ * @author Oliver Grande
+ * Created: 27.02.2020
+ */
+public class JPAODataParallelBatchProcessor extends JPAODataBatchProcessor {
+
+  public JPAODataParallelBatchProcessor(final JPAODataSessionContextAccess serviceContext,
+      final JPAODataRequestContextAccess requestContext) {
+<span class="nc" id="L45">    super(serviceContext, requestContext);</span>
+<span class="nc" id="L46">  }</span>
+
+  @Override
+  protected List&lt;ODataResponsePart&gt; executeBatchParts(final BatchFacade facade,
+      final List&lt;BatchRequestPart&gt; requestParts, final boolean continueOnError) throws ODataApplicationException,
+      ODataLibraryException {
+
+    try {
+<span class="nc" id="L54">      return buildGroups(requestParts).stream()</span>
+<span class="nc" id="L55">          .map(JPAODataBatchRequestGroup::execute)</span>
+<span class="nc" id="L56">          .flatMap(List::stream)</span>
+<span class="nc" id="L57">          .collect(Collectors.toList());</span>
+<span class="nc" id="L58">    } catch (final ODataJPABatchRuntimeException e) {</span>
+<span class="nc" id="L59">      throw new ODataJPABatchException(e);</span>
+    }
+  }
+
+  List&lt;JPAODataBatchRequestGroup&gt; buildGroups(@Nonnull final List&lt;BatchRequestPart&gt; requestParts)
+      throws ODataJPABatchException {
+<span class="nc bnc" id="L65" title="All 2 branches missed.">    if (requestParts.isEmpty())</span>
+<span class="nc" id="L66">      return Collections.emptyList();</span>
+
+<span class="nc" id="L68">    final List&lt;JPAODataBatchRequestGroup&gt; groups = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L69">    Boolean isGetGroup = null;</span>
+<span class="nc" id="L70">    List&lt;BatchRequestPart&gt; groupElements = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">    for (final BatchRequestPart part : requestParts) {</span>
+<span class="nc" id="L72">      checkPartConsistency(part);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">      if (isGetGroup == null) {</span>
+<span class="nc bnc" id="L74" title="All 4 branches missed.">        isGetGroup = !part.isChangeSet() &amp;&amp; isGetRequest(part);</span>
+<span class="nc bnc" id="L75" title="All 6 branches missed.">      } else if (Boolean.TRUE.equals(isGetGroup) &amp;&amp; (!isGetRequest(part) || part.isChangeSet())) {</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        if (groupElements.size() == 1)</span>
+<span class="nc" id="L77">          groups.add(new JPAODataBatchSequentialRequestGroup(this, groupElements));</span>
+        else
+<span class="nc" id="L79">          groups.add(new JPAODataBatchParallelRequestGroup(this, groupElements));</span>
+<span class="nc" id="L80">        groupElements = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L81">        isGetGroup = Boolean.FALSE;</span>
+<span class="nc bnc" id="L82" title="All 4 branches missed.">      } else if (Boolean.FALSE.equals(isGetGroup) &amp;&amp; isGetRequest(part)) {</span>
+<span class="nc" id="L83">        groups.add(new JPAODataBatchSequentialRequestGroup(this, groupElements));</span>
+<span class="nc" id="L84">        groupElements = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L85">        isGetGroup = Boolean.TRUE;</span>
+      }
+<span class="nc" id="L87">      groupElements.add(part);</span>
+<span class="nc" id="L88">    }</span>
+<span class="nc" id="L89">    addLastGroup(groups, isGetGroup, groupElements);</span>
+<span class="nc" id="L90">    requestContext.getDebugger().debug(this, &quot;Number of groups build: %d&quot;, groups.size());</span>
+<span class="nc" id="L91">    return groups;</span>
+  }
+
+  OData getOdata() {
+<span class="nc" id="L95">    return odata;</span>
+  }
+  
+  JPAODataRequestContextAccess getRequestContext() {
+<span class="nc" id="L99">    return requestContext;</span>
+  }
+  
+  JPAODataSessionContextAccess getServiceContext() {
+<span class="nc" id="L103">    return serviceContext;</span>
+  }
+
+  ServiceMetadata getServiceMetadata() {
+<span class="nc" id="L107">    return serviceMetadata;</span>
+  }
+
+  private void addLastGroup(final List&lt;JPAODataBatchRequestGroup&gt; groups, final Boolean isGetGroup,
+      final List&lt;BatchRequestPart&gt; groupElements) {
+<span class="nc bnc" id="L112" title="All 4 branches missed.">    if (Boolean.FALSE.equals(isGetGroup) || groupElements.size() == 1)</span>
+<span class="nc" id="L113">      groups.add(new JPAODataBatchSequentialRequestGroup(this, groupElements));</span>
+    else
+<span class="nc" id="L115">      groups.add(new JPAODataBatchParallelRequestGroup(this, groupElements));</span>
+<span class="nc" id="L116">  }</span>
+
+  private boolean isGetRequest(final BatchRequestPart part) {
+<span class="nc bnc" id="L119" title="All 2 branches missed.">    return part.getRequests().get(0).getMethod() == HttpMethod.GET;</span>
+  }
+
+  private void checkPartConsistency(final BatchRequestPart part) throws ODataJPABatchException {
+<span class="nc bnc" id="L123" title="All 4 branches missed.">    if (part.getRequests().size() &gt; 1 &amp;&amp; !part.isChangeSet())</span>
+<span class="nc" id="L124">      throw new ODataJPABatchException(UNSUPPORTED_BATCH_PARTS, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L125">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

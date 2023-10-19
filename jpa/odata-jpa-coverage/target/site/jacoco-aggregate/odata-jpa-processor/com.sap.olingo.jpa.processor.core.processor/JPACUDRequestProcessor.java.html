@@ -1,0 +1,1108 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPACUDRequestProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPACUDRequestProcessor.java</span></div><h1>JPACUDRequestProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import static com.sap.olingo.jpa.processor.core.converter.JPAExpandResult.ROOT_RESULT_KEY;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.*;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.BAD_REQUEST;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.INTERNAL_SERVER_ERROR;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.NO_CONTENT;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.persistence.EntityManager;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.*;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.impl.IntermediateEntityType;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAInvocationTargetException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPASerializerException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPATransactionException;
+import org.apache.olingo.commons.api.data.*;
+import org.apache.olingo.commons.api.edm.EdmEntitySet;
+import org.apache.olingo.commons.api.edm.EdmSingleton;
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpHeader;
+import org.apache.olingo.commons.api.http.HttpMethod;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ODataLibraryException;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.deserializer.DeserializerException;
+import org.apache.olingo.server.api.prefer.Preferences;
+import org.apache.olingo.server.api.prefer.Preferences.Return;
+import org.apache.olingo.server.api.serializer.SerializerException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPACUDRequestHandler;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.api.JPAODataTransactionFactory.JPAODataTransaction;
+import com.sap.olingo.jpa.processor.core.converter.JPATupleChildConverter;
+import com.sap.olingo.jpa.processor.core.modify.JPAConversionHelper;
+import com.sap.olingo.jpa.processor.core.modify.JPACreateResultFactory;
+import com.sap.olingo.jpa.processor.core.modify.JPAUpdateResult;
+import com.sap.olingo.jpa.processor.core.query.EdmBindingTargetInfo;
+import com.sap.olingo.jpa.processor.core.query.ExpressionUtil;
+import com.sap.olingo.jpa.processor.core.query.Util;
+import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceComplexProperty;
+import org.apache.olingo.server.api.uri.UriResourceEntitySet;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+import org.apache.olingo.server.api.uri.UriResourceValue;
+
+public final class JPACUDRequestProcessor extends JPAAbstractRequestProcessor {
+
+  private static final String DEBUG_CREATE_ENTITY = &quot;createEntity&quot;;
+  private static final String DEBUG_UPDATE_ENTITY = &quot;updateEntity&quot;;
+  private static final String DEBUG_UPDATE_MEDIA_ENTITY = &quot;updateMediaEntity&quot;;
+  private static final String DEBUG_DELETE_MEDIA_ENTITY = &quot;deleteMediaEntity&quot;;
+  private final ServiceMetadata serviceMetadata;
+  private final JPAConversionHelper helper;
+
+  public JPACUDRequestProcessor(final OData odata, final ServiceMetadata serviceMetadata,
+      final JPAODataRequestContextAccess requestContext,
+      final JPAConversionHelper cudHelper) throws ODataException {
+
+<span class="nc" id="L79">    super(odata, requestContext);</span>
+<span class="nc" id="L80">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L81">    this.helper = cudHelper;</span>
+<span class="nc" id="L82">  }</span>
+
+  public void clearFields(final ODataRequest request, final ODataResponse response) throws ODataJPAProcessException {
+
+<span class="nc" id="L86">    final int handle = debugger.startRuntimeMeasurement(this, &quot;clearFields&quot;);</span>
+<span class="nc" id="L87">    final JPACUDRequestHandler handler = requestContext.getCUDRequestHandler();</span>
+<span class="nc" id="L88">    final EdmBindingTargetInfo edmEntitySetInfo = Util.determineBindingTargetAndKeys(uriInfo.getUriResourceParts());</span>
+
+<span class="nc" id="L90">    final JPARequestEntity requestEntity = createRequestEntity(edmEntitySetInfo, uriInfo.getUriResourceParts(), request</span>
+<span class="nc" id="L91">        .getAllHeaders());</span>
+
+<span class="nc" id="L93">    JPAODataTransaction ownTransaction = null;</span>
+<span class="nc" id="L94">    final boolean foreignTransaction = requestContext.getTransactionFactory().hasActiveTransaction();</span>
+
+<span class="nc bnc" id="L96" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L97">      ownTransaction = requestContext.getTransactionFactory().createTransaction();</span>
+<span class="nc" id="L98">    JPAUpdateResult updateResult = null;</span>
+    try {
+<span class="nc" id="L100">      final int updateHandle = debugger.startRuntimeMeasurement(handler, DEBUG_UPDATE_ENTITY);</span>
+<span class="nc" id="L101">      updateResult = handler.updateEntity(requestEntity, em, determineHttpVerb(request, uriInfo.getUriResourceParts()));</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">      if (!foreignTransaction)</span>
+<span class="nc" id="L103">        handler.validateChanges(em);</span>
+<span class="nc" id="L104">      debugger.stopRuntimeMeasurement(updateHandle);</span>
+<span class="nc" id="L105">    } catch (final ODataJPAProcessException e) {</span>
+<span class="nc" id="L106">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L107">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L108">      throw e;</span>
+<span class="nc" id="L109">    } catch (final Exception e) {</span>
+<span class="nc" id="L110">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L111">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L112">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L113">    }</span>
+<span class="nc bnc" id="L114" title="All 4 branches missed.">    if(updateResult != null &amp;&amp; updateResult.getModifiedEntity() != null) {</span>
+<span class="nc" id="L115">      em.merge(updateResult.getModifiedEntity());</span>
+    }
+<span class="nc bnc" id="L117" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L118">      ownTransaction.commit();</span>
+<span class="nc" id="L119">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L120">    response.setStatusCode(HttpStatusCode.NO_CONTENT.getStatusCode());</span>
+<span class="nc" id="L121">  }</span>
+
+
+  public void createMediaEntity(ODataRequest request, ODataResponse response, ContentType requestFormat, ContentType responseFormat) throws DeserializerException, ODataJPAProcessException, ODataJPAModelException, SerializerException {
+<span class="nc" id="L125">    final int handle = debugger.startRuntimeMeasurement(this, DEBUG_CREATE_ENTITY);</span>
+<span class="nc" id="L126">    final JPACUDRequestHandler handler = requestContext.getCUDRequestHandler();</span>
+<span class="nc" id="L127">    final EdmBindingTargetInfo edmEntitySetInfo = Util.determineModifyEntitySetAndKeys(uriInfo.getUriResourceParts());</span>
+<span class="nc" id="L128">    final byte[] mediaContent = odata.createFixedFormatDeserializer().binary(request.getBody());</span>
+<span class="nc" id="L129">    final JPAEntityType et = sd.getEntity(edmEntitySetInfo</span>
+<span class="nc" id="L130">            .getName());</span>
+<span class="nc" id="L131">    Entity odataEntity = helper.createMediaEntity(request.getAllHeaders(), requestFormat.toContentTypeString(), mediaContent, (IntermediateEntityType)et);</span>
+<span class="nc" id="L132">    final JPARequestEntity requestEntity = createRequestEntity(edmEntitySetInfo, odataEntity, request.getAllHeaders());</span>
+
+    // Create entity
+<span class="nc" id="L135">    Object result = null;</span>
+<span class="nc" id="L136">    JPAODataTransaction ownTransaction = null;</span>
+<span class="nc" id="L137">    final boolean foreignTransaction = requestContext.getTransactionFactory().hasActiveTransaction();</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L139">      ownTransaction = requestContext.getTransactionFactory().createTransaction();</span>
+    try {
+<span class="nc" id="L141">      final int createHandle = debugger.startRuntimeMeasurement(handler, DEBUG_CREATE_ENTITY);</span>
+<span class="nc" id="L142">      result = handler.createEntity(requestEntity, em);</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">      if (!foreignTransaction)</span>
+<span class="nc" id="L144">        handler.validateChanges(em);</span>
+<span class="nc" id="L145">      debugger.stopRuntimeMeasurement(createHandle);</span>
+<span class="nc" id="L146">    } catch (final ODataJPAProcessException e) {</span>
+<span class="nc" id="L147">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L148">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L149">      throw e;</span>
+<span class="nc" id="L150">    } catch (final Exception e) {</span>
+<span class="nc" id="L151">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L152">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L153">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L154">    }</span>
+
+<span class="nc bnc" id="L156" title="All 6 branches missed.">    if (result != null &amp;&amp; result.getClass() != requestEntity.getEntityType().getTypeClass()</span>
+            &amp;&amp; !(result instanceof Map&lt;?, ?&gt;)) {
+<span class="nc" id="L158">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L159">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L160">      throw new ODataJPAProcessorException(WRONG_RETURN_TYPE, INTERNAL_SERVER_ERROR, result.getClass().toString(),</span>
+<span class="nc" id="L161">              requestEntity.getEntityType().getTypeClass().toString());</span>
+    }
+
+<span class="nc bnc" id="L164" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L165">      ownTransaction.commit();</span>
+
+<span class="nc" id="L167">    createCreateResponse(request, response, responseFormat, requestEntity, edmEntitySetInfo, result);</span>
+<span class="nc" id="L168">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L169">  }</span>
+
+  public void createEntity(final ODataRequest request, final ODataResponse response, final ContentType requestFormat,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+
+<span class="nc" id="L174">    final int handle = debugger.startRuntimeMeasurement(this, DEBUG_CREATE_ENTITY);</span>
+<span class="nc" id="L175">    final JPACUDRequestHandler handler = requestContext.getCUDRequestHandler();</span>
+
+<span class="nc" id="L177">    final EdmBindingTargetInfo edmEntitySetInfo = Util.determineModifyEntitySetAndKeys(uriInfo.getUriResourceParts());</span>
+<span class="nc" id="L178">    final Entity odataEntity = helper.convertInputStream(odata, request, requestFormat, uriInfo.getUriResourceParts());</span>
+
+<span class="nc" id="L180">    final JPARequestEntity requestEntity = createRequestEntity(edmEntitySetInfo, odataEntity, request.getAllHeaders());</span>
+
+    // Create entity
+<span class="nc" id="L183">    Object result = null;</span>
+<span class="nc" id="L184">    JPAODataTransaction ownTransaction = null;</span>
+<span class="nc" id="L185">    final boolean foreignTransaction = requestContext.getTransactionFactory().hasActiveTransaction();</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L187">      ownTransaction = requestContext.getTransactionFactory().createTransaction();</span>
+    try {
+<span class="nc" id="L189">      final int createHandle = debugger.startRuntimeMeasurement(handler, DEBUG_CREATE_ENTITY);</span>
+<span class="nc" id="L190">      result = handler.createEntity(requestEntity, em);</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">      if (!foreignTransaction)</span>
+<span class="nc" id="L192">        handler.validateChanges(em);</span>
+<span class="nc" id="L193">      debugger.stopRuntimeMeasurement(createHandle);</span>
+<span class="nc" id="L194">    } catch (final ODataJPAProcessException e) {</span>
+<span class="nc" id="L195">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L196">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L197">      throw e;</span>
+<span class="nc" id="L198">    } catch (final Exception e) {</span>
+<span class="nc" id="L199">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L200">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L201">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L202">    }</span>
+
+<span class="nc bnc" id="L204" title="All 6 branches missed.">    if (result != null &amp;&amp; result.getClass() != requestEntity.getEntityType().getTypeClass()</span>
+        &amp;&amp; !(result instanceof Map&lt;?, ?&gt;)) {
+<span class="nc" id="L206">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L207">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L208">      throw new ODataJPAProcessorException(WRONG_RETURN_TYPE, INTERNAL_SERVER_ERROR, result.getClass().toString(),</span>
+<span class="nc" id="L209">          requestEntity.getEntityType().getTypeClass().toString());</span>
+    }
+
+<span class="nc bnc" id="L212" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L213">      ownTransaction.commit();</span>
+// &lt;--------------------++
+<span class="nc" id="L215">    updateJoinColumn(result, odataEntity, request, edmEntitySetInfo, handler, requestEntity);</span>
+// ++--------------------&gt;&gt;
+<span class="nc" id="L217">    createCreateResponse(request, response, responseFormat, requestEntity, edmEntitySetInfo, result);</span>
+<span class="nc" id="L218">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L219">  }</span>
+  // &lt;--------------------++
+  public void updateJoinColumn(Object result, Entity odataEntity, final ODataRequest request,
+                                    EdmBindingTargetInfo edmEntitySetInfo, JPACUDRequestHandler handler,
+                                    JPARequestEntity requestEntity)
+          throws ODataApplicationException {
+
+<span class="nc" id="L226">    final int handle = debugger.startRuntimeMeasurement(this, DEBUG_CREATE_ENTITY);</span>
+<span class="nc" id="L227">    String leftColumnNameInt = null;</span>
+<span class="nc" id="L228">    String leftColumnNameExt = null;</span>
+<span class="nc" id="L229">    String rightColumnNameInt = null;</span>
+<span class="nc" id="L230">    String oneToOneAssoc = null;</span>
+<span class="nc" id="L231">    String oneToOneAssocKey = null;</span>
+<span class="nc" id="L232">    Map&lt;String, Object&gt; keyMap = new HashMap&lt;&gt;();</span>
+// &lt;-------Determine JoinColumn, one to one association, Key-------&gt;
+// &lt;-------Assumption : one key &amp; many &quot;onetoone&quot; relation could exists, first level is checked-------&gt;
+    try {
+<span class="nc" id="L236">      List&lt;JPAAttribute&gt; key = requestEntity.getEntityType().getKey();</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">      if (!key.isEmpty()){</span>
+<span class="nc" id="L238">        oneToOneAssocKey = key.get(0).getInternalName();</span>
+      }
+<span class="nc" id="L240">      List&lt;JPAAssociationPath&gt; associationPathList = requestEntity.getEntityType().getAssociationPathList();</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">      for (JPAAssociationPath jpaAssociationPath : associationPathList) {</span>
+<span class="nc bnc" id="L242" title="All 2 branches missed.">        if(jpaAssociationPath.getRightColumnsList().isEmpty() &amp;&amp;</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">                jpaAssociationPath.getLeftColumnsList().isEmpty()){</span>
+          // it is one to one association; proceed further
+        }else{
+          // it is one to many association;
+          continue;
+        }
+<span class="nc" id="L249">        oneToOneAssoc = jpaAssociationPath.getAlias();</span>
+<span class="nc" id="L250">        List&lt;JPAOnConditionItem&gt; joinColumnsList = jpaAssociationPath.getJoinColumnsList();</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">        if (!joinColumnsList.isEmpty()){</span>
+<span class="nc" id="L252">          JPAOnConditionItem jpaOnConditionItem = joinColumnsList.get(0);</span>
+<span class="nc" id="L253">          List&lt;JPAElement&gt; pathLeft = jpaOnConditionItem.getLeftPath().getPath();</span>
+<span class="nc" id="L254">          JPAElement jpaElementLeft = pathLeft.get(0);</span>
+<span class="nc" id="L255">          leftColumnNameInt = jpaElementLeft.getInternalName();</span>
+<span class="nc" id="L256">          leftColumnNameExt = jpaElementLeft.getExternalName();</span>
+
+<span class="nc" id="L258">          List&lt;JPAElement&gt; pathRight = jpaOnConditionItem.getRightPath().getPath();</span>
+<span class="nc" id="L259">          JPAElement jpaElementRight = pathRight.get(0);</span>
+<span class="nc" id="L260">          rightColumnNameInt = jpaElementRight.getInternalName();</span>
+        }
+
+<span class="nc bnc" id="L263" title="All 6 branches missed.">        if (leftColumnNameInt == null || rightColumnNameInt == null || oneToOneAssoc == null){</span>
+<span class="nc" id="L264">          continue;</span>
+        }
+        // &lt;-------Put Create transaction result in the map-------&gt;
+<span class="nc" id="L267">        Map&lt;String, Object&gt; stringObjectMap = determineGetter(result,oneToOneAssoc,leftColumnNameInt,rightColumnNameInt);</span>
+<span class="nc bnc" id="L268" title="All 2 branches missed.">        if ( stringObjectMap == null){</span>
+        }else {
+          // &lt;-------put JoinColumn data to be updated in the entity-------&gt;
+<span class="nc bnc" id="L271" title="All 4 branches missed.">          if (!stringObjectMap.isEmpty() &amp;&amp; stringObjectMap.containsKey(leftColumnNameInt)) {</span>
+<span class="nc bnc" id="L272" title="All 2 branches missed.">            if (stringObjectMap.get(leftColumnNameInt) == null) {</span>
+<span class="nc" id="L273">              continue;</span>
+            }
+<span class="nc" id="L275">            odataEntity.addProperty(new Property(null, leftColumnNameExt,</span>
+<span class="nc" id="L276">                    ValueType.PRIMITIVE, stringObjectMap.get(leftColumnNameInt)));</span>
+
+            // &lt;-------Get entity key &amp; put it in the map object-------&gt;
+//            Map&lt;String, Object&gt; keyMap = new HashMap&lt;&gt;();
+<span class="nc bnc" id="L280" title="All 2 branches missed.">            for (Map.Entry&lt;String, Object&gt; entry : stringObjectMap.entrySet()) {</span>
+<span class="nc" id="L281">              String k = entry.getKey();</span>
+<span class="nc" id="L282">              Object v = entry.getValue();</span>
+<span class="nc bnc" id="L283" title="All 2 branches missed.">              if (k.equalsIgnoreCase(oneToOneAssocKey)) {</span>
+<span class="nc" id="L284">                keyMap.put(k, v);</span>
+<span class="nc" id="L285">                break;</span>
+              }
+<span class="nc" id="L287">            }</span>
+          }
+        }
+<span class="nc" id="L290">      }</span>
+<span class="nc" id="L291">    } catch (ODataJPAModelException e) {</span>
+<span class="nc" id="L292">      throw new RuntimeException(e);</span>
+<span class="nc" id="L293">    }</span>
+
+// &lt;-------Prepare update request entity-------
+<span class="nc bnc" id="L296" title="All 2 branches missed.">        if(keyMap.isEmpty()){</span>
+//          no associations are to be updated
+<span class="nc" id="L298">          return;</span>
+        }
+<span class="nc" id="L300">        final JPARequestEntity updateRequestEntity = createRequestEntityNew(edmEntitySetInfo, odataEntity,</span>
+<span class="nc" id="L301">                request.getAllHeaders(),keyMap);</span>
+        // Update entity
+<span class="nc" id="L303">        Object result1 = null;</span>
+<span class="nc" id="L304">        JPAODataTransaction ownTransaction1 = null;</span>
+<span class="nc" id="L305">        final boolean foreignTransaction1 = requestContext.getTransactionFactory().hasActiveTransaction();</span>
+<span class="nc bnc" id="L306" title="All 2 branches missed.">        if (!foreignTransaction1)</span>
+<span class="nc" id="L307">          ownTransaction1 = requestContext.getTransactionFactory().createTransaction();</span>
+        try {
+<span class="nc" id="L309">          final int createHandle1 = debugger.startRuntimeMeasurement(handler, DEBUG_CREATE_ENTITY);</span>
+          // &lt;-------Call update-------&gt;
+<span class="nc" id="L311">          result1 = handler.updateEntity(updateRequestEntity, em, HttpMethod.PATCH);</span>
+<span class="nc bnc" id="L312" title="All 2 branches missed.">          if (!foreignTransaction1)</span>
+<span class="nc" id="L313">            handler.validateChanges(em);</span>
+<span class="nc" id="L314">          debugger.stopRuntimeMeasurement(createHandle1);</span>
+<span class="nc" id="L315">        } catch (final ODataJPAProcessException e) {</span>
+<span class="nc" id="L316">          checkForRollback(ownTransaction1, foreignTransaction1);</span>
+<span class="nc" id="L317">          debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L318">          throw e;</span>
+<span class="nc" id="L319">        } catch (final Exception e) {</span>
+<span class="nc" id="L320">          checkForRollback(ownTransaction1, foreignTransaction1);</span>
+<span class="nc" id="L321">          debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L322">          throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L323">        }</span>
+
+<span class="nc bnc" id="L325" title="All 2 branches missed.">        if (result1 == null) {</span>
+<span class="nc" id="L326">          checkForRollback(ownTransaction1, foreignTransaction1);</span>
+<span class="nc" id="L327">          debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L328">          throw new ODataJPAProcessorException(RETURN_NULL, INTERNAL_SERVER_ERROR);</span>
+        }
+// &lt;-------commit transaction-------&gt;
+<span class="nc bnc" id="L331" title="All 2 branches missed.">        if (!foreignTransaction1)</span>
+<span class="nc" id="L332">          ownTransaction1.commit();</span>
+<span class="nc" id="L333">  }</span>
+  public Map&lt;String, Object&gt; determineGetter(final Object instance, final String oneToOneAssoc,
+                                             final String leftColumnNameInt , final String rightColumnNameInt) throws ODataJPAProcessorException {
+    Map&lt;String, Object&gt; getterMap;
+<span class="nc" id="L337">    getterMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L338">    Map&lt;String, Object&gt; childObjectMap = null; // &lt;--------------------++</span>
+<span class="nc" id="L339">    final Method[] methods = instance.getClass().getMethods();</span>
+<span class="nc bnc" id="L340" title="All 2 branches missed.">    for (final Method meth : methods) {</span>
+<span class="nc" id="L341">      final String methodName = meth.getName();</span>
+<span class="nc bnc" id="L342" title="All 4 branches missed.">      if (methodName.substring(0, 3).equals(&quot;get&quot;) &amp;&amp; methodName.length() &gt; 3) {</span>
+<span class="nc" id="L343">        final String attributeName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);</span>
+        try {
+<span class="nc" id="L345">          final Object value = meth.invoke(instance);</span>
+<span class="nc" id="L346">          getterMap.put(attributeName, value);</span>
+          // &lt;-------Get one to one association attributes-------&gt;
+          // &lt;--------------------++
+<span class="nc bnc" id="L349" title="All 4 branches missed.">          if(attributeName.equalsIgnoreCase(oneToOneAssoc) &amp;&amp; value != null){</span>
+<span class="nc" id="L350">            childObjectMap = determineGetter(value,oneToOneAssoc,leftColumnNameInt,rightColumnNameInt);</span>
+          }
+          // ++--------------------&gt;&gt;
+<span class="nc" id="L353">        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {</span>
+<span class="nc" id="L354">          throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.ATTRIBUTE_RETRIEVAL_FAILED,</span>
+                  HttpStatusCode.INTERNAL_SERVER_ERROR, e, attributeName);
+<span class="nc" id="L356">        }</span>
+      }
+    }
+    // &lt;--------------------++
+<span class="nc bnc" id="L360" title="All 2 branches missed.">    if ( childObjectMap == null){</span>
+    }else{
+<span class="nc bnc" id="L362" title="All 2 branches missed.">      if (!childObjectMap.isEmpty()){</span>
+<span class="nc" id="L363">        getterMap.put(leftColumnNameInt,childObjectMap.get(rightColumnNameInt));</span>
+      }
+    }
+    // ++--------------------&gt;&gt;
+<span class="nc" id="L367">    return getterMap;</span>
+  }
+  final JPARequestEntity createRequestEntityNew( final EdmBindingTargetInfo edmEntitySetInfo,
+                                                 final Entity odataEntity,
+                                                 final Map&lt;String, List&lt;String&gt;&gt; headers,
+                                                 final Map&lt;String, Object&gt; keys )
+          throws ODataJPAProcessorException {
+
+    try {
+<span class="nc" id="L376">      final JPAEntityType et = sd.getEntity(edmEntitySetInfo</span>
+<span class="nc" id="L377">              .getName());</span>
+<span class="nc bnc" id="L378" title="All 2 branches missed.">      if (et == null)</span>
+<span class="nc" id="L379">        throw new ODataJPAProcessorException(ENTITY_TYPE_UNKNOWN, BAD_REQUEST, edmEntitySetInfo.getName());</span>
+//      final Map&lt;String, Object&gt; keys = helper.convertUriKeys(odata, et, edmEntitySetInfo.getKeyPredicates());
+<span class="nc" id="L381">      final JPARequestEntityImpl requestEntity = (JPARequestEntityImpl) createRequestEntity(et, odataEntity, keys,</span>
+<span class="nc" id="L382">              headers, et.getAssociationPath(edmEntitySetInfo.getNavigationPath()));</span>
+<span class="nc" id="L383">      requestEntity.setBeforeImage(createBeforeImage(requestEntity, em));</span>
+<span class="nc" id="L384">      return requestEntity;</span>
+<span class="nc" id="L385">    } catch (final ODataException e) {</span>
+<span class="nc" id="L386">      throw new ODataJPAProcessorException(e, BAD_REQUEST);</span>
+    }
+  }
+// ++--------------------&gt;&gt;
+
+  public void deleteMediaEntity(ODataRequest request, ODataResponse response) throws ODataJPAProcessException, ODataJPAModelException {
+<span class="nc" id="L392">    final int handle = debugger.startRuntimeMeasurement(this, DEBUG_DELETE_MEDIA_ENTITY);</span>
+<span class="nc" id="L393">    final JPACUDRequestHandler handler = requestContext.getCUDRequestHandler();</span>
+<span class="nc" id="L394">    final EdmBindingTargetInfo edmEntitySetInfo = Util.determineModifyEntitySetAndKeys(uriInfo.getUriResourceParts());</span>
+<span class="nc" id="L395">    final JPAEntityType et = sd.getEntity(edmEntitySetInfo</span>
+<span class="nc" id="L396">            .getName());</span>
+<span class="nc" id="L397">    Entity odataEntity = helper.deleteMediaEntity((IntermediateEntityType)et);</span>
+<span class="nc" id="L398">    final JPARequestEntity requestEntity = createRequestEntity(edmEntitySetInfo, odataEntity, request.getAllHeaders());</span>
+<span class="nc" id="L399">    JPAUpdateResult updateResult = null;</span>
+<span class="nc" id="L400">    JPAODataTransaction ownTransaction = null;</span>
+<span class="nc" id="L401">    final boolean foreignTransaction = requestContext.getTransactionFactory().hasActiveTransaction();</span>
+<span class="nc bnc" id="L402" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L403">      ownTransaction = requestContext.getTransactionFactory().createTransaction();</span>
+    try {
+<span class="nc" id="L405">      updateResult = handler.updateEntity(requestEntity, em, HttpMethod.PATCH);</span>
+<span class="nc bnc" id="L406" title="All 2 branches missed.">      if (!foreignTransaction)</span>
+<span class="nc" id="L407">        handler.validateChanges(em);</span>
+<span class="nc" id="L408">    } catch (final ODataJPAProcessException e) {</span>
+<span class="nc" id="L409">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L410">      throw e;</span>
+<span class="nc" id="L411">    } catch (final Throwable e) {</span>
+<span class="nc" id="L412">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L413">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+    } finally {
+<span class="nc" id="L415">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+<span class="nc bnc" id="L417" title="All 2 branches missed.">    if (updateResult == null) {</span>
+<span class="nc" id="L418">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L419">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L420">      throw new ODataJPAProcessorException(RETURN_NULL, INTERNAL_SERVER_ERROR);</span>
+    }
+<span class="nc bnc" id="L422" title="All 4 branches missed.">    if (updateResult.getModifiedEntity() != null &amp;&amp; !requestEntity.getEntityType().getTypeClass().isInstance(</span>
+<span class="nc" id="L423">            updateResult.getModifiedEntity())) {</span>
+<span class="nc" id="L424">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L425">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L426">      throw new ODataJPAProcessorException(WRONG_RETURN_TYPE, INTERNAL_SERVER_ERROR,</span>
+<span class="nc" id="L427">              updateResult.getModifiedEntity().getClass().toString(), requestEntity.getEntityType().getTypeClass()</span>
+<span class="nc" id="L428">              .toString());</span>
+    }
+<span class="nc bnc" id="L430" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L431">      ownTransaction.commit();</span>
+
+<span class="nc" id="L433">    response.setStatusCode(NO_CONTENT.getStatusCode());</span>
+<span class="nc" id="L434">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L435">  }</span>
+  /*
+   * 4.4 Addressing References between Entities
+   * DELETE http://host/service/Categories(1)/Products/$ref?$id=../../Products(0)
+   * DELETE http://host/service/Products(0)/Category/$ref
+   */
+  public void deleteEntity(final ODataRequest request, final ODataResponse response) throws ODataJPAProcessException {
+<span class="nc" id="L442">    final int handle = debugger.startRuntimeMeasurement(this, &quot;deleteEntity&quot;);</span>
+<span class="nc" id="L443">    final JPACUDRequestHandler handler = requestContext.getCUDRequestHandler();</span>
+    final JPAEntityType et;
+<span class="nc" id="L445">    final Map&lt;String, Object&gt; jpaKeyPredicates = new HashMap&lt;&gt;();</span>
+
+    // 1. Retrieve the entity set which belongs to the requested entity
+<span class="nc" id="L448">    final List&lt;UriResource&gt; resourcePaths = uriInfo.getUriResourceParts();</span>
+    // Note: only in our example we can assume that the first segment is the EntitySet
+<span class="nc" id="L450">    final UriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);</span>
+<span class="nc" id="L451">    final EdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();</span>
+
+    // 2. Convert Key from URL to JPA
+    try {
+<span class="nc" id="L455">      et = sd.getEntity(edmEntitySet.getName());</span>
+<span class="nc bnc" id="L456" title="All 2 branches missed.">      if (et == null)</span>
+<span class="nc" id="L457">        throw new ODataJPAProcessorException(ENTITY_TYPE_UNKNOWN, BAD_REQUEST, edmEntitySet.getName());</span>
+<span class="nc" id="L458">      final List&lt;UriParameter&gt; uriKeyPredicates = uriResourceEntitySet.getKeyPredicates();</span>
+<span class="nc bnc" id="L459" title="All 2 branches missed.">      for (final UriParameter uriParam : uriKeyPredicates) {</span>
+<span class="nc" id="L460">        final JPAAttribute attribute = et.getPath(uriParam.getName()).getLeaf();</span>
+<span class="nc" id="L461">        jpaKeyPredicates.put(attribute.getInternalName(), ExpressionUtil.convertValueOnAttribute(odata, attribute,</span>
+<span class="nc" id="L462">            uriParam.getText(), true));</span>
+<span class="nc" id="L463">      }</span>
+<span class="nc" id="L464">    } catch (final ODataException e) {</span>
+<span class="nc" id="L465">      throw new ODataJPAProcessorException(e, BAD_REQUEST);</span>
+<span class="nc" id="L466">    }</span>
+<span class="nc" id="L467">    final JPARequestEntity requestEntity = createRequestEntity(et, jpaKeyPredicates, request.getAllHeaders());</span>
+
+    // 3. Perform Delete
+<span class="nc" id="L470">    JPAODataTransaction ownTransaction = null;</span>
+<span class="nc" id="L471">    final boolean foreignTransaction = requestContext.getTransactionFactory().hasActiveTransaction();</span>
+<span class="nc bnc" id="L472" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L473">      ownTransaction = requestContext.getTransactionFactory().createTransaction();</span>
+    try {
+<span class="nc" id="L475">      final int deleteHandle = debugger.startRuntimeMeasurement(handler, &quot;deleteEntity&quot;);</span>
+<span class="nc" id="L476">      handler.deleteEntity(requestEntity, em);</span>
+<span class="nc bnc" id="L477" title="All 2 branches missed.">      if (!foreignTransaction)</span>
+<span class="nc" id="L478">        handler.validateChanges(em);</span>
+<span class="nc" id="L479">      debugger.stopRuntimeMeasurement(deleteHandle);</span>
+<span class="nc" id="L480">    } catch (final ODataJPAProcessException e) {</span>
+<span class="nc" id="L481">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L482">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L483">      throw e;</span>
+<span class="nc" id="L484">    } catch (final Throwable e) { // NOSONAR</span>
+<span class="nc" id="L485">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L486">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L487">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L488">    }</span>
+<span class="nc bnc" id="L489" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L490">      ownTransaction.commit();</span>
+
+    // 4. configure the response object
+<span class="nc" id="L493">    response.setStatusCode(NO_CONTENT.getStatusCode());</span>
+<span class="nc" id="L494">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L495">  }</span>
+
+  public void updateMediaEntity(ODataRequest request, ODataResponse response, ContentType requestFormat, ContentType responseFormat) throws DeserializerException, ODataJPAModelException, ODataJPAProcessException, SerializerException {
+<span class="nc" id="L498">    final int handle = debugger.startRuntimeMeasurement(this, DEBUG_UPDATE_MEDIA_ENTITY);</span>
+<span class="nc" id="L499">    final JPACUDRequestHandler handler = requestContext.getCUDRequestHandler();</span>
+<span class="nc" id="L500">    final EdmBindingTargetInfo edmEntitySetInfo = Util.determineModifyEntitySetAndKeys(uriInfo.getUriResourceParts());</span>
+<span class="nc" id="L501">    final byte[] mediaContent = odata.createFixedFormatDeserializer().binary(request.getBody());</span>
+<span class="nc" id="L502">    final JPAEntityType et = sd.getEntity(edmEntitySetInfo</span>
+<span class="nc" id="L503">            .getName());</span>
+<span class="nc" id="L504">    Entity odataEntity = helper.createMediaEntity(request.getAllHeaders(), requestFormat.toContentTypeString(), mediaContent, (IntermediateEntityType)et);</span>
+<span class="nc" id="L505">    final JPARequestEntity requestEntity = createRequestEntity(edmEntitySetInfo, odataEntity, request.getAllHeaders());</span>
+<span class="nc" id="L506">    JPAUpdateResult updateResult = null;</span>
+<span class="nc" id="L507">    JPAODataTransaction ownTransaction = null;</span>
+<span class="nc" id="L508">    final boolean foreignTransaction = requestContext.getTransactionFactory().hasActiveTransaction();</span>
+<span class="nc bnc" id="L509" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L510">      ownTransaction = requestContext.getTransactionFactory().createTransaction();</span>
+    try {
+<span class="nc" id="L512">      updateResult = handler.updateEntity(requestEntity, em, HttpMethod.PATCH);</span>
+<span class="nc bnc" id="L513" title="All 2 branches missed.">      if (!foreignTransaction)</span>
+<span class="nc" id="L514">        handler.validateChanges(em);</span>
+<span class="nc" id="L515">    } catch (final ODataJPAProcessException e) {</span>
+<span class="nc" id="L516">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L517">      throw e;</span>
+<span class="nc" id="L518">    } catch (final Throwable e) {</span>
+<span class="nc" id="L519">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L520">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+    } finally {
+<span class="nc" id="L522">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+<span class="nc bnc" id="L524" title="All 2 branches missed.">    if (updateResult == null) {</span>
+<span class="nc" id="L525">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L526">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L527">      throw new ODataJPAProcessorException(RETURN_NULL, INTERNAL_SERVER_ERROR);</span>
+    }
+<span class="nc bnc" id="L529" title="All 4 branches missed.">    if (updateResult.getModifiedEntity() != null &amp;&amp; !requestEntity.getEntityType().getTypeClass().isInstance(</span>
+<span class="nc" id="L530">            updateResult.getModifiedEntity())) {</span>
+<span class="nc" id="L531">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L532">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L533">      throw new ODataJPAProcessorException(WRONG_RETURN_TYPE, INTERNAL_SERVER_ERROR,</span>
+<span class="nc" id="L534">              updateResult.getModifiedEntity().getClass().toString(), requestEntity.getEntityType().getTypeClass()</span>
+<span class="nc" id="L535">              .toString());</span>
+    }
+<span class="nc bnc" id="L537" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L538">      ownTransaction.commit();</span>
+
+<span class="nc bnc" id="L540" title="All 2 branches missed.">    if (updateResult.wasCreate()) {</span>
+<span class="nc" id="L541">      createCreateResponse(request, response, responseFormat, requestEntity.getEntityType(),</span>
+<span class="nc" id="L542">              (EdmEntitySet) edmEntitySetInfo.getEdmBindingTarget(), updateResult.getModifiedEntity()); // Singleton</span>
+<span class="nc" id="L543">      debugger.stopRuntimeMeasurement(handle);</span>
+    } else {
+<span class="nc" id="L545">      createUpdateResponse(request, response, responseFormat, requestEntity, edmEntitySetInfo, updateResult);</span>
+<span class="nc" id="L546">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+<span class="nc" id="L548">  }</span>
+
+  public void updateEntity(final ODataRequest request, final ODataResponse response, final ContentType requestFormat,
+      final ContentType responseFormat) throws ODataJPAProcessException, ODataLibraryException {
+
+<span class="nc" id="L553">    final int handle = debugger.startRuntimeMeasurement(this, DEBUG_UPDATE_ENTITY);</span>
+<span class="nc" id="L554">    final JPACUDRequestHandler handler = requestContext.getCUDRequestHandler();</span>
+<span class="nc" id="L555">    final EdmBindingTargetInfo edmEntitySetInfo = Util.determineModifyEntitySetAndKeys(uriInfo.getUriResourceParts());</span>
+<span class="nc" id="L556">    final Entity odataEntity = helper.convertInputStream(odata, request, requestFormat, uriInfo.getUriResourceParts());</span>
+
+    // http://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part1-protocol/odata-v4.0-errata03-os-part1-protocol-complete.html#_Toc453752300
+    // 11.4.3 Update an Entity
+    // ...
+    // The entity MUST NOT contain related entities as inline content. It MAY contain binding information for
+    // navigation properties. For single-valued navigation properties this replaces the relationship. For
+    // collection-valued navigation properties this adds to the relationship.
+    // TODO navigation properties this replaces the relationship
+<span class="nc" id="L565">    final JPARequestEntity requestEntity = createRequestEntity(edmEntitySetInfo, odataEntity, request.getAllHeaders());</span>
+
+    // Update entity
+<span class="nc" id="L568">    JPAUpdateResult updateResult = null;</span>
+
+<span class="nc" id="L570">    JPAODataTransaction ownTransaction = null;</span>
+<span class="nc" id="L571">    final boolean foreignTransaction = requestContext.getTransactionFactory().hasActiveTransaction();</span>
+<span class="nc bnc" id="L572" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L573">      ownTransaction = requestContext.getTransactionFactory().createTransaction();</span>
+    try {
+      // http://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part1-protocol/odata-v4.0-errata03-os-part1-protocol-complete.html#_Toc453752300
+      // 11.4.3 Update an Entity
+      // Services SHOULD support PATCH as the preferred means of updating an entity. ... .Services MAY additionally
+      // support PUT, but should be aware of the potential for data-loss in round-tripping properties that the client
+      // may not know about in advance, such as open or added properties, or properties not specified in metadata.
+      // 11.4.4 Upsert an Entity
+      // To ensure that an update request is not treated as an insert, the client MAY specify an If-Match header in the
+      // update request. The service MUST NOT treat an update request containing an If-Match header as an insert.
+      // A PUT or PATCH request MUST NOT be treated as an update if an If-None-Match header is specified with a value of
+      // &quot;*&quot;.
+<span class="nc" id="L585">      updateResult = handler.updateEntity(requestEntity, em, determineHttpVerb(request, uriInfo.getUriResourceParts()));</span>
+<span class="nc bnc" id="L586" title="All 2 branches missed.">      if (!foreignTransaction)</span>
+<span class="nc" id="L587">        handler.validateChanges(em);</span>
+<span class="nc" id="L588">    } catch (final ODataJPAProcessException e) {</span>
+<span class="nc" id="L589">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L590">      throw e;</span>
+<span class="nc" id="L591">    } catch (final Throwable e) {</span>
+<span class="nc" id="L592">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L593">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+    } finally {
+<span class="nc" id="L595">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+<span class="nc bnc" id="L597" title="All 2 branches missed.">    if (updateResult == null) {</span>
+<span class="nc" id="L598">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L599">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L600">      throw new ODataJPAProcessorException(RETURN_NULL, INTERNAL_SERVER_ERROR);</span>
+    }
+<span class="nc bnc" id="L602" title="All 4 branches missed.">    if (updateResult.getModifiedEntity() != null &amp;&amp; !requestEntity.getEntityType().getTypeClass().isInstance(</span>
+<span class="nc" id="L603">        updateResult.getModifiedEntity())) {</span>
+<span class="nc" id="L604">      checkForRollback(ownTransaction, foreignTransaction);</span>
+<span class="nc" id="L605">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L606">      throw new ODataJPAProcessorException(WRONG_RETURN_TYPE, INTERNAL_SERVER_ERROR,</span>
+<span class="nc" id="L607">          updateResult.getModifiedEntity().getClass().toString(), requestEntity.getEntityType().getTypeClass()</span>
+<span class="nc" id="L608">              .toString());</span>
+    }
+<span class="nc bnc" id="L610" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L611">      ownTransaction.commit();</span>
+
+<span class="nc bnc" id="L613" title="All 2 branches missed.">    if (updateResult.wasCreate()) {</span>
+<span class="nc" id="L614">      createCreateResponse(request, response, responseFormat, requestEntity.getEntityType(),</span>
+<span class="nc" id="L615">          (EdmEntitySet) edmEntitySetInfo.getEdmBindingTarget(), updateResult.getModifiedEntity()); // Singleton</span>
+<span class="nc" id="L616">      debugger.stopRuntimeMeasurement(handle);</span>
+    } else {
+<span class="nc" id="L618">      createUpdateResponse(request, response, responseFormat, requestEntity, edmEntitySetInfo, updateResult);</span>
+<span class="nc" id="L619">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+
+<span class="nc" id="L622">  }</span>
+
+  private void checkForRollback(final JPAODataTransaction ownTransaction, final boolean foreignTransaction)
+      throws ODataJPATransactionException {
+<span class="nc bnc" id="L626" title="All 2 branches missed.">    if (!foreignTransaction)</span>
+<span class="nc" id="L627">      ownTransaction.rollback();</span>
+<span class="nc" id="L628">  }</span>
+
+  private HttpMethod determineHttpVerb(final ODataRequest request, final List&lt;UriResource&gt; resourceParts) {
+<span class="nc" id="L631">    final HttpMethod originalMethod = request.getMethod();</span>
+    final HttpMethod targetMethod;
+<span class="nc" id="L633">    final int noResourceParts = resourceParts.size();</span>
+<span class="nc bnc" id="L634" title="All 4 branches missed.">    if (originalMethod == HttpMethod.PUT &amp;&amp; resourceParts.get(noResourceParts - 1) instanceof UriResourceProperty) {</span>
+<span class="nc" id="L635">      targetMethod = HttpMethod.PATCH;</span>
+    } else {
+<span class="nc" id="L637">      targetMethod = originalMethod;</span>
+    }
+<span class="nc" id="L639">    return targetMethod;</span>
+  }
+
+  final JPARequestEntity createRequestEntity(final EdmEntitySet edmEntitySet, final Entity odataEntity,
+      final Map&lt;String, List&lt;String&gt;&gt; headers) throws ODataJPAProcessorException {
+
+    try {
+<span class="nc" id="L646">      final JPAEntityType et = sd.getEntity(edmEntitySet.getName());</span>
+<span class="nc bnc" id="L647" title="All 2 branches missed.">      if (et == null)</span>
+<span class="nc" id="L648">        throw new ODataJPAProcessorException(ENTITY_TYPE_UNKNOWN, BAD_REQUEST, edmEntitySet.getName());</span>
+<span class="nc" id="L649">      return createRequestEntity(et, odataEntity, new HashMap&lt;&gt;(0), headers, null);</span>
+<span class="nc" id="L650">    } catch (final ODataException e) {</span>
+<span class="nc" id="L651">      throw new ODataJPAProcessorException(e, BAD_REQUEST);</span>
+    }
+  }
+
+  final JPARequestEntity createRequestEntity(final EdmBindingTargetInfo edmEntitySetInfo, final Entity odataEntity,
+      final Map&lt;String, List&lt;String&gt;&gt; headers) throws ODataJPAProcessorException {
+
+    try {
+<span class="nc" id="L659">      final JPAEntityType et = sd.getEntity(edmEntitySetInfo</span>
+<span class="nc" id="L660">          .getName());</span>
+<span class="nc bnc" id="L661" title="All 2 branches missed.">      if (et == null)</span>
+<span class="nc" id="L662">        throw new ODataJPAProcessorException(ENTITY_TYPE_UNKNOWN, BAD_REQUEST, edmEntitySetInfo.getName());</span>
+<span class="nc" id="L663">      final Map&lt;String, Object&gt; keys = helper.convertUriKeys(odata, et, edmEntitySetInfo.getKeyPredicates());</span>
+<span class="nc" id="L664">      final JPARequestEntityImpl requestEntity = (JPARequestEntityImpl) createRequestEntity(et, odataEntity, keys,</span>
+<span class="nc" id="L665">          headers, et.getAssociationPath(edmEntitySetInfo.getNavigationPath()));</span>
+<span class="nc" id="L666">      requestEntity.setBeforeImage(createBeforeImage(requestEntity, em));</span>
+<span class="nc" id="L667">      return requestEntity;</span>
+<span class="nc" id="L668">    } catch (final ODataException e) {</span>
+<span class="nc" id="L669">      throw new ODataJPAProcessorException(e, BAD_REQUEST);</span>
+    }
+  }
+
+  /**
+   * Converts the deserialized request into the internal (JPA) format, which shall be provided to the hook method
+   * @param edmEntitySet
+   * @param odataEntity
+   * @param headers
+   * @return
+   * @throws ODataJPAProcessorException
+   */
+  final JPARequestEntity createRequestEntity(final JPAEntityType et, final Entity odataEntity,
+      final Map&lt;String, Object&gt; keys, final Map&lt;String, List&lt;String&gt;&gt; headers,
+      final JPAAssociationPath jpaAssociationPath) throws ODataJPAProcessorException {
+
+    try {
+<span class="nc bnc" id="L686" title="All 2 branches missed.">      if (jpaAssociationPath == null) {</span>
+<span class="nc" id="L687">        final Map&lt;String, Object&gt; jpaAttributes = helper.convertProperties(odata, et, odataEntity.getProperties());</span>
+<span class="nc" id="L688">        final Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; relatedEntities = createInlineEntities(et, odataEntity,</span>
+            headers);
+<span class="nc" id="L690">        final Map&lt;JPAAssociationPath, List&lt;JPARequestLink&gt;&gt; relationLinks = createRelationLinks(et, odataEntity);</span>
+<span class="nc" id="L691">        return new JPARequestEntityImpl(et, jpaAttributes, relatedEntities, relationLinks, keys, headers,</span>
+            requestContext);
+      } else {
+        // Handle requests like POST
+        // .../AdministrativeDivisions(DivisionCode='DE6',CodeID='NUTS1',CodePublisher='Eurostat')/Children
+<span class="nc" id="L696">        final Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; relatedEntities = createInlineEntities(odataEntity,</span>
+            jpaAssociationPath, headers);
+<span class="nc" id="L698">        return new JPARequestEntityImpl(et, Collections.emptyMap(), relatedEntities, Collections.emptyMap(), keys,</span>
+            headers, requestContext);
+      }
+
+<span class="nc" id="L702">    } catch (final ODataException e) {</span>
+<span class="nc" id="L703">      throw new ODataJPAProcessorException(e, BAD_REQUEST);</span>
+    }
+  }
+
+  /**
+   * Create an RequestEntity instance for delete requests
+   * @param et
+   * @param keys
+   * @param headers
+   * @return
+   */
+  final JPARequestEntity createRequestEntity(final JPAEntityType et, final Map&lt;String, Object&gt; keys,
+      final Map&lt;String, List&lt;String&gt;&gt; headers) {
+
+<span class="nc" id="L717">    final Map&lt;String, Object&gt; jpaAttributes = new HashMap&lt;&gt;(0);</span>
+<span class="nc" id="L718">    final Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; relatedEntities = new HashMap&lt;&gt;(0);</span>
+<span class="nc" id="L719">    final Map&lt;JPAAssociationPath, List&lt;JPARequestLink&gt;&gt; relationLinks = new HashMap&lt;&gt;(0);</span>
+
+<span class="nc" id="L721">    return new JPARequestEntityImpl(et, jpaAttributes, relatedEntities, relationLinks, keys, headers, requestContext);</span>
+  }
+
+  private Entity convertEntity(final JPAEntityType et, final Object result, final Map&lt;String, List&lt;String&gt;&gt; headers)
+      throws ODataJPAProcessorException {
+
+    try {
+<span class="nc" id="L728">      final JPATupleChildConverter converter = new JPATupleChildConverter(sd, odata.createUriHelper(), serviceMetadata,</span>
+          requestContext);
+<span class="nc" id="L730">      final JPACreateResultFactory factory = new JPACreateResultFactory(converter);//</span>
+<span class="nc" id="L731">      return converter.getResult(factory.getJPACreateResult(et, result, headers), Collections.emptySet())</span>
+<span class="nc" id="L732">          .get(ROOT_RESULT_KEY).getEntities().get(0);</span>
+<span class="nc" id="L733">    } catch (ODataJPAModelException | ODataApplicationException e) {</span>
+<span class="nc" id="L734">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+    }
+
+  }
+
+  private Map&lt;String, Object&gt; convertUriPath(final JPAEntityType et, final List&lt;UriResource&gt; resourcePaths)
+      throws ODataJPAModelException, ODataJPAProcessorException {
+
+<span class="nc" id="L742">    final Map&lt;String, Object&gt; jpaAttributes = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L743">    Map&lt;String, Object&gt; currentMap = jpaAttributes;</span>
+<span class="nc" id="L744">    JPAStructuredType st = et;</span>
+    int lastIndex;
+
+<span class="nc bnc" id="L747" title="All 2 branches missed.">    if (resourcePaths.get(resourcePaths.size() - 1) instanceof UriResourceValue)</span>
+<span class="nc" id="L748">      lastIndex = resourcePaths.size() - 1;</span>
+    else
+<span class="nc" id="L750">      lastIndex = resourcePaths.size();</span>
+
+<span class="nc bnc" id="L752" title="All 2 branches missed.">    for (int i = 1; i &lt; lastIndex; i++) {</span>
+<span class="nc" id="L753">      final UriResourceProperty uriResourceProperty = (UriResourceProperty) resourcePaths.get(i);</span>
+<span class="nc bnc" id="L754" title="All 4 branches missed.">      if (uriResourceProperty instanceof UriResourceComplexProperty &amp;&amp; i &lt; resourcePaths.size() - 1) {</span>
+<span class="nc" id="L755">        final Map&lt;String, Object&gt; jpaEmbedded = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L756">        final JPAPath path = st.getPath(uriResourceProperty.getProperty().getName());</span>
+<span class="nc" id="L757">        final String internalName = path.getPath().get(0).getInternalName();</span>
+
+<span class="nc" id="L759">        currentMap.put(internalName, jpaEmbedded);</span>
+
+<span class="nc" id="L761">        currentMap = jpaEmbedded;</span>
+<span class="nc" id="L762">        st = st.getAttribute(internalName).orElseThrow(() -&gt; new ODataJPAProcessorException(ATTRIBUTE_NOT_FOUND,</span>
+<span class="nc" id="L763">            INTERNAL_SERVER_ERROR, internalName)).getStructuredType();</span>
+<span class="nc" id="L764">      } else {</span>
+<span class="nc" id="L765">        currentMap.put(st.getPath(uriResourceProperty.getProperty().getName()).getLeaf().getInternalName(), null);</span>
+      }
+    }
+<span class="nc" id="L768">    return jpaAttributes;</span>
+  }
+
+  private Optional&lt;Object&gt; createBeforeImage(final JPARequestEntity requestEntity, final EntityManager em)
+      throws ODataJPAProcessorException, ODataJPAInvocationTargetException {
+
+<span class="nc bnc" id="L774" title="All 2 branches missed.">    if (!requestEntity.getKeys().isEmpty()) {</span>
+<span class="nc" id="L775">      final Object key = requestEntity.getModifyUtil().createPrimaryKey(requestEntity.getEntityType(), requestEntity</span>
+<span class="nc" id="L776">          .getKeys(), requestEntity.getEntityType());</span>
+<span class="nc" id="L777">      final Optional&lt;Object&gt; beforeImage = Optional.ofNullable(em.find(requestEntity.getEntityType().getTypeClass(),</span>
+          key));
+<span class="nc bnc" id="L779" title="All 2 branches missed.">      if (beforeImage.isPresent())</span>
+<span class="nc" id="L780">        em.detach(beforeImage.get());</span>
+<span class="nc" id="L781">      return beforeImage;</span>
+    }
+<span class="nc" id="L783">    return Optional.empty();</span>
+  }
+
+  private void createCreateResponse(final ODataRequest request, final ODataResponse response,
+      final ContentType responseFormat, final JPAEntityType et, final EdmEntitySet edmEntitySet, final Object result)
+      throws SerializerException, ODataJPAProcessorException, ODataJPASerializerException {
+
+    // http://docs.oasis-open.org/odata/odata/v4.0/odata-v4.0-part1-protocol.html
+    // Create response:
+    // 8.3.2 Header Location
+    // The Location header MUST be returned in the response from a Create Entity or Create Media Entity request to
+    // specify the edit URL, or for read-only entities the read URL, of the created entity, and in responses returning
+    // 202 Accepted to specify the URL that the client can use to request the status of an asynchronous request.
+    //
+    // 8.3.3 Header OData-EntityId
+    // A response to a create or upsert operation that returns 204 No Content MUST include an OData-EntityId response
+    // header. The value of the header is the entity-id of the entity that was acted on by the request. The syntax of
+    // the OData-EntityId header is specified in [OData-ABNF].
+    //
+    // 8.2.8.7 Preference return=representation and return=minimal states:
+    // A preference of return=minimal requests that the service invoke the request but does not return content in the
+    // response. The service MAY apply this preference by returning 204 No Content in which case it MAY include a
+    // Preference-Applied response header containing the return=minimal preference.
+    // A preference of return=representation requests that the service invokes the request and returns the modified
+    // resource. The service MAY apply this preference by returning the representation of the successfully modified
+    // resource in the body of the response, formatted according to the rules specified for the requested format. In
+    // this case the service MAY include a Preference-Applied response header containing the return=representation
+    // preference.
+    //
+    // 11.4.1.5 Returning Results from Data Modification Requests
+    // Clients can request whether created or modified resources are returned from create, update, and upsert operations
+    // using the return preference header. In the absence of such a header, services SHOULD return the created or
+    // modified content unless the resource is a stream property value.
+    // When returning content other than for an update to a media entity stream, services MUST return the same content
+    // as a subsequent request to retrieve the same resource. For updating media entity streams, the content of a
+    // non-empty response body MUST be the updated media entity.
+    //
+    // 11.4.2 Create an Entity
+    // Upon successful completion, the response MUST contain a Location header that contains the edit URL or read URL of
+    // the created entity.
+    //
+<span class="nc" id="L824">    successStatusCode = HttpStatusCode.CREATED.getStatusCode();</span>
+<span class="nc" id="L825">    final Preferences prefer = odata.createPreferences(request.getHeaders(HttpHeader.PREFER));</span>
+    // TODO Stream properties
+
+<span class="nc" id="L828">    final String location = helper.convertKeyToLocal(odata, request, edmEntitySet, et, result);</span>
+<span class="nc bnc" id="L829" title="All 2 branches missed.">    if (prefer.getReturn() == Return.MINIMAL) {</span>
+<span class="nc" id="L830">      createMinimalCreateResponse(response, location);</span>
+    } else {
+<span class="nc" id="L832">      final Entity createdEntity = convertEntity(et, result, request.getAllHeaders());</span>
+<span class="nc" id="L833">      final EntityCollection entities = new EntityCollection();</span>
+<span class="nc" id="L834">      entities.getEntities().add(createdEntity);</span>
+<span class="nc" id="L835">      createSuccessResponse(response, responseFormat, serializer.serialize(request, entities));</span>
+<span class="nc" id="L836">      response.setHeader(HttpHeader.LOCATION, location);</span>
+    }
+<span class="nc" id="L838">  }</span>
+
+  private void createCreateResponse(final ODataRequest request, final ODataResponse response,
+      final ContentType responseFormat, final JPARequestEntity requestEntity, final EdmBindingTargetInfo edmEntitySet,
+      final Object result) throws SerializerException, ODataJPAProcessorException, ODataJPASerializerException {
+
+<span class="nc bnc" id="L844" title="All 2 branches missed.">    if (!requestEntity.getKeys().isEmpty()) {</span>
+      // .../AdministrativeDivisions(DivisionCode='DE5',CodeID='NUTS1',CodePublisher='Eurostat')/Children
+      // As of now only one related entity can be created
+      try {
+<span class="nc" id="L848">        final JPAAssociationPath path = requestEntity.getEntityType().getAssociationPath(edmEntitySet</span>
+<span class="nc" id="L849">            .getNavigationPath());</span>
+
+<span class="nc" id="L851">        final JPARequestEntity linkedEntity = requestEntity.getRelatedEntities().get(path).get(0);</span>
+<span class="nc" id="L852">        final Object linkedResult = getLinkedResult(result, path, requestEntity.getBeforeImage());</span>
+<span class="nc" id="L853">        createCreateResponse(request, response, responseFormat, linkedEntity.getEntityType(),</span>
+<span class="nc" id="L854">            (EdmEntitySet) edmEntitySet.getTargetEdmBindingTarget(), linkedResult);</span>
+<span class="nc" id="L855">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L856">        throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L857">      }</span>
+    } else {
+<span class="nc" id="L859">      createCreateResponse(request, response, responseFormat, requestEntity.getEntityType(),</span>
+<span class="nc" id="L860">          (EdmEntitySet) edmEntitySet.getEdmBindingTarget(), result);</span>
+    }
+<span class="nc" id="L862">  }</span>
+
+  private Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; createInlineEntities(final Entity odataEntity,
+      final JPAAssociationPath path, final Map&lt;String, List&lt;String&gt;&gt; headers) throws ODataJPAProcessorException {
+
+<span class="nc" id="L867">    final Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; relatedEntities = new HashMap&lt;&gt;(1);</span>
+<span class="nc" id="L868">    final List&lt;JPARequestEntity&gt; inlineEntities = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L870">    inlineEntities.add(createRequestEntity((JPAEntityType) path.getTargetType(), odataEntity, new HashMap&lt;&gt;(0), headers,</span>
+        null));
+
+<span class="nc" id="L873">    relatedEntities.put(path, inlineEntities);</span>
+
+<span class="nc" id="L875">    return relatedEntities;</span>
+  }
+
+  private Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; createInlineEntities(final JPAEntityType et,
+      final Entity odataEntity, final Map&lt;String, List&lt;String&gt;&gt; headers) throws ODataJPAModelException,
+      ODataJPAProcessorException {
+
+<span class="nc" id="L882">    final Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; relatedEntities = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L884" title="All 2 branches missed.">    for (final JPAAssociationPath path : et.getAssociationPathList()) {</span>
+<span class="nc" id="L885">      List&lt;Property&gt; stProperties = odataEntity.getProperties();</span>
+<span class="nc" id="L886">      Property p = null;</span>
+<span class="nc bnc" id="L887" title="All 2 branches missed.">      for (final JPAElement pathItem : path.getPath()) {</span>
+<span class="nc bnc" id="L888" title="All 2 branches missed.">        if (pathItem == path.getLeaf()) { // We have reached the target and can process further</span>
+<span class="nc bnc" id="L889" title="All 2 branches missed.">          final Link navigationLink = p != null ? p.asComplex().getNavigationLink(pathItem.getExternalName())</span>
+<span class="nc" id="L890">              : odataEntity.getNavigationLink(pathItem.getExternalName());</span>
+<span class="nc" id="L891">          createInlineEntities((JPAEntityType) path.getTargetType(), headers, relatedEntities, navigationLink, path);</span>
+        }
+<span class="nc" id="L893">        p = findProperty(pathItem.getExternalName(), stProperties);</span>
+<span class="nc bnc" id="L894" title="All 2 branches missed.">        if (p == null) break;</span>
+<span class="nc bnc" id="L895" title="All 2 branches missed.">        if (p.isComplex()) {</span>
+<span class="nc" id="L896">          stProperties = p.asComplex().getValue();</span>
+        }
+<span class="nc" id="L898">      }</span>
+<span class="nc" id="L899">    }</span>
+<span class="nc" id="L900">    return relatedEntities;</span>
+  }
+
+  private void createInlineEntities(final JPAEntityType st, final Map&lt;String, List&lt;String&gt;&gt; headers,
+      final Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; relatedEntities, final Link navigationLink,
+      final JPAAssociationPath path) throws ODataJPAProcessorException {
+
+<span class="nc bnc" id="L907" title="All 2 branches missed.">    if (navigationLink == null) return;</span>
+<span class="nc" id="L908">    final List&lt;JPARequestEntity&gt; inlineEntities = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L909" title="All 2 branches missed.">    if (path.getLeaf().isCollection()) {</span>
+<span class="nc bnc" id="L910" title="All 2 branches missed.">      for (final Entity e : navigationLink.getInlineEntitySet().getEntities()) {</span>
+<span class="nc" id="L911">        inlineEntities.add(createRequestEntity(st, e, new HashMap&lt;&gt;(0), headers, null));</span>
+<span class="nc" id="L912">      }</span>
+<span class="nc" id="L913">      relatedEntities.put(path, inlineEntities);</span>
+    } else {
+<span class="nc" id="L915">      inlineEntities.add(createRequestEntity(st, navigationLink.getInlineEntity(), new HashMap&lt;&gt;(0), headers, null));</span>
+<span class="nc" id="L916">      relatedEntities.put(path, inlineEntities);</span>
+    }
+<span class="nc" id="L918">  }</span>
+
+  private void createMinimalCreateResponse(final ODataResponse response, final String location) {
+<span class="nc" id="L921">    response.setStatusCode(NO_CONTENT.getStatusCode());</span>
+<span class="nc" id="L922">    response.setHeader(HttpHeader.PREFERENCE_APPLIED, &quot;return=minimal&quot;);</span>
+<span class="nc" id="L923">    response.setHeader(HttpHeader.LOCATION, location);</span>
+<span class="nc" id="L924">    response.setHeader(HttpHeader.ODATA_ENTITY_ID, location);</span>
+<span class="nc" id="L925">  }</span>
+
+  private Map&lt;JPAAssociationPath, List&lt;JPARequestLink&gt;&gt; createRelationLinks(final JPAEntityType et,
+      final Entity odataEntity)
+      throws ODataJPAModelException {
+
+<span class="nc" id="L931">    final Map&lt;JPAAssociationPath, List&lt;JPARequestLink&gt;&gt; relationLinks =</span>
+        new HashMap&lt;&gt;();
+<span class="nc bnc" id="L933" title="All 2 branches missed.">    for (final Link binding : odataEntity.getNavigationBindings()) {</span>
+<span class="nc" id="L934">      final List&lt;JPARequestLink&gt; bindingLinks = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L935">      final JPAAssociationPath path = et.getAssociationPath(binding.getTitle());</span>
+<span class="nc bnc" id="L936" title="All 2 branches missed.">      if (path.getLeaf().isCollection()) {</span>
+<span class="nc bnc" id="L937" title="All 2 branches missed.">        for (final String bindingLink : binding.getBindingLinks()) {</span>
+<span class="nc" id="L938">          final JPARequestLink requestLink = new JPARequestLinkImpl(path, bindingLink, helper);</span>
+<span class="nc" id="L939">          bindingLinks.add(requestLink);</span>
+<span class="nc" id="L940">        }</span>
+      } else {
+<span class="nc" id="L942">        final JPARequestLink requestLink = new JPARequestLinkImpl(path, binding.getBindingLink(), helper);</span>
+<span class="nc" id="L943">        bindingLinks.add(requestLink);</span>
+      }
+<span class="nc" id="L945">      relationLinks.put(path, bindingLinks);</span>
+<span class="nc" id="L946">    }</span>
+<span class="nc" id="L947">    return relationLinks;</span>
+  }
+
+  private JPARequestEntity createRequestEntity(final EdmBindingTargetInfo edmEntitySetInfo,
+      final List&lt;UriResource&gt; resourceParts,
+      final Map&lt;String, List&lt;String&gt;&gt; headers) throws ODataJPAProcessorException {
+
+    try {
+<span class="nc" id="L955">      final JPAEntityType et = sd.getEntity(edmEntitySetInfo</span>
+<span class="nc" id="L956">          .getEdmBindingTarget().getName());</span>
+<span class="nc" id="L957">      final Map&lt;String, Object&gt; keys = helper.convertUriKeys(odata, et, edmEntitySetInfo.getKeyPredicates());</span>
+<span class="nc" id="L958">      final Map&lt;String, Object&gt; jpaAttributes = convertUriPath(et, resourceParts);</span>
+
+<span class="nc" id="L960">      return new JPARequestEntityImpl(et, jpaAttributes, Collections.emptyMap(), Collections.emptyMap(), keys, headers,</span>
+          requestContext);
+
+<span class="nc" id="L963">    } catch (final ODataException e) {</span>
+<span class="nc" id="L964">      throw new ODataJPAProcessorException(e, BAD_REQUEST);</span>
+    }
+  }
+
+  private void createUpdateResponse(final ODataRequest request, final ODataResponse response,
+      final ContentType responseFormat, final JPARequestEntity requestEntity,
+      final EdmBindingTargetInfo edmEntitySetInfo,
+      final JPAUpdateResult updateResult)
+      throws SerializerException, ODataJPAProcessorException, ODataJPASerializerException {
+
+    // http://docs.oasis-open.org/odata/odata/v4.0/odata-v4.0-part1-protocol.html
+
+    // 8.2.8.7 Preference return=representation and return=minimal states:
+    // A preference of return=minimal requests that the service invoke the request but does not return content in the
+    // response. The service MAY apply this preference by returning 204 No Content in which case it MAY include a
+    // Preference-Applied response header containing the return=minimal preference.
+    // A preference of return=representation requests that the service invokes the request and returns the modified
+    // resource. The service MAY apply this preference by returning the representation of the successfully modified
+    // resource in the body of the response, formatted according to the rules specified for the requested format. In
+    // this case the service MAY include a Preference-Applied response header containing the return=representation
+    // preference.
+    //
+    // 11.4.1.5 Returning Results from Data Modification Requests
+    // Clients can request whether created or modified resources are returned from create, update, and upsert operations
+    // using the return preference header. In the absence of such a header, services SHOULD return the created or
+    // modified content unless the resource is a stream property value.
+    // When returning content other than for an update to a media entity stream, services MUST return the same content
+    // as a subsequent request to retrieve the same resource. For updating media entity streams, the content of a
+    // non-empty response body MUST be the updated media entity.
+    //
+<span class="nc" id="L994">    successStatusCode = HttpStatusCode.OK.getStatusCode();</span>
+<span class="nc" id="L995">    final Preferences prefer = odata.createPreferences(request.getHeaders(HttpHeader.PREFER));</span>
+    // TODO Stream properties
+<span class="nc bnc" id="L997" title="All 4 branches missed.">    if (updateResult == null || prefer.getReturn() == Return.MINIMAL) {</span>
+<span class="nc" id="L998">      response.setStatusCode(NO_CONTENT.getStatusCode());</span>
+<span class="nc" id="L999">      response.setHeader(HttpHeader.PREFERENCE_APPLIED, &quot;return=minimal&quot;);</span>
+    } else {
+<span class="nc bnc" id="L1001" title="All 2 branches missed.">      if (updateResult.getModifiedEntity() == null)</span>
+<span class="nc" id="L1002">        throw new ODataJPAProcessorException(RETURN_MISSING_ENTITY, INTERNAL_SERVER_ERROR);</span>
+
+<span class="nc" id="L1004">      Entity updatedEntity = null;</span>
+      JPAAssociationPath path;
+      try {
+<span class="nc" id="L1007">        path = requestEntity.getEntityType().getAssociationPath(edmEntitySetInfo</span>
+<span class="nc" id="L1008">            .getNavigationPath());</span>
+<span class="nc" id="L1009">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L1010">        throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L1011">      }</span>
+<span class="nc bnc" id="L1012" title="All 2 branches missed.">      if (path != null) {</span>
+        // PATCH .../Organizations('1')/AdministrativeInformation/Updated/User
+<span class="nc" id="L1014">        final JPARequestEntity linkedEntity = requestEntity.getRelatedEntities().get(path).get(0);</span>
+<span class="nc" id="L1015">        final Object linkedResult = getLinkedResult(updateResult.getModifiedEntity(), path, Optional.empty());</span>
+<span class="nc" id="L1016">        updatedEntity = convertEntity(linkedEntity.getEntityType(), linkedResult, request.getAllHeaders());</span>
+<span class="nc" id="L1017">      } else {</span>
+<span class="nc" id="L1018">          response.setStatusCode(successStatusCode);</span>
+<span class="nc" id="L1019">          response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());</span>
+        }
+      }
+<span class="nc" id="L1022">    }</span>
+
+  private Property findProperty(final String name, final List&lt;Property&gt; properties) {
+
+<span class="nc bnc" id="L1026" title="All 2 branches missed.">    for (final Property property : properties) {</span>
+<span class="nc bnc" id="L1027" title="All 2 branches missed.">      if (name.equals(property.getName())) {</span>
+<span class="nc" id="L1028">        return property;</span>
+      }
+<span class="nc" id="L1030">    }</span>
+<span class="nc" id="L1031">    return null;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private Object getLinkedResult(final Object result, final JPAAssociationPath path, final Optional&lt;Object&gt; beforeImage)
+      throws ODataJPAProcessorException {
+
+<span class="nc bnc" id="L1038" title="All 2 branches missed.">    if (result instanceof Map&lt;?, ?&gt;) {</span>
+<span class="nc" id="L1039">      return getLinkedMapBasedResult((Map&lt;String, Object&gt;) result, path);</span>
+    } else {
+<span class="nc bnc" id="L1041" title="All 4 branches missed.">      if (beforeImage.isPresent() &amp;&amp; beforeImage.get().equals(result)) {</span>
+<span class="nc" id="L1042">        return getLinkedInstanceBasedResultByDelta(result, path, beforeImage);</span>
+      } else {
+<span class="nc" id="L1044">        return getLinkedInstanceBasedResultByIndex(result, path);</span>
+      }
+    }
+  }
+
+  /*
+   * The method compares before image with the current state of a collection. It is expected that exactly one entry has
+   * been created. Up to now no contract checks are performed, which may change in the future.
+   */
+  Object getLinkedInstanceBasedResultByDelta(final Object result, final JPAAssociationPath path,
+      final Optional&lt;Object&gt; beforeImage) throws ODataJPAProcessorException {
+<span class="nc bnc" id="L1055" title="All 2 branches missed.">    if (beforeImage.isPresent()) {</span>
+<span class="nc bnc" id="L1056" title="All 2 branches missed.">      if (em.contains(beforeImage.get())) {</span>
+<span class="nc" id="L1057">        throw new ODataJPAProcessorException(BEFORE_IMAGE_MERGED, INTERNAL_SERVER_ERROR);</span>
+      }
+<span class="nc bnc" id="L1059" title="All 2 branches missed.">      if (!path.getLeaf().isCollection())</span>
+<span class="nc" id="L1060">        return getLinkedInstanceBasedResultByIndex(result, path);</span>
+
+<span class="nc" id="L1062">      Object value = result;</span>
+<span class="nc" id="L1063">      Object before = beforeImage.get();</span>
+<span class="nc bnc" id="L1064" title="All 2 branches missed.">      for (final JPAElement pathItem : path.getPath()) {</span>
+<span class="nc" id="L1065">        final Map&lt;String, Object&gt; valueGetterMap = helper.buildGetterMap(value);</span>
+<span class="nc" id="L1066">        value = valueGetterMap.get(pathItem.getInternalName());</span>
+        // We are not able to use the buffered Getter Map for the before image as well, as the buffer uses a HashMap and
+        // before image and result have the same key and therefore are equal and have likely the same hash value.
+<span class="nc" id="L1069">        final Map&lt;String, Object&gt; beforeGetterMap = helper.determineGetter(before);</span>
+<span class="nc" id="L1070">        before = beforeGetterMap.get(pathItem.getInternalName());</span>
+<span class="nc" id="L1071">      }</span>
+<span class="nc bnc" id="L1072" title="All 4 branches missed.">      if (value != null &amp;&amp; !((Collection&lt;?&gt;) value).isEmpty()) {</span>
+<span class="nc bnc" id="L1073" title="All 2 branches missed.">        for (final Object element : ((Collection&lt;?&gt;) value)) {</span>
+<span class="nc bnc" id="L1074" title="All 2 branches missed.">          if (!((Collection&lt;?&gt;) before).contains(element))</span>
+<span class="nc" id="L1075">            return element;</span>
+<span class="nc" id="L1076">        }</span>
+      }
+<span class="nc" id="L1078">      return null;</span>
+    }
+<span class="nc" id="L1080">    return null;</span>
+  }
+
+  private Object getLinkedInstanceBasedResultByIndex(final Object result, final JPAAssociationPath path)
+      throws ODataJPAProcessorException {
+
+<span class="nc" id="L1086">    Object value = result;</span>
+<span class="nc bnc" id="L1087" title="All 2 branches missed.">    for (final JPAElement pathItem : path.getPath()) {</span>
+<span class="nc" id="L1088">      final Map&lt;String, Object&gt; embeddedGetterMap = helper.buildGetterMap(value);</span>
+<span class="nc" id="L1089">      value = embeddedGetterMap.get(pathItem.getInternalName());</span>
+<span class="nc" id="L1090">    }</span>
+<span class="nc bnc" id="L1091" title="All 4 branches missed.">    if (path.getLeaf().isCollection() &amp;&amp; value != null) {</span>
+<span class="nc bnc" id="L1092" title="All 2 branches missed.">      if (((Collection&lt;?&gt;) value).isEmpty())</span>
+<span class="nc" id="L1093">        value = null;</span>
+      else
+<span class="nc" id="L1095">        value = ((Collection&lt;?&gt;) value).toArray()[0];</span>
+    }
+<span class="nc" id="L1097">    return value;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private Object getLinkedMapBasedResult(final Map&lt;String, Object&gt; result, final JPAAssociationPath path) {
+<span class="nc" id="L1102">    Map&lt;String, Object&gt; target = result;</span>
+<span class="nc bnc" id="L1103" title="All 2 branches missed.">    for (final JPAElement pathItem : path.getPath())</span>
+<span class="nc" id="L1104">      target = (Map&lt;String, Object&gt;) target.get(pathItem.getInternalName());</span>
+<span class="nc" id="L1105">    return target;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

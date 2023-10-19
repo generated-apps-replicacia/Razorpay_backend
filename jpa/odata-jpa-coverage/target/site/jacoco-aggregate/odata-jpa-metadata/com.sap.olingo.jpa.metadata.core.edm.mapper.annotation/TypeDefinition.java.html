@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>TypeDefinition.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.annotation</a> &gt; <span class="el_source">TypeDefinition.java</span></div><h1>TypeDefinition.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.annotation;
+
+import java.util.Objects;
+
+import org.apache.olingo.commons.api.edm.geo.SRID;
+import org.apache.olingo.commons.api.edm.provider.CsdlTypeDefinition;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+<span class="nc" id="L12">class TypeDefinition extends CsdlTypeDefinition {</span>
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Name&quot;, isAttribute = true)
+  public CsdlTypeDefinition setName(final String name) {
+<span class="nc" id="L17">    return super.setName(name);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;UnderlyingType&quot;, isAttribute = true)
+  public CsdlTypeDefinition setUnderlyingType(final String underlyingType) {
+<span class="nc" id="L23">    return super.setUnderlyingType(underlyingType);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;MaxLength&quot;, isAttribute = true)
+  public CsdlTypeDefinition setMaxLength(final Integer maxLength) {
+<span class="nc" id="L29">    return super.setMaxLength(maxLength);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Precision&quot;, isAttribute = true)
+  public CsdlTypeDefinition setPrecision(final Integer precision) {
+<span class="nc" id="L35">    return super.setPrecision(precision);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Scale&quot;, isAttribute = true)
+  public CsdlTypeDefinition setScale(final Integer scale) {
+<span class="nc" id="L41">    return super.setScale(scale);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Unicode&quot;, isAttribute = true)
+  public CsdlTypeDefinition setUnicode(final boolean unicode) {
+<span class="nc" id="L47">    return super.setUnicode(unicode);</span>
+  }
+
+  @JacksonXmlProperty(localName = &quot;SRID&quot;, isAttribute = true)
+  void setSrid(final String srid) {
+<span class="nc" id="L52">    Objects.requireNonNull(srid);</span>
+<span class="nc" id="L53">    super.setSrid(SRID.valueOf(srid));</span>
+<span class="nc" id="L54">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

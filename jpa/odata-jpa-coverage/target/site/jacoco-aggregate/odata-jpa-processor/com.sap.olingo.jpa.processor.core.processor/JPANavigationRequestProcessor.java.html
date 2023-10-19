@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPANavigationRequestProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPANavigationRequestProcessor.java</span></div><h1>JPANavigationRequestProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import static com.sap.olingo.jpa.processor.core.converter.JPAExpandResult.ROOT_RESULT_KEY;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.ODATA_MAXPAGESIZE_NOT_A_NUMBER;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.QUERY_PREPARATION_ERROR;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.QUERY_RESULT_CONV_ERROR;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.olingo.commons.api.data.ComplexValue;
+import org.apache.olingo.commons.api.data.Entity;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.serializer.SerializerResult;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.UriResourcePartTyped;
+import org.apache.olingo.server.api.uri.queryoption.CountOption;
+import org.apache.olingo.server.api.uri.queryoption.SystemQueryOptionKind;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.processor.core.api.JPAODataPage;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.converter.JPAExpandResult;
+import com.sap.olingo.jpa.processor.core.converter.JPATupleChildConverter;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPANotImplementedException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.query.JPAAbstractExpandQuery;
+import com.sap.olingo.jpa.processor.core.query.JPACollectionItemInfo;
+import com.sap.olingo.jpa.processor.core.query.JPACollectionJoinQuery;
+import com.sap.olingo.jpa.processor.core.query.JPAConvertibleResult;
+import com.sap.olingo.jpa.processor.core.query.JPAExpandItemInfo;
+import com.sap.olingo.jpa.processor.core.query.JPAExpandItemInfoFactory;
+import com.sap.olingo.jpa.processor.core.query.JPAExpandQueryFactory;
+import com.sap.olingo.jpa.processor.core.query.JPAExpandQueryResult;
+import com.sap.olingo.jpa.processor.core.query.JPAJoinQuery;
+import com.sap.olingo.jpa.processor.core.query.JPAKeyBoundary;
+import com.sap.olingo.jpa.processor.core.query.JPANavigationPropertyInfo;
+import com.sap.olingo.jpa.processor.core.query.Util;
+
+public final class JPANavigationRequestProcessor extends JPAAbstractGetRequestProcessor {
+  private final ServiceMetadata serviceMetadata;
+  private final UriResource lastItem;
+  private final JPAODataPage page;
+
+  public JPANavigationRequestProcessor(final OData odata, final ServiceMetadata serviceMetadata,
+      final JPAODataRequestContextAccess requestContext)
+      throws ODataException {
+
+<span class="nc" id="L65">    super(odata, requestContext);</span>
+<span class="nc" id="L66">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L67">    final List&lt;UriResource&gt; resourceParts = uriInfo.getUriResourceParts();</span>
+<span class="nc" id="L68">    this.lastItem = resourceParts.get(resourceParts.size() - 1);</span>
+<span class="nc" id="L69">    this.page = requestContext.getPage();</span>
+<span class="nc" id="L70">  }</span>
+
+  @Override
+  public &lt;K extends Comparable&lt;K&gt;&gt; void retrieveData(final ODataRequest request, final ODataResponse response,
+      final ContentType responseFormat) throws ODataException {
+
+<span class="nc" id="L76">    final int handle = debugger.startRuntimeMeasurement(this, &quot;retrieveData&quot;);</span>
+<span class="nc" id="L77">    checkRequestSupported();</span>
+    // Create a JPQL Query and execute it
+<span class="nc" id="L79">    JPAJoinQuery query = null;</span>
+    try {
+<span class="nc" id="L81">      query = new JPAJoinQuery(odata, requestContext);</span>
+<span class="nc" id="L82">    } catch (final ODataException e) {</span>
+<span class="nc" id="L83">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L84">      throw new ODataJPAProcessorException(QUERY_PREPARATION_ERROR, HttpStatusCode.INTERNAL_SERVER_ERROR, e);</span>
+<span class="nc" id="L85">    }</span>
+
+<span class="nc" id="L87">    final JPAConvertibleResult result = query.execute();</span>
+    // Read Expand and Collection
+<span class="nc" id="L89">    final Optional&lt;JPAKeyBoundary&gt; keyBoundary = result.getKeyBoundary(requestContext, query.getNavigationInfo(), page);</span>
+<span class="nc" id="L90">    result.putChildren(readExpandEntities(request.getAllHeaders(), query.getNavigationInfo(), uriInfo, keyBoundary));</span>
+    // Convert tuple result into an OData Result
+<span class="nc" id="L92">    final int converterHandle = debugger.startRuntimeMeasurement(this, &quot;convertResult&quot;);</span>
+    EntityCollection entityCollection;
+    try {
+<span class="nc" id="L95">      entityCollection = result.asEntityCollection(new JPATupleChildConverter(sd, odata.createUriHelper(),</span>
+<span class="nc" id="L96">          serviceMetadata, requestContext)).get(ROOT_RESULT_KEY);</span>
+<span class="nc" id="L97">      debugger.stopRuntimeMeasurement(converterHandle);</span>
+<span class="nc" id="L98">    } catch (final ODataApplicationException e) {</span>
+<span class="nc" id="L99">      debugger.stopRuntimeMeasurement(converterHandle);</span>
+<span class="nc" id="L100">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L101">      throw new ODataJPAProcessorException(QUERY_RESULT_CONV_ERROR, HttpStatusCode.INTERNAL_SERVER_ERROR, e);</span>
+<span class="nc" id="L102">    }</span>
+    // Set Next Link
+<span class="nc" id="L104">    entityCollection.setNext(buildNextLink(page));</span>
+    // Count results if requested
+<span class="nc" id="L106">    final CountOption countOption = uriInfo.getCountOption();</span>
+<span class="nc bnc" id="L107" title="All 4 branches missed.">    if (countOption != null &amp;&amp; countOption.getValue())</span>
+<span class="nc" id="L108">      entityCollection.setCount(new JPAJoinQuery(odata, requestContext)</span>
+<span class="nc" id="L109">          .countResults().intValue());</span>
+
+    /*
+     * See part 1:
+     * -9.1.1 Response Code 200 OK: A request that does not create a resource returns 200 OK if it is completed
+     * successfully and the value of the resource is not null. In this case, the response body MUST contain the value of
+     * the resource specified in the request URL.
+     * - 9.2.1 Response Code 404 Not Found: 404 Not Found indicates that the resource specified by the request URL does
+     * not exist. The response body MAY provide additional information.
+     * - 11.2.1 Requesting Individual Entities:
+     * -- If no entity exists with the key values specified in the request URL, the service responds with 404 Not Found.
+     * - 11.2.3 Requesting Individual Properties:
+     * -- If the property is single-valued and has the null value, the service responds with 204 No Content.
+     * -- If the property is not available, for example due to permissions, the service responds with 404 Not Found.
+     * - 11.2.6 Requesting Related Entities:
+     * -- If the navigation property does not exist on the entity indicated by the request URL, the service returns 404
+     * Not Found.
+     * -- If the relationship terminates on a collection, the response MUST be the format-specific representation of the
+     * collection of related entities. If no entities are related, the response is the format-specific representation of
+     * an empty collection.
+     * -- If the relationship terminates on a single entity, the response MUST be the format-specific representation of
+     * the related single entity. If no entity is related, the service returns 204 No Content.
+     */
+<span class="nc bnc" id="L132" title="All 2 branches missed.">    if (hasNoContent(entityCollection.getEntities()))</span>
+<span class="nc" id="L133">      response.setStatusCode(HttpStatusCode.NO_CONTENT.getStatusCode());</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">    else if (doesNotExists(entityCollection.getEntities()))</span>
+<span class="nc" id="L135">      response.setStatusCode(HttpStatusCode.NOT_FOUND.getStatusCode());</span>
+    // 200 OK indicates that either a result was found or that the a Entity Collection query had no result
+<span class="nc bnc" id="L137" title="All 2 branches missed.">    else if (entityCollection.getEntities() != null) {</span>
+<span class="nc" id="L138">      final int serializerHandle = debugger.startRuntimeMeasurement(serializer, &quot;serialize&quot;);</span>
+<span class="nc" id="L139">      final SerializerResult serializerResult = serializer.serialize(request, entityCollection);</span>
+<span class="nc" id="L140">      debugger.stopRuntimeMeasurement(serializerHandle);</span>
+<span class="nc" id="L141">      createSuccessResponse(response, responseFormat, serializerResult);</span>
+<span class="nc" id="L142">    } else {</span>
+      // A request returns 204 No Content if the requested resource has the null value, or if the service applies a
+      // return=minimal preference. In this case, the response body MUST be empty.
+<span class="nc" id="L145">      response.setStatusCode(HttpStatusCode.NO_CONTENT.getStatusCode());</span>
+    }
+<span class="nc" id="L147">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L148">  }</span>
+
+  private void checkRequestSupported() throws ODataJPAProcessException {
+<span class="nc bnc" id="L151" title="All 2 branches missed.">    if (uriInfo.getApplyOption() != null)</span>
+<span class="nc" id="L152">      throw new ODataJPANotImplementedException(&quot;$apply&quot;);</span>
+<span class="nc" id="L153">  }</span>
+
+  private URI buildNextLink(final JPAODataPage page) throws ODataJPAProcessorException {
+<span class="nc bnc" id="L156" title="All 4 branches missed.">    if (page != null &amp;&amp; page.getSkipToken() != null) {</span>
+      try {
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (page.getSkipToken() instanceof String)</span>
+<span class="nc" id="L159">          return new URI(Util.determineBindingTarget(uriInfo.getUriResourceParts()).getName() + &quot;?&quot;</span>
+<span class="nc" id="L160">              + SystemQueryOptionKind.SKIPTOKEN.toString() + &quot;='&quot; + page.getSkipToken() + &quot;'&quot;);</span>
+        else
+<span class="nc" id="L162">          return new URI(Util.determineBindingTarget(uriInfo.getUriResourceParts()).getName() + &quot;?&quot;</span>
+<span class="nc" id="L163">              + SystemQueryOptionKind.SKIPTOKEN.toString() + &quot;=&quot; + page.getSkipToken().toString());</span>
+<span class="nc" id="L164">      } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L165">        throw new ODataJPAProcessorException(ODATA_MAXPAGESIZE_NOT_A_NUMBER, HttpStatusCode.INTERNAL_SERVER_ERROR, e);</span>
+      }
+    }
+<span class="nc" id="L168">    return null;</span>
+  }
+
+  private boolean complexHasNoContent(final List&lt;Entity&gt; entities) {
+    final String name;
+<span class="nc bnc" id="L173" title="All 2 branches missed.">    if (entities.isEmpty())</span>
+<span class="nc" id="L174">      return false;</span>
+<span class="nc" id="L175">    name = Util.determineStartNavigationPath(uriInfo.getUriResourceParts()).getProperty().getName();</span>
+<span class="nc" id="L176">    final Property property = entities.get(0).getProperty(name);</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">    if (property != null) {</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">      for (final Property p : ((ComplexValue) property.getValue()).getValue()) {</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">        if (p.getValue() != null) {</span>
+<span class="nc" id="L180">          return false;</span>
+        }
+<span class="nc" id="L182">      }</span>
+    }
+<span class="nc" id="L184">    return true;</span>
+  }
+
+  private boolean doesNotExists(final List&lt;Entity&gt; entities) throws ODataApplicationException {
+    // handle ../Organizations('xx')
+<span class="nc bnc" id="L189" title="All 2 branches missed.">    return (entities.isEmpty()</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">        &amp;&amp; ((lastItem.getKind() == UriResourceKind.primitiveProperty</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">            || lastItem.getKind() == UriResourceKind.complexProperty</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">            || lastItem.getKind() == UriResourceKind.entitySet</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">                &amp;&amp; !Util.determineKeyPredicates(lastItem).isEmpty())</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">            || lastItem.getKind() == UriResourceKind.singleton));</span>
+  }
+
+  private boolean hasNoContent(final List&lt;Entity&gt; entities) {
+
+<span class="nc bnc" id="L199" title="All 2 branches missed.">    if (lastItem.getKind() == UriResourceKind.primitiveProperty</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">        || lastItem.getKind() == UriResourceKind.navigationProperty</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">        || lastItem.getKind() == UriResourceKind.complexProperty) {</span>
+
+<span class="nc bnc" id="L203" title="All 2 branches missed.">      if (((UriResourcePartTyped) this.lastItem).isCollection()) {</span>
+        // Collections always return 200 no matter if type are empty or not
+<span class="nc" id="L205">        return false;</span>
+      }
+
+<span class="nc bnc" id="L208" title="All 2 branches missed.">      if (lastItem.getKind() == UriResourceKind.primitiveProperty) {</span>
+<span class="nc" id="L209">        return primitiveHasNoContent(entities);</span>
+      }
+<span class="nc bnc" id="L211" title="All 2 branches missed.">      if (lastItem.getKind() == UriResourceKind.complexProperty) {</span>
+<span class="nc" id="L212">        return complexHasNoContent(entities);</span>
+      }
+<span class="nc bnc" id="L214" title="All 2 branches missed.">      if (entities.isEmpty()) {</span>
+<span class="nc" id="L215">        return true;</span>
+      }
+    }
+<span class="nc" id="L218">    return false;</span>
+  }
+
+  private boolean primitiveHasNoContent(final List&lt;Entity&gt; entities) {
+    final String name;
+<span class="nc bnc" id="L223" title="All 2 branches missed.">    if (entities.isEmpty())</span>
+<span class="nc" id="L224">      return false;</span>
+<span class="nc" id="L225">    name = Util.determineStartNavigationPath(uriInfo.getUriResourceParts()).getProperty().getName();</span>
+<span class="nc" id="L226">    final Property property = entities.get(0).getProperty(name);</span>
+<span class="nc bnc" id="L227" title="All 4 branches missed.">    return (property != null &amp;&amp; property.getValue() == null);</span>
+  }
+
+  /**
+   * $expand is implemented as a recursively processing of all expands with a DB round trip per expand item.
+   * Alternatively also a &lt;i&gt;big&lt;/i&gt; join could be created. This would lead to a transport of redundant data, but has
+   * only one round trip. As of now it has not been measured under which conditions which solution has the better
+   * performance, but a big join has also the following draw back:
+   * &lt;ul&gt;
+   * &lt;li&gt;In case a multiple $expands are requested maybe on multiple levels
+   * including filtering and ordering the query becomes very complex which reduces the maintainability and comes with
+   * the risk that some databases are not able to handles those.&lt;/li&gt;
+   * &lt;li&gt;The number of returned columns becomes big, which may become a problem for some databases&lt;/li&gt;
+   * &lt;li&gt;This hard to create a big join for &lt;code&gt;$level=*&lt;/code&gt;&lt;/li&gt;
+   * &lt;li&gt;Server driven paging seems to be more complicated&lt;/li&gt;
+   * &lt;/ul&gt;
+   * and the goal is to implement a general solution, multiple round trips have been taken.
+   * &lt;p&gt;For a general overview see:
+   * &lt;a href=
+   * &quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part1-protocol/odata-v4.0-errata02-os-part1-protocol-complete.html#_Toc406398298&quot;
+   * &gt;OData Version 4.0 Part 1 - 11.2.4.2 System Query Option $expand&lt;/a&gt;&lt;p&gt;
+   *
+   * For a detailed description of the URI syntax see:
+   * &lt;a href=
+   * &quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part2-url-conventions/odata-v4.0-errata02-os-part2-url-conventions-complete.html#_Toc406398162&quot;
+   * &gt;OData Version 4.0 Part 2 - 5.1.2 System Query Option $expand&lt;/a&gt; boundary
+   * @param headers
+   * @param naviStartEdmEntitySet
+   * @param parentHops
+   * @param uriResourceInfo
+   * @param parentWhere
+   * @return
+   * @throws ODataException
+   */
+  private Map&lt;JPAAssociationPath, JPAExpandResult&gt; readExpandEntities(final Map&lt;String, List&lt;String&gt;&gt; headers,
+      final List&lt;JPANavigationPropertyInfo&gt; parentHops, final UriInfoResource uriResourceInfo,
+      final Optional&lt;JPAKeyBoundary&gt; keyBoundary) throws ODataException {
+
+<span class="nc" id="L265">    final int handle = debugger.startRuntimeMeasurement(this, &quot;readExpandEntities&quot;);</span>
+<span class="nc" id="L266">    final JPAExpandQueryFactory factory = new JPAExpandQueryFactory(odata, requestContext, cb);</span>
+<span class="nc" id="L267">    final Map&lt;JPAAssociationPath, JPAExpandResult&gt; allExpResults = new HashMap&lt;&gt;();</span>
+    // x/a?$expand=b/c($expand=d,e/f)&amp;$filter=...&amp;$top=3&amp;$orderBy=...
+    // For performance reasons the expand query should only return results for the results of the higher-level query.
+    // The solution for restrictions like a given key or a given filter condition, as it can be propagated to a
+    // sub-query.
+    // For $top and $skip things are more difficult as the Subquery does not support LIMIT and OFFSET, this is
+    // done on the TypedQuery created out of the CriteriaQuery. In addition not all databases support LIMIT within a
+    // sub-query used within EXISTS.
+    // Solution: Forward the highest and lowest key from the root and create a &quot;between&quot; those.
+
+<span class="nc" id="L277">    final List&lt;JPAExpandItemInfo&gt; itemInfoList = new JPAExpandItemInfoFactory()</span>
+<span class="nc" id="L278">        .buildExpandItemInfo(sd, uriResourceInfo, parentHops);</span>
+<span class="nc bnc" id="L279" title="All 2 branches missed.">    for (final JPAExpandItemInfo item : itemInfoList) {</span>
+<span class="nc" id="L280">      final JPAAbstractExpandQuery expandQuery = factory.createQuery(item, keyBoundary);</span>
+<span class="nc" id="L281">      final JPAExpandQueryResult expandResult = expandQuery.execute();</span>
+<span class="nc bnc" id="L282" title="All 2 branches missed.">      if (expandResult.getNoResults() &gt; 0)</span>
+        // Only go to the next hop if the current one has a result
+<span class="nc" id="L284">        expandResult.putChildren(readExpandEntities(headers, item.getHops(), item.getUriInfo(), keyBoundary));</span>
+<span class="nc" id="L285">      allExpResults.put(item.getExpandAssociation(), expandResult);</span>
+<span class="nc" id="L286">    }</span>
+
+    // process collection attributes
+<span class="nc" id="L289">    final List&lt;JPACollectionItemInfo&gt; collectionInfoList = new JPAExpandItemInfoFactory()</span>
+<span class="nc" id="L290">        .buildCollectionItemInfo(sd, uriResourceInfo, parentHops, requestContext.getGroupsProvider());</span>
+<span class="nc bnc" id="L291" title="All 2 branches missed.">    for (final JPACollectionItemInfo item : collectionInfoList) {</span>
+<span class="nc" id="L292">      final JPACollectionJoinQuery collectionQuery = new JPACollectionJoinQuery(odata, item,</span>
+<span class="nc" id="L293">          new JPAODataInternalRequestContext(item.getUriInfo(), requestContext, headers), keyBoundary);</span>
+<span class="nc" id="L294">      final JPAExpandResult expandResult = collectionQuery.execute();</span>
+<span class="nc" id="L295">      allExpResults.put(item.getExpandAssociation(), expandResult);</span>
+<span class="nc" id="L296">    }</span>
+<span class="nc" id="L297">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L298">    return allExpResults;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

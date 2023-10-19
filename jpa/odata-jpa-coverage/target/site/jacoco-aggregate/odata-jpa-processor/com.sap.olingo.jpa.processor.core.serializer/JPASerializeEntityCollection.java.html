@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPASerializeEntityCollection.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.serializer</a> &gt; <span class="el_source">JPASerializeEntityCollection.java</span></div><h1>JPASerializeEntityCollection.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.serializer;
+
+import java.net.URISyntaxException;
+
+import org.apache.olingo.commons.api.data.Annotatable;
+import org.apache.olingo.commons.api.data.ContextURL;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.edm.EdmBindingTarget;
+import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.serializer.EntityCollectionSerializerOptions;
+import org.apache.olingo.server.api.serializer.ODataSerializer;
+import org.apache.olingo.server.api.serializer.SerializerException;
+import org.apache.olingo.server.api.serializer.SerializerResult;
+import org.apache.olingo.server.api.uri.UriHelper;
+import org.apache.olingo.server.api.uri.UriInfo;
+
+import com.sap.olingo.jpa.processor.core.api.JPAODataSessionContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPASerializerException;
+import com.sap.olingo.jpa.processor.core.query.Util;
+
+final class JPASerializeEntityCollection implements JPAOperationSerializer {
+  private final ServiceMetadata serviceMetadata;
+  private final UriInfo uriInfo;
+  private final UriHelper uriHelper;
+  private final ODataSerializer serializer;
+  private final ContentType responseFormat;
+  private final JPAODataSessionContextAccess serviceContext;
+
+  JPASerializeEntityCollection(final ServiceMetadata serviceMetadata, final ODataSerializer serializer,
+      final UriHelper uriHelper, final UriInfo uriInfo, final ContentType responseFormat,
+<span class="nc" id="L36">      final JPAODataSessionContextAccess serviceContext) {</span>
+<span class="nc" id="L37">    this.uriInfo = uriInfo;</span>
+<span class="nc" id="L38">    this.serializer = serializer;</span>
+<span class="nc" id="L39">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L40">    this.uriHelper = uriHelper;</span>
+<span class="nc" id="L41">    this.responseFormat = responseFormat;</span>
+<span class="nc" id="L42">    this.serviceContext = serviceContext;</span>
+<span class="nc" id="L43">  }</span>
+
+  @Override
+  public SerializerResult serialize(final ODataRequest request, final EntityCollection result)
+      throws SerializerException, ODataJPASerializerException {
+
+<span class="nc" id="L49">    final EdmBindingTarget targetEdmBindingTarget = Util.determineBindingTarget(uriInfo.getUriResourceParts());</span>
+
+<span class="nc" id="L51">    final String selectList = uriHelper.buildContextURLSelectList(targetEdmBindingTarget.getEntityType(),</span>
+<span class="nc" id="L52">        uriInfo.getExpandOption(), uriInfo.getSelectOption());</span>
+
+    ContextURL contextUrl;
+    try {
+<span class="nc" id="L56">      contextUrl = ContextURL.with()</span>
+<span class="nc" id="L57">          .serviceRoot(buildServiceRoot(request, serviceContext))</span>
+<span class="nc" id="L58">          .entitySetOrSingletonOrType(targetEdmBindingTarget.getName())</span>
+<span class="nc" id="L59">          .selectList(selectList)</span>
+<span class="nc" id="L60">          .build();</span>
+<span class="nc" id="L61">    } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L62">      throw new ODataJPASerializerException(e, HttpStatusCode.BAD_REQUEST);</span>
+<span class="nc" id="L63">    }</span>
+
+<span class="nc" id="L65">    final String id = request.getRawBaseUri() + &quot;/&quot; + targetEdmBindingTarget.getEntityType().getName();</span>
+<span class="nc" id="L66">    final EntityCollectionSerializerOptions opts = EntityCollectionSerializerOptions.with()</span>
+<span class="nc" id="L67">        .contextURL(contextUrl)</span>
+<span class="nc" id="L68">        .id(id)</span>
+<span class="nc" id="L69">        .count(uriInfo.getCountOption())</span>
+<span class="nc" id="L70">        .select(uriInfo.getSelectOption())</span>
+<span class="nc" id="L71">        .expand(uriInfo.getExpandOption())</span>
+<span class="nc" id="L72">        .build();</span>
+
+<span class="nc" id="L74">    return serializer.entityCollection(this.serviceMetadata, targetEdmBindingTarget.getEntityType(), result, opts);</span>
+
+  }
+
+  @Override
+  public SerializerResult serialize(final Annotatable annotatable, final EdmType entityType, final ODataRequest request)
+      throws SerializerException, ODataJPASerializerException {
+
+<span class="nc" id="L82">    final EntityCollection result = (EntityCollection) annotatable;</span>
+<span class="nc" id="L83">    final String selectList = uriHelper.buildContextURLSelectList((EdmEntityType) entityType, uriInfo.getExpandOption(),</span>
+<span class="nc" id="L84">        uriInfo.getSelectOption());</span>
+
+    ContextURL contextUrl;
+    try {
+<span class="nc" id="L88">      contextUrl = ContextURL.with()</span>
+<span class="nc" id="L89">          .serviceRoot(buildServiceRoot(request, serviceContext))</span>
+<span class="nc" id="L90">          .asCollection()</span>
+<span class="nc" id="L91">          .type(entityType)</span>
+<span class="nc" id="L92">          .selectList(selectList)</span>
+<span class="nc" id="L93">          .build();</span>
+<span class="nc" id="L94">    } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L95">      throw new ODataJPASerializerException(e, HttpStatusCode.BAD_REQUEST);</span>
+<span class="nc" id="L96">    }</span>
+
+<span class="nc" id="L98">    final EntityCollectionSerializerOptions options = EntityCollectionSerializerOptions.with()</span>
+<span class="nc" id="L99">        .contextURL(contextUrl)</span>
+<span class="nc" id="L100">        .select(uriInfo.getSelectOption())</span>
+<span class="nc" id="L101">        .expand(uriInfo.getExpandOption())</span>
+<span class="nc" id="L102">        .build();</span>
+
+<span class="nc" id="L104">    return serializer.entityCollection(serviceMetadata, (EdmEntityType) entityType, result, options);</span>
+  }
+
+  @Override
+  public ContentType getContentType() {
+<span class="nc" id="L109">    return responseFormat;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

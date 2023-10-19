@@ -1,0 +1,1080 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateStructuredType.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateStructuredType.java</span></div><h1>IntermediateStructuredType.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.COMPLEX_PROPERTY_WRONG_PROTECTION_PATH;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.PROPERTY_REQUIRED_UNKNOWN;
+
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
+import java.lang.reflect.Member;
+import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+import javax.persistence.AssociationOverride;
+import javax.persistence.AssociationOverrides;
+import javax.persistence.AttributeOverride;
+import javax.persistence.AttributeOverrides;
+import javax.persistence.Column;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinColumns;
+import javax.persistence.OneToMany;
+import javax.persistence.Version;
+import javax.persistence.metamodel.Attribute;
+import javax.persistence.metamodel.Attribute.PersistentAttributeType;
+import javax.persistence.metamodel.IdentifiableType;
+import javax.persistence.metamodel.ManagedType;
+import javax.persistence.metamodel.MappedSuperclassType;
+import javax.persistence.metamodel.PluralAttribute;
+import javax.persistence.metamodel.SingularAttribute;
+import javax.persistence.metamodel.Type;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.provider.CsdlStructuralType;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmDescriptionAssociation;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmIgnore;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransient;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAProtectionInfo;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+abstract class IntermediateStructuredType&lt;T&gt; extends IntermediateModelElement implements JPAStructuredType {
+//
+<span class="nc" id="L63">  private static final Log LOGGER = LogFactory.getLog(IntermediateStructuredType.class);</span>
+  protected final Map&lt;String, IntermediateProperty&gt; declaredPropertiesList;
+  protected final Map&lt;String, IntermediateNavigationProperty&gt; declaredNaviPropertiesList;
+  protected final Map&lt;String, JPAPathImpl&gt; resolvedPathMap;
+  protected final Map&lt;String, JPAPath&gt; intermediatePathMap;
+  protected final Map&lt;String, JPAAssociationPathImpl&gt; resolvedAssociationPathMap;
+  protected final ManagedType&lt;T&gt; jpaManagedType;
+  protected final Optional&lt;MappedSuperclassType&lt;? super T&gt;&gt; mappedSuperclass;
+  protected final IntermediateSchema schema;
+  protected List&lt;JPAProtectionInfo&gt; protectedAttributes;
+  protected CsdlStructuralType edmStructuralType;
+  private Optional&lt;List&lt;IntermediateSimpleProperty&gt;&gt; streamProperty;
+
+  IntermediateStructuredType(final JPAEdmNameBuilder nameBuilder, final ManagedType&lt;T&gt; jpaManagedType,
+      final IntermediateSchema schema) {
+
+<span class="nc" id="L79">    super(nameBuilder, IntNameBuilder.buildStructuredTypeName(jpaManagedType.getJavaType()));</span>
+<span class="nc" id="L80">    this.declaredPropertiesList = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L81">    this.resolvedPathMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L82">    this.intermediatePathMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L83">    this.declaredNaviPropertiesList = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L84">    this.resolvedAssociationPathMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L85">    this.jpaManagedType = jpaManagedType;</span>
+<span class="nc" id="L86">    this.schema = schema;</span>
+<span class="nc" id="L87">    this.mappedSuperclass = determineMappedSuperclass(jpaManagedType);</span>
+<span class="nc" id="L88">    this.streamProperty = Optional.empty();</span>
+<span class="nc" id="L89">    determineIgnore();</span>
+<span class="nc" id="L90">  }</span>
+
+  public Map&lt;String, IntermediateProperty&gt; getDeclaredPropertiesList() {
+<span class="nc" id="L93">    return declaredPropertiesList;</span>
+  }
+
+  public Map&lt;String, IntermediateNavigationProperty&gt; getDeclaredNaviPropertiesList() {
+<span class="nc" id="L97">    return declaredNaviPropertiesList;</span>
+  }
+
+  @Override
+  public JPAAssociationAttribute getAssociation(final String internalName) throws ODataJPAModelException {
+<span class="nc bnc" id="L102" title="All 2 branches missed.">    for (final JPAAttribute attribute : this.getAssociations()) {</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">      if (attribute.getInternalName().equals(internalName))</span>
+<span class="nc" id="L104">        return (JPAAssociationAttribute) attribute;</span>
+<span class="nc" id="L105">    }</span>
+<span class="nc" id="L106">    return null;</span>
+  }
+
+  @Override
+  public JPAAssociationPath getAssociationPath(final String externalName) throws ODataJPAModelException {
+<span class="nc" id="L111">    lazyBuildCompleteAssociationPathMap();</span>
+<span class="nc" id="L112">    return resolvedAssociationPathMap.get(externalName);</span>
+  }
+
+  @Override
+  public List&lt;JPAAssociationPath&gt; getAssociationPathList() throws ODataJPAModelException {
+<span class="nc" id="L117">    lazyBuildCompleteAssociationPathMap();</span>
+<span class="nc" id="L118">    final List&lt;JPAAssociationPath&gt; associationList = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L120" title="All 2 branches missed.">    for (final Entry&lt;String, JPAAssociationPathImpl&gt; associationPat : resolvedAssociationPathMap.entrySet()) {</span>
+<span class="nc" id="L121">      associationList.add(associationPat.getValue());</span>
+<span class="nc" id="L122">    }</span>
+<span class="nc" id="L123">    return associationList;</span>
+  }
+
+  @Override
+  public Optional&lt;JPAAttribute&gt; getAttribute(final String internalName) throws ODataJPAModelException {
+<span class="nc bnc" id="L128" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L129">      lazyBuildEdmItem();</span>
+<span class="nc" id="L130">    Optional&lt;JPAAttribute&gt; result = Optional.ofNullable(declaredPropertiesList.get(internalName));</span>
+<span class="nc bnc" id="L131" title="All 4 branches missed.">    if (!result.isPresent() &amp;&amp; getBaseType() != null)</span>
+<span class="nc" id="L132">      result = getBaseType().getAttribute(internalName);</span>
+<span class="nc bnc" id="L133" title="All 4 branches missed.">    else if (result.isPresent() &amp;&amp; ((IntermediateModelElement) result.get()).ignore())</span>
+<span class="nc" id="L134">      return Optional.empty();</span>
+<span class="nc" id="L135">    return result;</span>
+  }
+
+  @Override
+  public Optional&lt;JPAAttribute&gt; getAttribute(final UriResourceProperty uriResourceItem) throws ODataJPAModelException {
+<span class="nc bnc" id="L140" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L141">      lazyBuildEdmItem();</span>
+<span class="nc" id="L142">    final String externalName = uriResourceItem.getProperty().getName();</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateProperty&gt; property : declaredPropertiesList.entrySet()) {</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">      if (property.getValue().getExternalName().equals(externalName))</span>
+<span class="nc" id="L145">        return Optional.of(property.getValue());</span>
+<span class="nc" id="L146">    }</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">    if (getBaseType() != null)</span>
+<span class="nc" id="L148">      return getBaseType().getAttribute(uriResourceItem);</span>
+<span class="nc" id="L149">    return Optional.empty();</span>
+  }
+
+  @Override
+  public List&lt;JPAAttribute&gt; getAttributes() throws ODataJPAModelException {
+<span class="nc bnc" id="L154" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L155">      lazyBuildEdmItem();</span>
+<span class="nc" id="L156">    final List&lt;JPAAttribute&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateProperty&gt; property : declaredPropertiesList.entrySet()) {</span>
+<span class="nc" id="L158">      final IntermediateProperty attribute = property.getValue();</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">      if (!attribute.ignore())</span>
+<span class="nc" id="L160">        result.add(attribute);</span>
+<span class="nc" id="L161">    }</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">    if (getBaseType() != null)</span>
+<span class="nc" id="L163">      result.addAll(getBaseType().getAttributes());</span>
+<span class="nc" id="L164">    return result;</span>
+  }
+
+  @Override
+  public List&lt;JPAPath&gt; getCollectionAttributesPath() throws ODataJPAModelException {
+<span class="nc" id="L169">    lazyBuildCompletePathMap();</span>
+<span class="nc" id="L170">    final List&lt;JPAPath&gt; pathList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">    for (final Entry&lt;String, JPAPathImpl&gt; path : resolvedPathMap.entrySet()) {</span>
+<span class="nc bnc" id="L172" title="All 4 branches missed.">      if (!path.getValue().ignore() &amp;&amp; path.getValue().getLeaf() instanceof JPACollectionAttribute)</span>
+<span class="nc" id="L173">        pathList.add(path.getValue());</span>
+<span class="nc" id="L174">    }</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">    for (final Entry&lt;String, JPAPath&gt; path : intermediatePathMap.entrySet()) {</span>
+<span class="nc bnc" id="L176" title="All 4 branches missed.">      if (!path.getValue().ignore() &amp;&amp; path.getValue().getLeaf() instanceof JPACollectionAttribute)</span>
+<span class="nc" id="L177">        pathList.add(path.getValue());</span>
+<span class="nc" id="L178">    }</span>
+<span class="nc" id="L179">    return pathList;</span>
+  }
+
+  @Override
+  public List&lt;JPAAssociationAttribute&gt; getDeclaredAssociations() throws ODataJPAModelException {
+<span class="nc" id="L184">    lazyBuildCompleteAssociationPathMap();</span>
+
+<span class="nc" id="L186">    final List&lt;JPAAssociationAttribute&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L187" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateNavigationProperty&gt; naviProperty : declaredNaviPropertiesList.entrySet())</span>
+<span class="nc" id="L188">      result.add(naviProperty.getValue());</span>
+<span class="nc" id="L189">    final IntermediateStructuredType&lt;? super T&gt; baseType = getBaseType();</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">    if (baseType != null)</span>
+<span class="nc" id="L191">      result.addAll(baseType.getDeclaredAssociations());</span>
+<span class="nc" id="L192">    return result;</span>
+  }
+
+  @Override
+  public Optional&lt;JPAAttribute&gt; getDeclaredAttribute(@Nonnull final String internalName) throws ODataJPAModelException {
+<span class="nc bnc" id="L197" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L198">      lazyBuildEdmItem();</span>
+<span class="nc" id="L199">    Optional&lt;JPAAttribute&gt; result = Optional.ofNullable(declaredPropertiesList.get(internalName));</span>
+<span class="nc bnc" id="L200" title="All 4 branches missed.">    if (!result.isPresent() &amp;&amp; getBaseType() != null)</span>
+<span class="nc" id="L201">      result = getBaseType().getDeclaredAttribute(internalName);</span>
+<span class="nc" id="L202">    return result;</span>
+  }
+
+  @Override
+  public List&lt;JPAAttribute&gt; getDeclaredAttributes() throws ODataJPAModelException {
+<span class="nc bnc" id="L207" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L208">      lazyBuildEdmItem();</span>
+<span class="nc" id="L209">    final List&lt;JPAAttribute&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateProperty&gt; property : declaredPropertiesList.entrySet()) {</span>
+<span class="nc" id="L211">      result.add(property.getValue());</span>
+<span class="nc" id="L212">    }</span>
+<span class="nc" id="L213">    final IntermediateStructuredType&lt;? super T&gt; baseType = getBaseType();</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">    if (baseType != null)</span>
+<span class="nc" id="L215">      result.addAll(baseType.getDeclaredAttributes());</span>
+<span class="nc" id="L216">    return result;</span>
+  }
+
+  @Override
+  public List&lt;JPACollectionAttribute&gt; getDeclaredCollectionAttributes() throws ODataJPAModelException {
+<span class="nc bnc" id="L221" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L222">      lazyBuildEdmItem();</span>
+<span class="nc" id="L223">    final List&lt;JPACollectionAttribute&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateProperty&gt; property : declaredPropertiesList.entrySet()) {</span>
+<span class="nc bnc" id="L225" title="All 2 branches missed.">      if (property.getValue().isCollection())</span>
+<span class="nc" id="L226">        result.add((JPACollectionAttribute) property.getValue());</span>
+<span class="nc" id="L227">    }</span>
+<span class="nc" id="L228">    final IntermediateStructuredType&lt;? super T&gt; baseType = getBaseType();</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">    if (baseType != null)</span>
+<span class="nc" id="L230">      result.addAll(baseType.getDeclaredCollectionAttributes());</span>
+<span class="nc" id="L231">    return result;</span>
+  }
+
+  @Override
+  public JPAPath getPath(final String externalName) throws ODataJPAModelException {
+<span class="nc" id="L236">    return getPath(externalName, true);</span>
+  }
+
+  @Override
+  public final JPAPath getPath(final String externalName, final boolean respectIgnore) throws ODataJPAModelException {
+<span class="nc" id="L241">    lazyBuildCompletePathMap();</span>
+<span class="nc" id="L242">    JPAPath targetPath = resolvedPathMap.get(externalName);</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">    if (targetPath == null)</span>
+<span class="nc" id="L244">      targetPath = intermediatePathMap.get(externalName);</span>
+<span class="nc bnc" id="L245" title="All 6 branches missed.">    if (targetPath == null || (targetPath.ignore() &amp;&amp; respectIgnore))</span>
+<span class="nc" id="L246">      return null;</span>
+<span class="nc" id="L247">    return targetPath;</span>
+  }
+
+  @Override
+  public List&lt;JPAPath&gt; getPathList() throws ODataJPAModelException {
+<span class="nc" id="L252">    lazyBuildCompletePathMap();</span>
+<span class="nc" id="L253">    final List&lt;JPAPath&gt; pathList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">    for (final Entry&lt;String, JPAPathImpl&gt; path : resolvedPathMap.entrySet()) {</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">      if (!path.getValue().ignore())</span>
+<span class="nc" id="L256">        pathList.add(path.getValue());</span>
+<span class="nc" id="L257">    }</span>
+<span class="nc" id="L258">    return pathList;</span>
+  }
+
+  @Override
+  public List&lt;JPAProtectionInfo&gt; getProtections() throws ODataJPAModelException {
+<span class="nc" id="L263">    lazyBuildCompleteProtectionList();</span>
+<span class="nc" id="L264">    return protectedAttributes;</span>
+  }
+
+  @Override
+  public Class&lt;?&gt; getTypeClass() {
+<span class="nc" id="L269">    return this.jpaManagedType.getJavaType();</span>
+  }
+
+  @Override
+  public boolean isAbstract() {
+<span class="nc" id="L274">    return false;</span>
+  }
+
+  /**
+   * The managed type (e.g. via jpaManagedType.getDeclaredAttributes()) does not provide transient field. Therefore they
+   * have to be simulated
+   * @throws ODataJPAModelException
+   */
+  protected void addTransientProperties() throws ODataJPAModelException {
+
+<span class="nc" id="L284">    addTransientOfManagedType(jpaManagedType.getJavaType().getDeclaredFields());</span>
+<span class="nc" id="L285">    addTransientOfManagedType(mappedSuperclass</span>
+<span class="nc" id="L286">        .map(ManagedType::getJavaType)</span>
+<span class="nc" id="L287">        .map(Class::getDeclaredFields)</span>
+<span class="nc" id="L288">        .orElse(new Field[] {}));</span>
+<span class="nc" id="L289">  }</span>
+
+  protected void buildNaviPropertyList() throws ODataJPAModelException {
+
+<span class="nc" id="L293">    final Set&lt;Attribute&lt;? super T, ?&gt;&gt; attributes = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L294">    attributes.addAll(jpaManagedType.getDeclaredAttributes());</span>
+<span class="nc" id="L295">    attributes.addAll(mappedSuperclass</span>
+<span class="nc" id="L296">        .map(ManagedType::getDeclaredAttributes)</span>
+<span class="nc" id="L297">        .orElse(Collections.emptySet()));</span>
+
+<span class="nc bnc" id="L299" title="All 2 branches missed.">    for (final Attribute&lt;?, ?&gt; jpaAttribute : attributes) {</span>
+<span class="nc" id="L300">      final PersistentAttributeType attributeType = jpaAttribute.getPersistentAttributeType();</span>
+
+<span class="nc bnc" id="L302" title="All 3 branches missed.">      switch (attributeType) {</span>
+        case BASIC:
+        case EMBEDDED:
+        case ELEMENT_COLLECTION:
+<span class="nc" id="L306">          break;</span>
+        case ONE_TO_MANY:
+        case ONE_TO_ONE:
+        case MANY_TO_MANY:
+        case MANY_TO_ONE:
+<span class="nc bnc" id="L311" title="All 2 branches missed.">          if (jpaAttribute.getJavaMember() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L312">            final EdmDescriptionAssociation jpaDescription = ((AnnotatedElement) jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L313">                .getAnnotation(EdmDescriptionAssociation.class);</span>
+<span class="nc bnc" id="L314" title="All 2 branches missed.">            if (jpaDescription != null) {</span>
+<span class="nc" id="L315">              final IntermediateDescriptionProperty descProperty = new IntermediateDescriptionProperty(nameBuilder,</span>
+                  jpaAttribute, this, schema);
+<span class="nc" id="L317">              declaredPropertiesList.put(descProperty.internalName, descProperty);</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">              if (LOGGER.isTraceEnabled())</span>
+<span class="nc" id="L319">                LOGGER.trace(getExternalName() + &quot;: found description property '&quot; + descProperty.getExternalName()</span>
+                    + &quot;'&quot;);
+              break;
+            }
+          }
+<span class="nc" id="L324">          final IntermediateNavigationProperty navProp = new IntermediateNavigationProperty(nameBuilder, this,</span>
+              jpaAttribute, schema);
+<span class="nc" id="L326">          declaredNaviPropertiesList.put(navProp.internalName, navProp);</span>
+<span class="nc bnc" id="L327" title="All 2 branches missed.">          if (LOGGER.isTraceEnabled())</span>
+<span class="nc" id="L328">            LOGGER.trace(getExternalName() + &quot;: found navigation property '&quot; + navProp.getExternalName() + &quot;'&quot;);</span>
+          break;
+        default:
+<span class="nc" id="L331">          throw new ODataJPAModelException(ODataJPAModelException.MessageKeys.NOT_SUPPORTED_ATTRIBUTE_TYPE,</span>
+<span class="nc" id="L332">              attributeType.name());</span>
+      }
+<span class="nc" id="L334">    }</span>
+<span class="nc" id="L335">  }</span>
+
+  protected void buildPropertyList() throws ODataJPAModelException {
+
+<span class="nc" id="L339">    final Set&lt;Attribute&lt;? super T, ?&gt;&gt; attributes = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L340">    attributes.addAll(jpaManagedType.getDeclaredAttributes());</span>
+<span class="nc" id="L341">    attributes.addAll(mappedSuperclass</span>
+<span class="nc" id="L342">        .map(ManagedType::getDeclaredAttributes)</span>
+<span class="nc" id="L343">        .orElse(Collections.emptySet()));</span>
+<span class="nc bnc" id="L344" title="All 2 branches missed.">    for (final Attribute&lt;?, ?&gt; jpaAttribute : attributes) {</span>
+<span class="nc" id="L345">      final PersistentAttributeType attributeType = jpaAttribute.getPersistentAttributeType();</span>
+
+<span class="nc bnc" id="L347" title="All 4 branches missed.">      switch (attributeType) {</span>
+        case BASIC:
+        case EMBEDDED:
+<span class="nc bnc" id="L350" title="All 2 branches missed.">          if (jpaAttribute instanceof SingularAttribute&lt;?, ?&gt;</span>
+<span class="nc bnc" id="L351" title="All 4 branches missed.">              &amp;&amp; ((SingularAttribute&lt;?, ?&gt;) jpaAttribute).isId()</span>
+              &amp;&amp; attributeType == PersistentAttributeType.EMBEDDED) {
+<span class="nc" id="L353">            final IntermediateSimpleProperty property = new IntermediateEmbeddedIdProperty(nameBuilder, jpaAttribute,</span>
+                schema);
+<span class="nc" id="L355">            declaredPropertiesList.put(property.internalName, property);</span>
+<span class="nc" id="L356">          } else {</span>
+<span class="nc" id="L357">            final IntermediateSimpleProperty property = new IntermediateSimpleProperty(nameBuilder, jpaAttribute,</span>
+                schema);
+<span class="nc" id="L359">            declaredPropertiesList.put(property.internalName, property);</span>
+          }
+<span class="nc" id="L361">          break;</span>
+        case ELEMENT_COLLECTION:
+<span class="nc" id="L363">          final IntermediateCollectionProperty property = new IntermediateCollectionProperty(nameBuilder,</span>
+              (PluralAttribute&lt;?, ?, ?&gt;) jpaAttribute, schema, this);
+<span class="nc" id="L365">          declaredPropertiesList.put(property.internalName, property);</span>
+<span class="nc" id="L366">          break;</span>
+        case ONE_TO_MANY:
+        case ONE_TO_ONE:
+        case MANY_TO_MANY:
+        case MANY_TO_ONE:
+<span class="nc" id="L371">          break;</span>
+        default:
+          // Attribute Type '%1$s' as of now not supported
+<span class="nc" id="L374">          throw new ODataJPAModelException(ODataJPAModelException.MessageKeys.NOT_SUPPORTED_ATTRIBUTE_TYPE,</span>
+<span class="nc" id="L375">              attributeType.name());</span>
+      }
+<span class="nc" id="L377">    }</span>
+<span class="nc" id="L378">  }</span>
+
+  /**
+   * @throws ODataJPAModelException
+   *
+   */
+  protected void checkPropertyConsistency() throws ODataJPAModelException {
+
+<span class="nc bnc" id="L386" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateProperty&gt; property : declaredPropertiesList.entrySet()) {</span>
+<span class="nc bnc" id="L387" title="All 2 branches missed.">      if (property.getValue().isTransient()) {</span>
+<span class="nc bnc" id="L388" title="All 2 branches missed.">        for (final String internalPath : property.getValue().getRequiredProperties()) {</span>
+<span class="nc" id="L389">          validateInternalPath(property.getKey(), internalPath);</span>
+<span class="nc" id="L390">        }</span>
+      }
+<span class="nc" id="L392">    }</span>
+<span class="nc" id="L393">  }</span>
+
+  protected FullQualifiedName determineBaseType() throws ODataJPAModelException {
+
+<span class="nc" id="L397">    final IntermediateStructuredType&lt;? super T&gt; baseEntity = getBaseType();</span>
+<span class="nc bnc" id="L398" title="All 6 branches missed.">    if (baseEntity != null &amp;&amp; !baseEntity.isAbstract() &amp;&amp; isAbstract())</span>
+      // Abstract entity type '%1$s' must not inherit from a non-abstract entity type '%2$s'
+<span class="nc" id="L400">      throw new ODataJPAModelException(ODataJPAModelException.MessageKeys.INHERITANCE_NOT_ALLOWED,</span>
+          this.internalName, baseEntity.internalName);
+<span class="nc bnc" id="L402" title="All 2 branches missed.">    return baseEntity != null ? buildFQN(baseEntity.getExternalName()) : null;</span>
+  }
+
+  protected boolean determineHasStream() throws ODataJPAModelException {
+<span class="nc bnc" id="L406" title="All 2 branches missed.">    return getStreamProperty() != null;</span>
+  }
+
+  protected void determineIgnore() {
+<span class="nc" id="L410">    final EdmIgnore jpaIgnore = this.jpaManagedType.getJavaType().getAnnotation(EdmIgnore.class);</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">    if (jpaIgnore != null) {</span>
+<span class="nc" id="L412">      this.setIgnore(true);</span>
+    }
+<span class="nc" id="L414">  }</span>
+
+  /**
+   * Determines if the structured type has a super type, that will be part of OData metadata. That is the method will
+   * return null in case the entity has a MappedSuperclass.
+   * @return Determined super type or null
+   */
+  protected IntermediateStructuredType&lt;? super T&gt; getBaseType() {
+<span class="nc" id="L422">    final Class&lt;?&gt; baseType = jpaManagedType.getJavaType().getSuperclass();</span>
+<span class="nc bnc" id="L423" title="All 2 branches missed.">    if (baseType != null) {</span>
+      @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L425">      final IntermediateStructuredType&lt;? super T&gt; baseEntity = (IntermediateStructuredType&lt;? super T&gt;) schema</span>
+<span class="nc" id="L426">          .getEntityType(baseType);</span>
+<span class="nc bnc" id="L427" title="All 2 branches missed.">      if (baseEntity != null)</span>
+<span class="nc" id="L428">        return baseEntity;</span>
+    }
+<span class="nc" id="L430">    return null;</span>
+  }
+
+  public IntermediateSimpleProperty getStreamProperty() {
+
+<span class="nc" id="L435">    if (streamProperty</span>
+<span class="nc" id="L436">        .orElseGet(this::determineStreamProperties)</span>
+<span class="nc bnc" id="L437" title="All 2 branches missed.">        .isEmpty())</span>
+<span class="nc" id="L438">      return null;</span>
+<span class="nc" id="L439">    return streamProperty.get().get(0);</span>
+  }
+
+  private List&lt;IntermediateSimpleProperty&gt; determineStreamProperties() {
+<span class="nc" id="L443">    final List&lt;IntermediateSimpleProperty&gt; result = new ArrayList&lt;&gt;(1);</span>
+<span class="nc bnc" id="L444" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateProperty&gt; property : declaredPropertiesList.entrySet()) {</span>
+      // Edm.Stream, or a type definition whose underlying type is Edm.Stream, cannot be used in collections or for
+      // non-binding parameters to functions or actions.
+<span class="nc bnc" id="L447" title="All 2 branches missed.">      if (property.getValue().isStream()) {</span>
+<span class="nc" id="L448">        result.add((IntermediateSimpleProperty) property.getValue());</span>
+      }
+<span class="nc" id="L450">    }</span>
+<span class="nc bnc" id="L451" title="All 2 branches missed.">    if (this.getBaseType() != null) {</span>
+<span class="nc" id="L452">      final IntermediateSimpleProperty superResult = getBaseType().getStreamProperty();</span>
+<span class="nc bnc" id="L453" title="All 2 branches missed.">      if (superResult != null) {</span>
+<span class="nc" id="L454">        result.add(superResult);</span>
+      }
+    }
+<span class="nc bnc" id="L457" title="All 2 branches missed.">    if (result.size() &gt; 1)</span>
+      // Only one stream property per entity is allowed. For %1$s %2$s have been found
+<span class="nc" id="L459">      throw new RuntimeException(</span>
+          new ODataJPAModelException(ODataJPAModelException.MessageKeys.TO_MANY_STREAMS, internalName, Integer
+<span class="nc" id="L461">              .toString(result.size())));</span>
+<span class="nc" id="L462">    streamProperty = Optional.of(result);</span>
+<span class="nc" id="L463">    return result;</span>
+  }
+
+  List&lt;JPAAttribute&gt; getAssociations() throws ODataJPAModelException {
+<span class="nc bnc" id="L467" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L468">      lazyBuildEdmItem();</span>
+<span class="nc" id="L469">    final List&lt;JPAAttribute&gt; jpaAttributes = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L470" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateNavigationProperty&gt; naviProperty : declaredNaviPropertiesList.entrySet()) {</span>
+<span class="nc" id="L471">      final IntermediateNavigationProperty property = naviProperty.getValue();</span>
+<span class="nc bnc" id="L472" title="All 2 branches missed.">      if (!property.ignore())</span>
+<span class="nc" id="L473">        jpaAttributes.add(property);</span>
+<span class="nc" id="L474">    }</span>
+<span class="nc" id="L475">    final IntermediateStructuredType&lt;? super T&gt; baseType = getBaseType();</span>
+<span class="nc bnc" id="L476" title="All 2 branches missed.">    if (baseType != null)</span>
+<span class="nc" id="L477">      jpaAttributes.addAll(baseType.getAssociations());</span>
+<span class="nc" id="L478">    return jpaAttributes;</span>
+  }
+
+  JPAAssociationAttribute getCorrespondingAssociation(final IntermediateStructuredType&lt;?&gt; sourceType,
+      final String sourceRelationshipName) throws ODataJPAModelException {
+<span class="nc" id="L483">    final Attribute&lt;?, ?&gt; jpaAttribute = findCorrespondingAssociation(sourceType, sourceRelationshipName);</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">    return jpaAttribute == null ? null : new IntermediateNavigationProperty(nameBuilder, sourceType, jpaAttribute,</span>
+        schema);
+  }
+
+  @Override
+  abstract CsdlStructuralType getEdmItem() throws ODataJPAModelException;
+
+  Map&lt;String, JPAPath&gt; getIntermediatePathMap() throws ODataJPAModelException {
+<span class="nc" id="L492">    lazyBuildCompletePathMap();</span>
+<span class="nc" id="L493">    return intermediatePathMap;</span>
+  }
+
+  List&lt;IntermediateJoinColumn&gt; getJoinColumns(final String relationshipName) {
+
+<span class="nc" id="L498">    final List&lt;IntermediateJoinColumn&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L499">    final Attribute&lt;?, ?&gt; jpaAttribute = jpaManagedType.getAttribute(relationshipName);</span>
+
+<span class="nc bnc" id="L501" title="All 2 branches missed.">    if (jpaAttribute != null) {</span>
+<span class="nc" id="L502">      final AnnotatedElement annotatedElement = (AnnotatedElement) jpaAttribute.getJavaMember();</span>
+<span class="nc" id="L503">      final JoinColumns columns = annotatedElement.getAnnotation(JoinColumns.class);</span>
+<span class="nc bnc" id="L504" title="All 2 branches missed.">      if (columns != null) {</span>
+<span class="nc bnc" id="L505" title="All 2 branches missed.">        for (final JoinColumn column : columns.value()) {</span>
+<span class="nc" id="L506">          result.add(new IntermediateJoinColumn(column));</span>
+        }
+      } else {
+<span class="nc" id="L509">        final JoinColumn column = annotatedElement.getAnnotation(JoinColumn.class);</span>
+<span class="nc bnc" id="L510" title="All 2 branches missed.">        if (column != null) {</span>
+<span class="nc" id="L511">          result.add(new IntermediateJoinColumn(column));</span>
+        }
+      }
+    }
+<span class="nc" id="L515">    return result;</span>
+  }
+
+  /**
+   * Method follows resolved semantic
+   *
+   * @param dbFieldName
+   * @return
+   * @throws ODataJPAModelException
+   */
+  JPAPath getPathByDBField(final String dbFieldName) throws ODataJPAModelException {
+<span class="nc" id="L526">    lazyBuildCompletePathMap();</span>
+
+<span class="nc bnc" id="L528" title="All 2 branches missed.">    for (final Entry&lt;String, JPAPathImpl&gt; path : resolvedPathMap.entrySet()) {</span>
+<span class="nc bnc" id="L529" title="All 2 branches missed.">      if (path.getValue().getDBFieldName().equals(dbFieldName))</span>
+<span class="nc" id="L530">        return path.getValue();</span>
+<span class="nc" id="L531">    }</span>
+<span class="nc" id="L532">    return null;</span>
+  }
+
+  /**
+   * Returns an property regardless if it should be ignored or not
+   * @param internalName
+   * @return
+   * @throws ODataJPAModelException
+   */
+  IntermediateProperty getProperty(final String internalName) throws ODataJPAModelException {
+<span class="nc bnc" id="L542" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L543">      lazyBuildEdmItem();</span>
+<span class="nc" id="L544">    IntermediateProperty result = declaredPropertiesList.get(internalName);</span>
+<span class="nc bnc" id="L545" title="All 4 branches missed.">    if (result == null &amp;&amp; getBaseType() != null)</span>
+<span class="nc" id="L546">      result = getBaseType().getProperty(internalName);</span>
+<span class="nc" id="L547">    return result;</span>
+  }
+
+  /**
+   * Gets a property by its database field name.&lt;p&gt;
+   * The resolution respects embedded types as well as super types
+   * @param dbFieldName
+   * @return
+   * @throws ODataJPAModelException
+   */
+  IntermediateModelElement getPropertyByDBField(final String dbFieldName) throws ODataJPAModelException {
+<span class="nc" id="L558">    buildPropertyList();</span>
+<span class="nc bnc" id="L559" title="All 2 branches missed.">    for (final IntermediateProperty property : declaredPropertiesList.values()) {</span>
+<span class="nc bnc" id="L560" title="All 2 branches missed.">      if (property.isComplex()) {</span>
+<span class="nc" id="L561">        final IntermediateProperty embeddedProperty =</span>
+            (IntermediateProperty) ((IntermediateStructuredType&lt;?&gt;) property
+<span class="nc" id="L563">                .getStructuredType()).getPropertyByDBField(dbFieldName);</span>
+<span class="nc bnc" id="L564" title="All 4 branches missed.">        if (embeddedProperty != null &amp;&amp; embeddedProperty.getDBFieldName().equals(dbFieldName))</span>
+<span class="nc" id="L565">          return embeddedProperty;</span>
+<span class="nc bnc" id="L566" title="All 2 branches missed.">      } else if (property.getDBFieldName().equals(dbFieldName)) {</span>
+<span class="nc" id="L567">        return property;</span>
+      }
+<span class="nc" id="L569">    }</span>
+<span class="nc bnc" id="L570" title="All 2 branches missed.">    if (getBaseType() != null)</span>
+<span class="nc" id="L571">      return getBaseType().getPropertyByDBField(dbFieldName);</span>
+<span class="nc" id="L572">    return null;</span>
+  }
+
+  Map&lt;String, JPAPathImpl&gt; getResolvedPathMap() throws ODataJPAModelException {
+<span class="nc" id="L576">    lazyBuildCompletePathMap();</span>
+<span class="nc" id="L577">    return resolvedPathMap;</span>
+  }
+
+  private void addTransientOfManagedType(final Field[] fields) throws ODataJPAModelException {
+<span class="nc bnc" id="L581" title="All 2 branches missed.">    for (final Field jpaAttribute : fields) {</span>
+<span class="nc" id="L582">      final EdmTransient t = jpaAttribute.getAnnotation(EdmTransient.class);</span>
+<span class="nc bnc" id="L583" title="All 2 branches missed.">      if (t != null) {</span>
+<span class="nc" id="L584">        IntermediateProperty property = null;</span>
+<span class="nc bnc" id="L585" title="All 2 branches missed.">        if (Collection.class.isAssignableFrom(jpaAttribute.getType())) {</span>
+<span class="nc" id="L586">          property = new IntermediateCollectionProperty(nameBuilder,</span>
+              new TransientPluralAttribute&lt;&gt;(jpaManagedType, jpaAttribute, schema), schema, this);
+        } else {
+<span class="nc" id="L589">          property = new IntermediateSimpleProperty(nameBuilder,</span>
+              new TransientSingularAttribute&lt;&gt;(jpaManagedType, jpaAttribute), schema);
+        }
+<span class="nc" id="L592">        declaredPropertiesList.put(property.internalName, property);</span>
+      }
+    }
+<span class="nc" id="L595">  }</span>
+
+  private String buildPath(final String pathRoot, final String pathElement) {
+<span class="nc" id="L598">    return pathRoot + JPAPath.PATH_SEPARATOR + pathElement;</span>
+  }
+
+  private String determineDBFieldName(final IntermediateModelElement property, final JPAPath jpaPath) {
+<span class="nc" id="L602">    final Attribute&lt;?, ?&gt; jpaAttribute = jpaManagedType.getAttribute(property.getInternalName());</span>
+<span class="nc bnc" id="L603" title="All 2 branches missed.">    if (jpaAttribute.getJavaMember() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L604">      final AnnotatedElement a = (AnnotatedElement) jpaAttribute.getJavaMember();</span>
+<span class="nc" id="L605">      final AttributeOverrides overwriteList = a.getAnnotation(AttributeOverrides.class);</span>
+<span class="nc bnc" id="L606" title="All 2 branches missed.">      if (overwriteList != null) {</span>
+<span class="nc bnc" id="L607" title="All 2 branches missed.">        for (final AttributeOverride overwrite : overwriteList.value()) {</span>
+<span class="nc bnc" id="L608" title="All 4 branches missed.">          if (overwrite.name().equals(jpaPath.getLeaf().getInternalName()) || overwrite.name().toLowerCase().equals(jpaPath.getAlias().replaceAll(&quot;/&quot;, &quot;.&quot;).toLowerCase()))</span>
+<span class="nc" id="L609">            return overwrite.column().name();</span>
+        }
+      } else {
+<span class="nc" id="L612">        final AttributeOverride overwrite = a.getAnnotation(AttributeOverride.class);</span>
+<span class="nc bnc" id="L613" title="All 4 branches missed.">        if (overwrite != null &amp;&amp; (overwrite.name().equals(jpaPath.getLeaf().getInternalName()) ||</span>
+<span class="nc bnc" id="L614" title="All 2 branches missed.">                overwrite.name().toLowerCase().equals(jpaPath.getAlias().replaceAll(&quot;/&quot;, &quot;.&quot;).toLowerCase()))) {</span>
+<span class="nc" id="L615">          return overwrite.column().name();</span>
+        }
+      }
+    }
+<span class="nc" id="L619">    return jpaPath.getDBFieldName();</span>
+  }
+
+  private List&lt;IntermediateJoinColumn&gt; determineJoinColumns(final IntermediateModelElement property,
+      final JPAAssociationPath association) {
+<span class="nc" id="L624">    final List&lt;IntermediateJoinColumn&gt; result = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L626">    final Attribute&lt;?, ?&gt; jpaAttribute = jpaManagedType.getAttribute(property.getInternalName());</span>
+<span class="nc bnc" id="L627" title="All 2 branches missed.">    if (jpaAttribute.getJavaMember() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L628">      final AnnotatedElement a = (AnnotatedElement) jpaAttribute.getJavaMember();</span>
+<span class="nc bnc" id="L629" title="All 2 branches missed.">      if (jpaAttribute.getJavaMember() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L630">        final AssociationOverrides overwriteList = a.getAnnotation(AssociationOverrides.class);</span>
+<span class="nc bnc" id="L631" title="All 2 branches missed.">        if (overwriteList != null) {</span>
+<span class="nc bnc" id="L632" title="All 2 branches missed.">          for (final AssociationOverride overwrite : overwriteList.value()) {</span>
+<span class="nc bnc" id="L633" title="All 2 branches missed.">            if (overwrite.name().equals(association.getLeaf().getInternalName())) {</span>
+<span class="nc bnc" id="L634" title="All 2 branches missed.">              for (final JoinColumn column : overwrite.joinColumns())</span>
+<span class="nc" id="L635">                result.add(new IntermediateJoinColumn(column));</span>
+            }
+          }
+        } else {
+<span class="nc" id="L639">          final AssociationOverride overwrite = a.getAnnotation(AssociationOverride.class);</span>
+<span class="nc bnc" id="L640" title="All 4 branches missed.">          if (overwrite != null &amp;&amp; overwrite.name().equals(association.getLeaf().getInternalName())) {</span>
+<span class="nc bnc" id="L641" title="All 2 branches missed.">            for (final JoinColumn column : overwrite.joinColumns())</span>
+<span class="nc" id="L642">              result.add(new IntermediateJoinColumn(column));</span>
+          }
+        }
+      }
+    }
+<span class="nc" id="L647">    return result;</span>
+
+  }
+
+  private Optional&lt;MappedSuperclassType&lt;? super T&gt;&gt; determineMappedSuperclass(final ManagedType&lt;T&gt; managedType) {
+<span class="nc bnc" id="L652" title="All 2 branches missed.">    if (managedType instanceof IdentifiableType&lt;?&gt;) {</span>
+<span class="nc" id="L653">      final IdentifiableType&lt;? super T&gt; superType = ((IdentifiableType&lt;T&gt;) managedType).getSupertype();</span>
+<span class="nc bnc" id="L654" title="All 2 branches missed.">      if (superType instanceof MappedSuperclassType&lt;?&gt;)</span>
+<span class="nc" id="L655">        return Optional.of((MappedSuperclassType&lt;? super T&gt;) superType);</span>
+    }
+<span class="nc" id="L657">    return Optional.empty();</span>
+  }
+
+  private Class&lt;?&gt; determineTargetClass(final Attribute&lt;?, ?&gt; jpaAttribute) {
+    Class&lt;?&gt; targetClass;
+<span class="nc bnc" id="L662" title="All 2 branches missed.">    if (jpaAttribute.isCollection()) {</span>
+<span class="nc" id="L663">      targetClass = ((PluralAttribute&lt;?, ?, ?&gt;) jpaAttribute).getElementType().getJavaType();</span>
+    } else {
+<span class="nc" id="L665">      targetClass = jpaAttribute.getJavaType();</span>
+    }
+<span class="nc" id="L667">    return targetClass;</span>
+  }
+
+  private Attribute&lt;?, ?&gt; findCorrespondingAssociation(final IntermediateStructuredType&lt;?&gt; sourceType,
+      final String sourceRelationshipName) {
+
+<span class="nc bnc" id="L673" title="All 2 branches missed.">    for (final Attribute&lt;?, ?&gt; jpaAttribute : jpaManagedType.getAttributes()) {</span>
+<span class="nc bnc" id="L674" title="All 2 branches missed.">      if (jpaAttribute.getPersistentAttributeType() != null</span>
+<span class="nc bnc" id="L675" title="All 2 branches missed.">          &amp;&amp; jpaAttribute.getJavaMember() instanceof AnnotatedElement</span>
+<span class="nc bnc" id="L676" title="All 2 branches missed.">          &amp;&amp; !sourceRelationshipName.equals(IntNameBuilder.buildAssociationName(jpaAttribute))) {</span>
+<span class="nc" id="L677">        final Class&lt;?&gt; targetClass = determineTargetClass(jpaAttribute);</span>
+<span class="nc bnc" id="L678" title="All 2 branches missed.">        if (targetClass.equals(sourceType.getTypeClass())) {</span>
+<span class="nc" id="L679">          final OneToMany cardinalityOtM = ((AnnotatedElement) jpaAttribute.getJavaMember()).getAnnotation(</span>
+              OneToMany.class);
+<span class="nc bnc" id="L681" title="All 4 branches missed.">          if (cardinalityOtM != null &amp;&amp; cardinalityOtM.mappedBy() != null</span>
+<span class="nc bnc" id="L682" title="All 2 branches missed.">              &amp;&amp; cardinalityOtM.mappedBy().equals(sourceRelationshipName))</span>
+<span class="nc" id="L683">            return jpaAttribute;</span>
+        }
+      }
+<span class="nc" id="L686">    }</span>
+
+<span class="nc" id="L688">    return null;</span>
+  }
+
+  private void lazyBuildCompleteAssociationPathMap() throws ODataJPAModelException {
+    JPAAssociationPathImpl associationPath;
+<span class="nc" id="L693">    lazyBuildCompletePathMap();</span>
+    // TODO check if ignore has to be handled
+<span class="nc bnc" id="L695" title="All 2 branches missed.">    if (resolvedAssociationPathMap.size() == 0) {</span>
+<span class="nc bnc" id="L696" title="All 2 branches missed.">      for (final JPAAttribute association : getAssociations()) {</span>
+<span class="nc" id="L697">        associationPath = new JPAAssociationPathImpl((IntermediateNavigationProperty) association, this);</span>
+<span class="nc" id="L698">        resolvedAssociationPathMap.put(associationPath.getAlias(), associationPath);</span>
+<span class="nc" id="L699">      }</span>
+
+<span class="nc bnc" id="L701" title="All 2 branches missed.">      for (final Entry&lt;String, JPAPath&gt; entity : this.intermediatePathMap.entrySet()) {</span>
+<span class="nc" id="L702">        final JPAPath attributePath = entity.getValue();</span>
+<span class="nc bnc" id="L703" title="All 2 branches missed.">        if (attributePath.getPath().size() == 1) {</span>
+          // Only direct attributes
+<span class="nc" id="L705">          final IntermediateProperty property = (IntermediateProperty) attributePath.getLeaf();</span>
+<span class="nc" id="L706">          final IntermediateStructuredType&lt;?&gt; is = (IntermediateStructuredType&lt;?&gt;) property.getStructuredType();</span>
+<span class="nc bnc" id="L707" title="All 2 branches missed.">          for (final JPAAssociationPath association : is.getAssociationPathList()) {</span>
+<span class="nc" id="L708">            associationPath = new JPAAssociationPathImpl(association, this, determineJoinColumns(property, association),</span>
+                property);
+<span class="nc" id="L710">            resolvedAssociationPathMap.put(associationPath.getAlias(), associationPath);</span>
+<span class="nc" id="L711">          }</span>
+        }
+<span class="nc" id="L713">      }</span>
+    }
+<span class="nc" id="L715">  }</span>
+
+  private void lazyBuildCompletePathMap() throws ODataJPAModelException {
+    ArrayList&lt;JPAElement&gt; pathList;
+<span class="nc bnc" id="L719" title="All 2 branches missed.">    if (edmStructuralType == null)</span>
+<span class="nc" id="L720">      lazyBuildEdmItem();</span>
+<span class="nc bnc" id="L721" title="All 2 branches missed.">    if (resolvedPathMap.size() == 0) {</span>
+<span class="nc bnc" id="L722" title="All 2 branches missed.">      for (final Entry&lt;String, IntermediateProperty&gt; propertyEntity : declaredPropertiesList.entrySet()) {</span>
+<span class="nc" id="L723">        final IntermediateProperty property = propertyEntity.getValue();</span>
+<span class="nc bnc" id="L724" title="All 2 branches missed.">        if (property.isComplex()) {</span>
+<span class="nc" id="L725">          intermediatePathMap.put(property.getExternalName(),</span>
+<span class="nc" id="L726">              new JPAPathImpl(property.getExternalName(), null, property));</span>
+<span class="nc" id="L727">          final Map&lt;String, JPAPath&gt; intermediatePath = ((IntermediateStructuredType&lt;?&gt;) property</span>
+<span class="nc" id="L728">              .getStructuredType()).getIntermediatePathMap();</span>
+<span class="nc bnc" id="L729" title="All 2 branches missed.">          for (final Entry&lt;String, JPAPath&gt; path : intermediatePath.entrySet()) {</span>
+<span class="nc" id="L730">            pathList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L731" title="All 2 branches missed.">            if (path.getValue().getLeaf() instanceof IntermediateCollectionProperty) {</span>
+<span class="nc bnc" id="L732" title="All 2 branches missed.">              if (path.getValue().getPath().size() &gt; 1)</span>
+<span class="nc" id="L733">                pathList.addAll(path.getValue().getPath().subList(0, path.getValue().getPath().size() - 1));</span>
+<span class="nc" id="L734">              pathList.add(new IntermediateCollectionProperty((IntermediateCollectionProperty) path.getValue()</span>
+<span class="nc" id="L735">                  .getLeaf(), this, property));</span>
+            } else {
+<span class="nc" id="L737">              pathList.addAll(path.getValue().getPath());</span>
+            }
+<span class="nc" id="L739">            pathList.add(0, property);</span>
+<span class="nc" id="L740">            final JPAPath newPath = new JPAPathImpl(buildPath(property.getExternalName(), path.getKey()), null,</span>
+                pathList);
+<span class="nc" id="L742">            intermediatePathMap.put(newPath.getAlias(), newPath);</span>
+<span class="nc" id="L743">          }</span>
+
+<span class="nc" id="L745">          final Map&lt;String, JPAPathImpl&gt; resolvedPath = ((IntermediateStructuredType&lt;?&gt;) property</span>
+<span class="nc" id="L746">              .getStructuredType()).getResolvedPathMap();</span>
+
+<span class="nc bnc" id="L748" title="All 2 branches missed.">          for (final Entry&lt;String, JPAPathImpl&gt; path : resolvedPath.entrySet()) {</span>
+<span class="nc" id="L749">            pathList = new ArrayList&lt;&gt;(path.getValue().getPath());</span>
+<span class="nc" id="L750">            pathList.add(0, property);</span>
+            JPAPathImpl newPath;
+<span class="nc bnc" id="L752" title="All 2 branches missed.">            if (property.isKey()) {</span>
+<span class="nc" id="L753">              newPath = new JPAPathImpl(path.getKey(), determineDBFieldName(property, resolvedPath.get(path.getKey())),</span>
+                  pathList);
+            } else {
+
+<span class="nc" id="L757">              newPath = new JPAPathImpl(buildPath(property.getExternalName(), path.getKey()),</span>
+<span class="nc" id="L758">                  determineDBFieldName(property, path.getValue()), rebuildPathList(pathList));</span>
+            }
+<span class="nc" id="L760">            resolvedPathMap.put(newPath.getAlias(), newPath);</span>
+
+<span class="nc" id="L762">          }</span>
+<span class="nc" id="L763">        } else {</span>
+<span class="nc" id="L764">          resolvedPathMap.put(property.getExternalName(), new JPAPathImpl(property.getExternalName(), property</span>
+<span class="nc" id="L765">              .getDBFieldName(), property));</span>
+        }
+<span class="nc" id="L767">      }</span>
+<span class="nc" id="L768">      final IntermediateStructuredType&lt;? super T&gt; baseType = getBaseType();</span>
+<span class="nc bnc" id="L769" title="All 2 branches missed.">      if (baseType != null) {</span>
+<span class="nc" id="L770">        resolvedPathMap.putAll(baseType.getResolvedPathMap());</span>
+<span class="nc" id="L771">        intermediatePathMap.putAll(baseType.getIntermediatePathMap());</span>
+      }
+    }
+<span class="nc" id="L774">  }</span>
+
+  private void lazyBuildCompleteProtectionList() throws ODataJPAModelException {
+<span class="nc bnc" id="L777" title="All 2 branches missed.">    if (protectedAttributes == null) {</span>
+<span class="nc bnc" id="L778" title="All 2 branches missed.">      if (edmStructuralType == null)</span>
+<span class="nc" id="L779">        lazyBuildEdmItem();</span>
+<span class="nc" id="L780">      this.protectedAttributes = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L781" title="All 2 branches missed.">      for (final JPAAttribute attribute : getDeclaredAttributes()) {</span>
+<span class="nc bnc" id="L782" title="All 2 branches missed.">        if (attribute.hasProtection()) {</span>
+<span class="nc bnc" id="L783" title="All 2 branches missed.">          if (attribute.isComplex()) {</span>
+<span class="nc bnc" id="L784" title="All 2 branches missed.">            for (final String claimName : attribute.getProtectionClaimNames()) {</span>
+<span class="nc bnc" id="L785" title="All 2 branches missed.">              for (final String pathName : attribute.getProtectionPath(claimName)) {</span>
+<span class="nc" id="L786">                final JPAPath path = this.getPath(pathName, false);</span>
+<span class="nc bnc" id="L787" title="All 2 branches missed.">                if (path == null) // Annotation EdmProtectedBy found at '%2$s' of '%1$s', but the given 'path' '%3$s'...</span>
+<span class="nc" id="L788">                  throw new ODataJPAModelException(COMPLEX_PROPERTY_WRONG_PROTECTION_PATH, attribute.getInternalName(),</span>
+<span class="nc" id="L789">                      this.getTypeClass().getSimpleName(), pathName);</span>
+<span class="nc" id="L790">                protectedAttributes.add(new ProtectionInfo(path, claimName, attribute));</span>
+<span class="nc" id="L791">              }</span>
+<span class="nc" id="L792">            }</span>
+          } else {
+<span class="nc bnc" id="L794" title="All 2 branches missed.">            for (final String claimName : attribute.getProtectionClaimNames()) {</span>
+<span class="nc" id="L795">              protectedAttributes.add(new ProtectionInfo(this.getPath(attribute.getExternalName(), false), claimName,</span>
+                  attribute));
+<span class="nc" id="L797">            }</span>
+          }
+<span class="nc bnc" id="L799" title="All 2 branches missed.">        } else if (attribute.isComplex()) { // Protection at attribute overrides protection within complex</span>
+<span class="nc bnc" id="L800" title="All 2 branches missed.">          for (final JPAProtectionInfo info : attribute.getStructuredType().getProtections()) {</span>
+            // Copy and extend path
+<span class="nc" id="L802">            final String pathName = attribute.getExternalName() + JPAPath.PATH_SEPARATOR + info.getPath().getAlias();</span>
+<span class="nc" id="L803">            final JPAPath path = this.getPath(pathName, false);</span>
+<span class="nc" id="L804">            protectedAttributes.add(new ProtectionInfo(path, info));</span>
+<span class="nc" id="L805">          }</span>
+        }
+<span class="nc" id="L807">      }</span>
+    }
+<span class="nc" id="L809">  }</span>
+
+  private List&lt;JPAElement&gt; rebuildPathList(final List&lt;JPAElement&gt; pathList) throws ODataJPAModelException {
+
+<span class="nc" id="L813">    final StringBuilder path = new StringBuilder();</span>
+<span class="nc bnc" id="L814" title="All 2 branches missed.">    for (int i = 0; i &lt; pathList.size() - 1; i++) {</span>
+<span class="nc" id="L815">      path.append(pathList.get(i).getExternalName());</span>
+<span class="nc" id="L816">      path.append(JPAPath.PATH_SEPARATOR);</span>
+    }
+<span class="nc" id="L818">    path.deleteCharAt(path.length() - 1);</span>
+<span class="nc" id="L819">    final JPAPath parentPath = intermediatePathMap.get(path.toString());</span>
+<span class="nc bnc" id="L820" title="All 2 branches missed.">    if (parentPath == null)</span>
+<span class="nc" id="L821">      return pathList;</span>
+    else {
+<span class="nc" id="L823">      final List&lt;JPAElement&gt; pathElements = new ArrayList&lt;&gt;(parentPath.getPath());</span>
+<span class="nc" id="L824">      JPAElement leaf = pathList.get(pathList.size() - 1);</span>
+<span class="nc bnc" id="L825" title="All 2 branches missed.">      if (leaf instanceof IntermediateCollectionProperty</span>
+<span class="nc bnc" id="L826" title="All 2 branches missed.">          &amp;&amp; pathList.size() &gt; 1</span>
+<span class="nc bnc" id="L827" title="All 2 branches missed.">          &amp;&amp; ((IntermediateCollectionProperty) leaf).getSourceType() != this)</span>
+<span class="nc" id="L828">        leaf = new IntermediateCollectionProperty((IntermediateCollectionProperty) leaf, this,</span>
+<span class="nc" id="L829">            (IntermediateProperty) pathList.get(0)); // pathList.size() - 2</span>
+<span class="nc" id="L830">      pathElements.add(leaf);</span>
+<span class="nc" id="L831">      return pathElements;</span>
+    }
+  }
+
+  private void validateInternalPath(final String propertyName, final String internalPath)
+      throws ODataJPAModelException {
+
+<span class="nc" id="L838">    IntermediateStructuredType&lt;?&gt; hop = this;</span>
+<span class="nc bnc" id="L839" title="All 2 branches missed.">    for (final String pathPart : internalPath.split(JPAPath.PATH_SEPARATOR)) {</span>
+<span class="nc" id="L840">      final JPAAttribute required = hop.getAttribute(pathPart).orElseThrow(</span>
+          // The transient attribute '%1$s' of class '%2$s' requires '%3$s', which is not known
+<span class="nc" id="L842">          () -&gt; new ODataJPAModelException(PROPERTY_REQUIRED_UNKNOWN, propertyName, getInternalName(), internalName));</span>
+<span class="nc bnc" id="L843" title="All 2 branches missed.">      if (required.isComplex())</span>
+<span class="nc" id="L844">        hop = (IntermediateStructuredType&lt;?&gt;) required.getStructuredType();</span>
+    }
+<span class="nc" id="L846">  }</span>
+
+  protected abstract static class TransientAttribute&lt;X, Y&gt; implements Attribute&lt;X, Y&gt; {
+    protected final ManagedType&lt;X&gt; parent;
+    protected final Field attribute;
+
+    TransientAttribute(final ManagedType&lt;X&gt; parent, final Field attribute) {
+<span class="nc" id="L853">      super();</span>
+<span class="nc" id="L854">      this.parent = parent;</span>
+<span class="nc" id="L855">      this.attribute = attribute;</span>
+<span class="nc" id="L856">    }</span>
+
+    @Override
+    public ManagedType&lt;X&gt; getDeclaringType() {
+<span class="nc" id="L860">      return parent;</span>
+    }
+
+    @Override
+    public Member getJavaMember() {
+<span class="nc" id="L865">      return attribute;</span>
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Override
+    public Class&lt;Y&gt; getJavaType() {
+<span class="nc" id="L871">      return (Class&lt;Y&gt;) attribute.getType();</span>
+    }
+
+    @Override
+    public String getName() {
+<span class="nc" id="L876">      return attribute.getName();</span>
+    }
+
+    @Override
+    public boolean isAssociation() {
+<span class="nc" id="L881">      return false;</span>
+    }
+  }
+
+  protected static class TransientPluralAttribute&lt;X, Y, Z&gt; extends TransientAttribute&lt;X, Y&gt;
+      implements PluralAttribute&lt;X, Y, Z&gt; {
+
+    private final TransientRowType&lt;?&gt; type;
+
+    /**
+     * @param parent
+     * @param attribute
+     */
+    TransientPluralAttribute(final ManagedType&lt;X&gt; parent, final Field attribute, final IntermediateSchema schema) {
+<span class="nc" id="L895">      super(parent, attribute);</span>
+<span class="nc" id="L896">      this.type = new TransientRowType&lt;&gt;(attribute, schema);</span>
+<span class="nc" id="L897">    }</span>
+
+    @Override
+    public Class&lt;Z&gt; getBindableJavaType() {
+<span class="nc" id="L901">      return null;</span>
+    }
+
+    @Override
+    public BindableType getBindableType() {
+<span class="nc" id="L906">      return null;</span>
+    }
+
+    @Override
+    public CollectionType getCollectionType() {
+<span class="nc bnc" id="L911" title="All 2 branches missed.">      if (Map.class.isAssignableFrom(attribute.getType()))</span>
+<span class="nc" id="L912">        return CollectionType.MAP;</span>
+<span class="nc bnc" id="L913" title="All 2 branches missed.">      if (Set.class.isAssignableFrom(attribute.getType()))</span>
+<span class="nc" id="L914">        return CollectionType.SET;</span>
+<span class="nc bnc" id="L915" title="All 2 branches missed.">      if (List.class.isAssignableFrom(attribute.getType()))</span>
+<span class="nc" id="L916">        return CollectionType.LIST;</span>
+<span class="nc" id="L917">      return CollectionType.COLLECTION;</span>
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Override
+    public Type&lt;Z&gt; getElementType() {
+<span class="nc" id="L923">      return (Type&lt;Z&gt;) type;</span>
+    }
+
+    @Override
+    public PersistentAttributeType getPersistentAttributeType() {
+<span class="nc" id="L928">      return PersistentAttributeType.ELEMENT_COLLECTION;</span>
+    }
+
+    @Override
+    public boolean isCollection() {
+<span class="nc" id="L933">      return true;</span>
+    }
+  }
+
+  protected static class TransientRowType&lt;Z&gt; implements Type&lt;Z&gt; {
+
+    private final Class&lt;?&gt; rowType;
+    private final PersistenceType persistenceType;
+
+    /**
+     * @param attribute
+     */
+<span class="nc" id="L945">    public TransientRowType(final Field attribute, final IntermediateSchema schema) {</span>
+<span class="nc bnc" id="L946" title="All 2 branches missed.">      if (attribute.getGenericType() instanceof ParameterizedType) {</span>
+<span class="nc" id="L947">        final java.lang.reflect.Type[] attributes = ((ParameterizedType) attribute.getGenericType())</span>
+<span class="nc" id="L948">            .getActualTypeArguments();</span>
+<span class="nc" id="L949">        this.rowType = (Class&lt;?&gt;) attributes[attributes.length - 1];</span>
+<span class="nc" id="L950">      } else {</span>
+<span class="nc" id="L951">        this.rowType = attribute.getType();</span>
+      }
+<span class="nc" id="L953">      this.persistenceType = determinePersistanceType(schema);</span>
+
+<span class="nc" id="L955">    }</span>
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Override
+    public Class&lt;Z&gt; getJavaType() {
+<span class="nc" id="L960">      return (Class&lt;Z&gt;) rowType;</span>
+    }
+
+    @Override
+    public PersistenceType getPersistenceType() {
+<span class="nc" id="L965">      return persistenceType;</span>
+    }
+
+    /**
+     * @param schema
+     * @return
+     */
+    private PersistenceType determinePersistanceType(final IntermediateSchema schema) {
+<span class="nc bnc" id="L973" title="All 2 branches missed.">      return schema.getStructuredType(rowType) == null ? PersistenceType.BASIC : PersistenceType.EMBEDDABLE;</span>
+    }
+
+  }
+
+  protected static class TransientSingularAttribute&lt;X, Y&gt; extends TransientAttribute&lt;X, Y&gt;
+      implements SingularAttribute&lt;X, Y&gt; {
+
+    TransientSingularAttribute(final ManagedType&lt;X&gt; parent, final Field attribute) {
+<span class="nc" id="L982">      super(parent, attribute);</span>
+<span class="nc" id="L983">    }</span>
+
+    @Override
+    public Class&lt;Y&gt; getBindableJavaType() {
+<span class="nc" id="L987">      return null;</span>
+    }
+
+    @Override
+    public BindableType getBindableType() {
+<span class="nc" id="L992">      return null;</span>
+    }
+
+    @Override
+    public PersistentAttributeType getPersistentAttributeType() {
+<span class="nc" id="L997">      return PersistentAttributeType.BASIC;</span>
+    }
+
+    @Override
+    public Type&lt;Y&gt; getType() {
+<span class="nc" id="L1002">      return null;</span>
+    }
+
+    @Override
+    public boolean isCollection() {
+<span class="nc" id="L1007">      return false;</span>
+    }
+
+    @Override
+    public boolean isId() {
+<span class="nc" id="L1012">      final Id id = this.attribute.getAnnotation(Id.class);</span>
+<span class="nc bnc" id="L1013" title="All 2 branches missed.">      return id != null;</span>
+    }
+
+    @Override
+    public boolean isOptional() {
+<span class="nc" id="L1018">      final Column column = this.attribute.getAnnotation(Column.class);</span>
+<span class="nc bnc" id="L1019" title="All 4 branches missed.">      return column == null || column.nullable();</span>
+    }
+
+    @Override
+    public boolean isVersion() {
+<span class="nc" id="L1024">      final Version version = this.attribute.getAnnotation(Version.class);</span>
+<span class="nc bnc" id="L1025" title="All 2 branches missed.">      return version != null;</span>
+    }
+  }
+
+  private static class ProtectionInfo implements JPAProtectionInfo {
+    private final JPAPath pathToAttribute;
+    private final String claimName;
+    private final boolean wildcardSupported;
+
+    /**
+     * Copy with a new path. This can be used for nested structured types
+     * @param path
+     * @param info
+     */
+<span class="nc" id="L1039">    public ProtectionInfo(final JPAPath path, final JPAProtectionInfo info) {</span>
+<span class="nc" id="L1040">      this.pathToAttribute = path;</span>
+<span class="nc" id="L1041">      this.claimName = info.getClaimName();</span>
+<span class="nc" id="L1042">      this.wildcardSupported = info.supportsWildcards();</span>
+<span class="nc" id="L1043">    }</span>
+
+<span class="nc" id="L1045">    public ProtectionInfo(final JPAPath path, final String claimName, final JPAAttribute attribute) {</span>
+<span class="nc" id="L1046">      this.pathToAttribute = path;</span>
+<span class="nc" id="L1047">      this.claimName = claimName;</span>
+<span class="nc" id="L1048">      this.wildcardSupported = ((IntermediateProperty) attribute).protectionWithWildcard(claimName, path.getLeaf()</span>
+<span class="nc" id="L1049">          .getType());</span>
+
+<span class="nc" id="L1051">    }</span>
+
+    @Override
+    public JPAAttribute getAttribute() {
+<span class="nc" id="L1055">      return pathToAttribute.getLeaf();</span>
+    }
+
+    @Override
+    public String getClaimName() {
+<span class="nc" id="L1060">      return claimName;</span>
+    }
+
+    @Override
+    public JPAPath getPath() {
+<span class="nc" id="L1065">      return pathToAttribute;</span>
+    }
+
+    @Override
+    public boolean supportsWildcards() {
+<span class="nc" id="L1070">      return wildcardSupported;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L1075">      return &quot;ProtectionInfo [pathToAttribute=&quot; + pathToAttribute.getAlias() + &quot;, claimName=&quot; + claimName</span>
+          + &quot;, wildcardSupported=&quot; + wildcardSupported + &quot;]&quot;;
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAExpandQueryResult.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPAExpandQueryResult.java</span></div><h1>JPAExpandQueryResult.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.persistence.Tuple;
+
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.queryoption.SelectItem;
+import org.apache.olingo.server.api.uri.queryoption.SelectOption;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAODataPage;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.converter.JPAExpandResult;
+import com.sap.olingo.jpa.processor.core.converter.JPATupleChildConverter;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+
+/**
+ * Builds a hierarchy of expand results. One instance contains on the one hand of the result itself, a map which has the
+ * join columns values of the parent as its key and on the other hand a map that point the results of the next expand.
+ * The join columns are concatenated in the order they are stored in the corresponding Association Path.
+ * @author Oliver Grande
+ *
+ */
+public final class JPAExpandQueryResult implements JPAExpandResult, JPAConvertibleResult {
+  private static final Map&lt;String, List&lt;Tuple&gt;&gt; EMPTY_RESULT;
+  private final Map&lt;JPAAssociationPath, JPAExpandResult&gt; childrenResult;
+  private final Map&lt;String, List&lt;Tuple&gt;&gt; jpaResult;
+  private Map&lt;String, EntityCollection&gt; odataResult;
+  private final Map&lt;String, Long&gt; counts;
+  private final JPAEntityType jpaEntityType;
+  private final Collection&lt;JPAPath&gt; requestedSelection;
+
+  static {
+<span class="nc" id="L51">    EMPTY_RESULT = new HashMap&lt;&gt;(1);</span>
+<span class="nc" id="L52">    putEmptyResult();</span>
+<span class="nc" id="L53">  }</span>
+
+  /**
+   * Add an empty list as result for root to the EMPTY_RESULT. This is needed, as the conversion eats up the database
+   * result.
+   * @see JPATupleChildConverter
+   * @return
+   */
+  private static Map&lt;String, List&lt;Tuple&gt;&gt; putEmptyResult() {
+<span class="nc" id="L62">    EMPTY_RESULT.put(ROOT_RESULT_KEY, Collections.emptyList());</span>
+<span class="nc" id="L63">    return EMPTY_RESULT;</span>
+  }
+
+  public JPAExpandQueryResult(final JPAEntityType jpaEntityType, final Collection&lt;JPAPath&gt; selectionPath) {
+<span class="nc" id="L67">    this(putEmptyResult(), Collections.emptyMap(), jpaEntityType, selectionPath);</span>
+<span class="nc" id="L68">  }</span>
+
+  public JPAExpandQueryResult(final Map&lt;String, List&lt;Tuple&gt;&gt; result, final Map&lt;String, Long&gt; counts,
+<span class="nc" id="L71">      @Nonnull final JPAEntityType jpaEntityType, final Collection&lt;JPAPath&gt; selectionPath) {</span>
+
+<span class="nc" id="L73">    Objects.requireNonNull(jpaEntityType);</span>
+<span class="nc" id="L74">    childrenResult = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L75">    this.jpaResult = result;</span>
+<span class="nc" id="L76">    this.counts = counts;</span>
+<span class="nc" id="L77">    this.jpaEntityType = jpaEntityType;</span>
+<span class="nc" id="L78">    this.requestedSelection = selectionPath;</span>
+<span class="nc" id="L79">  }</span>
+
+  @Override
+  public Map&lt;String, EntityCollection&gt; asEntityCollection(final JPATupleChildConverter converter)
+      throws ODataApplicationException {
+
+<span class="nc" id="L85">    convert(new JPATupleChildConverter(converter));</span>
+<span class="nc" id="L86">    return odataResult;</span>
+  }
+
+  @Override
+  public void convert(final JPATupleChildConverter converter) throws ODataApplicationException {
+<span class="nc bnc" id="L91" title="All 2 branches missed.">    if (odataResult == null) {</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">      for (final Entry&lt;JPAAssociationPath, JPAExpandResult&gt; childResult : childrenResult.entrySet()) {</span>
+<span class="nc" id="L93">        childResult.getValue().convert(converter);</span>
+<span class="nc" id="L94">      }</span>
+<span class="nc" id="L95">      odataResult = converter.getResult(this, requestedSelection);</span>
+    }
+<span class="nc" id="L97">  }</span>
+
+  @Override
+  public JPAExpandResult getChild(final JPAAssociationPath associationPath) {
+<span class="nc" id="L101">    return childrenResult.get(associationPath);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see org.apache.org.jpa.processor.core.converter.JPAExpandResult#getChildren()
+   */
+  @Override
+  public Map&lt;JPAAssociationPath, JPAExpandResult&gt; getChildren() {
+<span class="nc" id="L111">    return childrenResult;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see org.apache.org.jpa.processor.core.converter.JPAExpandResult#getCount()
+   */
+  @Override
+  public Long getCount(final String key) {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">    return counts != null ? counts.get(key) : null;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see org.apache.org.jpa.processor.core.converter.JPAExpandResult#getEntityType()
+   */
+  @Override
+  public JPAEntityType getEntityType() {
+<span class="nc" id="L131">    return jpaEntityType;</span>
+  }
+
+  public long getNoResults() {
+<span class="nc" id="L135">    return jpaResult.size();</span>
+  }
+
+  public long getNoResultsDeep() {
+<span class="nc" id="L139">    long count = 0;</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">    for (final Entry&lt;String, List&lt;Tuple&gt;&gt; result : jpaResult.entrySet()) {</span>
+<span class="nc" id="L141">      count += result.getValue().size();</span>
+<span class="nc" id="L142">    }</span>
+<span class="nc" id="L143">    return count;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see org.apache.org.jpa.processor.core.converter.JPAExpandResult#getResult(java.lang.String)
+   */
+  @Override
+  public List&lt;Tuple&gt; getResult(final String key) {
+<span class="nc" id="L153">    return jpaResult.get(key);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see org.apache.org.jpa.processor.core.converter.JPAExpandResult#hasCount()
+   */
+  @Override
+  public boolean hasCount() {
+<span class="nc bnc" id="L163" title="All 2 branches missed.">    return counts != null;</span>
+  }
+
+  @Override
+  public void putChildren(final Map&lt;JPAAssociationPath, JPAExpandResult&gt; childResults)
+      throws ODataApplicationException {
+
+<span class="nc bnc" id="L170" title="All 2 branches missed.">    for (final JPAAssociationPath child : childResults.keySet()) {</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">      if (childrenResult.get(child) != null)</span>
+<span class="nc" id="L172">        throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_RESULT_EXPAND_ERROR,</span>
+            HttpStatusCode.INTERNAL_SERVER_ERROR);
+<span class="nc" id="L174">    }</span>
+<span class="nc" id="L175">    childrenResult.putAll(childResults);</span>
+<span class="nc" id="L176">  }</span>
+
+  @Override
+  public Map&lt;String, List&lt;Tuple&gt;&gt; getResults() {
+<span class="nc" id="L180">    return jpaResult;</span>
+  }
+
+  /**
+   * no key --&gt; empty collection
+   * @param key
+   * @return
+   */
+  @Override
+  public EntityCollection getEntityCollection(final String key) {
+<span class="nc bnc" id="L190" title="All 2 branches missed.">    return odataResult.containsKey(key) ? odataResult.get(key) : new EntityCollection();</span>
+  }
+
+  @Override
+  public Optional&lt;JPAKeyBoundary&gt; getKeyBoundary(final JPAODataRequestContextAccess requestContext,
+      final List&lt;JPANavigationPropertyInfo&gt; hops, final JPAODataPage page) throws ODataJPAProcessException {
+    try {
+<span class="nc bnc" id="L197" title="All 2 branches missed.">      if (!jpaResult.get(ROOT_RESULT_KEY).isEmpty()</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">          &amp;&amp; (requestContext.getUriInfo().getExpandOption() != null</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">              || collectionPropertyRequested(requestContext))</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">          &amp;&amp; ((requestContext.getUriInfo().getTopOption() != null</span>
+<span class="nc bnc" id="L201" title="All 4 branches missed.">              || requestContext.getUriInfo().getSkipOption() != null)</span>
+<span class="nc bnc" id="L202" title="All 4 branches missed.">              || (page != null &amp;&amp; (page.getSkip() != 0 || page.getTop() != Integer.MAX_VALUE)))) {</span>
+<span class="nc" id="L203">        final JPAKeyPair boundary = new JPAKeyPair(jpaEntityType.getKey());</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        for (final Tuple tuple : jpaResult.get(ROOT_RESULT_KEY)) {</span>
+          @SuppressWarnings(&quot;rawtypes&quot;)
+<span class="nc" id="L206">          final Map&lt;JPAAttribute, Comparable&gt; key = createKey(tuple);</span>
+<span class="nc" id="L207">          boundary.setValue(key);</span>
+<span class="nc" id="L208">        }</span>
+<span class="nc" id="L209">        return Optional.of(new JPAKeyBoundary(hops.size(), boundary));</span>
+      }
+<span class="nc" id="L211">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L212">      throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L213">    }</span>
+<span class="nc" id="L214">    return JPAConvertibleResult.super.getKeyBoundary(requestContext, hops, page);</span>
+  }
+
+  private boolean collectionPropertyRequested(final JPAODataRequestContextAccess requestContext)
+      throws ODataJPAModelException {
+<span class="nc bnc" id="L219" title="All 2 branches missed.">    if (!jpaEntityType.getCollectionAttributesPath().isEmpty()) {</span>
+<span class="nc" id="L220">      final SelectOption selectOptions = requestContext.getUriInfo().getSelectOption();</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">      if (SelectOptionUtil.selectAll(selectOptions)) {</span>
+<span class="nc" id="L222">        return true;</span>
+      } else {
+<span class="nc bnc" id="L224" title="All 2 branches missed.">        for (final SelectItem item : selectOptions.getSelectItems()) {</span>
+<span class="nc" id="L225">          final String pathItem = item.getResourcePath().getUriResourceParts().stream().map(path -&gt; (path</span>
+<span class="nc" id="L226">              .getSegmentValue())).collect(Collectors.joining(JPAPath.PATH_SEPARATOR));</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">          if (this.jpaEntityType.getCollectionAttribute(pathItem) != null) {</span>
+<span class="nc" id="L228">            return true;</span>
+          }
+<span class="nc" id="L230">        }</span>
+      }
+    }
+<span class="nc" id="L233">    return false;</span>
+  }
+
+  @SuppressWarnings(&quot;rawtypes&quot;)
+  private Map&lt;JPAAttribute, Comparable&gt; createKey(final Tuple tuple) throws ODataJPAModelException {
+<span class="nc" id="L238">    final Map&lt;JPAAttribute, Comparable&gt; keyMap = new HashMap&lt;&gt;(jpaEntityType.getKey().size());</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">    for (final JPAAttribute key : jpaEntityType.getKey()) {</span>
+<span class="nc" id="L240">      keyMap.put(key, (Comparable) tuple.get(key.getExternalName()));</span>
+<span class="nc" id="L241">    }</span>
+<span class="nc" id="L242">    return keyMap;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPASerializerFactory.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.serializer</a> &gt; <span class="el_source">JPASerializerFactory.java</span></div><h1>JPASerializerFactory.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.serializer;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.serializer.ODataSerializer;
+import org.apache.olingo.server.api.serializer.SerializerException;
+import org.apache.olingo.server.api.uri.UriHelper;
+import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.UriResourcePartTyped;
+
+import com.sap.olingo.jpa.processor.core.api.JPAODataSessionContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPASerializerException;
+
+public final class JPASerializerFactory {
+  private final ServiceMetadata serviceMetadata;
+  private final OData odata;
+  private final UriHelper uriHelper;
+  private final JPAODataSessionContextAccess serviceContext;
+
+  public JPASerializerFactory(final OData odata, final ServiceMetadata serviceMetadata,
+<span class="nc" id="L31">      final JPAODataSessionContextAccess serviceContext) {</span>
+<span class="nc" id="L32">    this.odata = odata;</span>
+<span class="nc" id="L33">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L34">    this.uriHelper = odata.createUriHelper();</span>
+<span class="nc" id="L35">    this.serviceContext = serviceContext;</span>
+<span class="nc" id="L36">  }</span>
+
+  public JPASerializer createCUDSerializer(final ContentType responseFormat, final UriInfo uriInfo,
+      final Optional&lt;List&lt;String&gt;&gt; responseVersion) throws SerializerException {
+<span class="nc" id="L40">    final ODataSerializer serializer = odata.createSerializer(responseFormat,</span>
+<span class="nc" id="L41">        responseVersion.orElse(Collections.emptyList()));</span>
+<span class="nc" id="L42">    return new JPASerializeCreate(serviceMetadata, serializer, uriInfo, serviceContext);</span>
+  }
+
+  public JPASerializer createSerializer(final ContentType responseFormat, final UriInfo uriInfo,
+      final Optional&lt;List&lt;String&gt;&gt; responseVersion) throws ODataApplicationException, SerializerException {
+
+    // Assumption: Type of last resource path item rules the type of the response
+<span class="nc" id="L49">    final List&lt;UriResource&gt; resourceParts = uriInfo.getUriResourceParts();</span>
+<span class="nc" id="L50">    final UriResource lastItem = resourceParts.get(resourceParts.size() - 1);</span>
+<span class="nc" id="L51">    final boolean isCollection = determineIsCollection(lastItem);</span>
+
+<span class="nc" id="L53">    return createSerializer(responseFormat, uriInfo, lastItem.getKind(), isCollection, responseVersion);</span>
+  }
+
+  public ServiceMetadata getServiceMetadata() {
+<span class="nc" id="L57">    return serviceMetadata;</span>
+  }
+
+  JPASerializer createSerializer(final ContentType responseFormat, final UriInfo uriInfo, final EdmTypeKind edmTypeKind,
+      final boolean isCollection, final Optional&lt;List&lt;String&gt;&gt; responseVersion) throws SerializerException,
+      ODataJPASerializerException {
+
+<span class="nc" id="L64">    final ODataSerializer serializer = odata.createSerializer(responseFormat,</span>
+<span class="nc" id="L65">        responseVersion.orElse(Collections.emptyList()));</span>
+<span class="nc bnc" id="L66" title="All 4 branches missed.">    switch (edmTypeKind) {</span>
+      case ENTITY:
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        if (isCollection)</span>
+<span class="nc" id="L69">          return new JPASerializeEntityCollection(serviceMetadata, serializer, uriHelper, uriInfo, responseFormat,</span>
+              serviceContext);
+        else
+<span class="nc" id="L72">          return new JPASerializeEntity(serviceMetadata, serializer, uriHelper, uriInfo, responseFormat,</span>
+              serviceContext);
+      case COMPLEX:
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (isCollection)</span>
+<span class="nc" id="L76">          return new JPASerializeComplexCollection(serviceMetadata, serializer, responseFormat, serviceContext);</span>
+        else
+<span class="nc" id="L78">          return new JPASerializeComplex(serviceMetadata, serializer, uriHelper, uriInfo, responseFormat,</span>
+              serviceContext);
+      case PRIMITIVE:
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if (isCollection)</span>
+<span class="nc" id="L82">          return new JPASerializePrimitiveCollection(serviceMetadata, serializer, responseFormat, serviceContext);</span>
+        else
+<span class="nc" id="L84">          return new JPASerializePrimitive(serviceMetadata, serializer, uriInfo, responseFormat, serviceContext);</span>
+      default:
+<span class="nc" id="L86">        throw new ODataJPASerializerException(ODataJPASerializerException.MessageKeys.NOT_SUPPORTED_RESOURCE_TYPE,</span>
+<span class="nc" id="L87">            HttpStatusCode.NOT_IMPLEMENTED, edmTypeKind.toString());</span>
+    }
+  }
+
+  JPASerializer createSerializer(final ContentType responseFormat, final UriInfo uriInfo,
+      final UriResourceKind uriResourceKind, final boolean isCollection, final Optional&lt;List&lt;String&gt;&gt; responseVersion)
+      throws SerializerException, ODataJPASerializerException {
+
+<span class="nc bnc" id="L95" title="All 7 branches missed.">    switch (uriResourceKind) {</span>
+      case entitySet:
+      case navigationProperty:
+      case singleton:
+<span class="nc" id="L99">        return createSerializerCollectionRequest(responseFormat, uriInfo, isCollection, responseVersion);</span>
+      case complexProperty:
+<span class="nc" id="L101">        return createSerializerComplexPropertyRequest(responseFormat, uriInfo, responseVersion);</span>
+      case primitiveProperty:
+<span class="nc" id="L103">        return createSerializerPrimitivePropertyRequest(responseFormat, uriInfo, responseVersion);</span>
+      case action:
+      case function:
+<span class="nc" id="L106">        return new JPASerializeFunction(uriInfo, responseFormat, this, responseVersion);</span>
+      case count:
+<span class="nc" id="L108">        return new JPASerializeCount(odata.createFixedFormatSerializer());</span>
+      case value:
+<span class="nc" id="L110">        return new JPASerializeValue(serviceMetadata, odata.createFixedFormatSerializer(), uriInfo);</span>
+      default:
+<span class="nc" id="L112">        throw new ODataJPASerializerException(ODataJPASerializerException.MessageKeys.NOT_SUPPORTED_RESOURCE_TYPE,</span>
+<span class="nc" id="L113">            HttpStatusCode.NOT_IMPLEMENTED, uriResourceKind.toString());</span>
+    }
+  }
+
+  private JPASerializer createSerializerCollectionRequest(final ContentType responseFormat, final UriInfo uriInfo,
+      final boolean isCollection, final Optional&lt;List&lt;String&gt;&gt; responseVersion) throws SerializerException {
+
+<span class="nc" id="L120">    final ODataSerializer serializer = odata.createSerializer(responseFormat,</span>
+<span class="nc" id="L121">        responseVersion.orElse(Collections.emptyList()));</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">    if (isCollection)</span>
+<span class="nc" id="L123">      return new JPASerializeEntityCollection(serviceMetadata, serializer, uriHelper, uriInfo, responseFormat,</span>
+          serviceContext);
+    else
+<span class="nc" id="L126">      return new JPASerializeEntity(serviceMetadata, serializer, uriHelper, uriInfo, responseFormat, serviceContext);</span>
+  }
+
+  private JPASerializer createSerializerComplexPropertyRequest(final ContentType responseFormat, final UriInfo uriInfo,
+      final Optional&lt;List&lt;String&gt;&gt; responseVersion) throws SerializerException {
+
+<span class="nc" id="L132">    final ODataSerializer serializer = odata.createSerializer(responseFormat,</span>
+<span class="nc" id="L133">        responseVersion.orElse(Collections.emptyList()));</span>
+<span class="nc" id="L134">    return new JPASerializeComplex(serviceMetadata, serializer, uriHelper, uriInfo, responseFormat, serviceContext);</span>
+  }
+
+  private JPASerializer createSerializerPrimitivePropertyRequest(final ContentType responseFormat,
+      final UriInfo uriInfo, final Optional&lt;List&lt;String&gt;&gt; responseVersion) throws SerializerException {
+
+<span class="nc" id="L140">    final ODataSerializer serializer = odata.createSerializer(responseFormat,</span>
+<span class="nc" id="L141">        responseVersion.orElse(Collections.emptyList()));</span>
+<span class="nc" id="L142">    return new JPASerializePrimitive(serviceMetadata, serializer, uriInfo, responseFormat, serviceContext);</span>
+  }
+
+  private boolean determineIsCollection(final UriResource lastItem) {
+<span class="nc bnc" id="L146" title="All 2 branches missed.">    if (lastItem instanceof UriResourcePartTyped)</span>
+<span class="nc" id="L147">      return ((UriResourcePartTyped) lastItem).isCollection();</span>
+<span class="nc" id="L148">    return false;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

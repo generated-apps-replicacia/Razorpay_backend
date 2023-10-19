@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAExampleCUDRequestHandler.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api.example</a> &gt; <span class="el_source">JPAExampleCUDRequestHandler.java</span></div><h1>JPAExampleCUDRequestHandler.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api.example;
+
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.regex.Pattern;
+
+import javax.persistence.EntityManager;
+import javax.persistence.GeneratedValue;
+import javax.persistence.metamodel.EntityType;
+import javax.persistence.metamodel.SingularAttribute;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.impl.IntermediateEntityType;
+import org.apache.olingo.commons.api.http.HttpMethod;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAProtectionInfo;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAAbstractCUDRequestHandler;
+import com.sap.olingo.jpa.processor.core.api.JPAClaimsPair;
+import com.sap.olingo.jpa.processor.core.api.JPAODataClaimProvider;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAInvocationTargetException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.modify.JPAUpdateResult;
+import com.sap.olingo.jpa.processor.core.processor.JPAModifyUtil;
+import com.sap.olingo.jpa.processor.core.processor.JPARequestEntity;
+import com.sap.olingo.jpa.processor.core.processor.JPARequestLink;
+
+import static com.sap.olingo.jpa.processor.core.api.example.JPAExampleModifyException.MessageKeys.ENTITY_ALREADY_EXISTS;
+import static com.sap.olingo.jpa.processor.core.api.example.JPAExampleModifyException.MessageKeys.ENTITY_NOT_FOUND;
+import static com.sap.olingo.jpa.processor.core.api.example.JPAExampleModifyException.MessageKeys.ENTITY_NOT_FOUND_WITH_ETAG;
+import static com.sap.olingo.jpa.processor.core.api.example.JPAExampleModifyException.MessageKeys.MODIFY_NOT_ALLOWED;
+import static com.sap.olingo.jpa.processor.core.api.example.JPAExampleModifyException.MessageKeys.PRIMARY_KEY_NULL;
+import static com.sap.olingo.jpa.processor.core.api.example.JPAExampleModifyException.MessageKeys.WILDCARD_RANGE_NOT_SUPPORTED;
+
+/**
+ * Example implementation at a CUD handler. The main purpose is rapid prototyping.&lt;p/&gt;
+ * The implementation requires Getter and Setter. This includes getter for collection properties and collection
+ * navigation properties that return at least empty collections.&lt;br/&gt;
+ * To link entities constructor injection is used. So each dependent entity needs a constructor that takes a entity type
+ * it depends on as parameter.
+ * @author Oliver Grande
+ *
+ */
+public class JPAExampleCUDRequestHandler extends JPAAbstractCUDRequestHandler {
+  private final Map&lt;Object, JPARequestEntity&gt; entityBuffer;
+  private final LocalDateTime now;
+
+<span class="nc" id="L65">  public JPAExampleCUDRequestHandler() {</span>
+<span class="nc" id="L66">    entityBuffer = new HashMap&lt;&gt;();</span>
+    // Doing so all the changes of one request get the same updatedAt
+<span class="nc" id="L68">    now = LocalDateTime.now(ZoneId.of(&quot;UTC&quot;));</span>
+<span class="nc" id="L69">    new Date();</span>
+<span class="nc" id="L70">  }</span>
+
+  @Override
+  public Object createEntity(final JPARequestEntity requestEntity, final EntityManager em)
+      throws ODataJPAProcessException {
+
+    // POST an Entity
+<span class="nc" id="L77">    Object instance = createOneEntity(requestEntity, null);</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">    if (requestEntity.getKeys().isEmpty()) {</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">      if (!hasGeneratedKey(requestEntity, em)) {</span>
+<span class="nc" id="L80">        final Object old = em.find(requestEntity.getEntityType().getTypeClass(),</span>
+<span class="nc" id="L81">            requestEntity.getModifyUtil().createPrimaryKey(requestEntity.getEntityType(), instance));</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (old != null)</span>
+<span class="nc" id="L83">          throw new JPAExampleModifyException(ENTITY_ALREADY_EXISTS, HttpStatusCode.BAD_REQUEST);</span>
+<span class="nc" id="L84">      } else {</span>
+        // Pre-fill granted ID, so it can be used for deep inserts
+<span class="nc" id="L86">        em.persist(instance);</span>
+      }
+    } else {
+      // POST on Link only // https://issues.oasis-open.org/browse/ODATA-1294
+<span class="nc" id="L90">      instance = findEntity(requestEntity, em);</span>
+    }
+<span class="nc" id="L92">    processRelatedEntities(requestEntity.getRelatedEntities(), instance, requestEntity.getModifyUtil(), em);</span>
+<span class="nc" id="L93">    setAuditInformation(instance, requestEntity.getClaims(), true);</span>
+<span class="nc" id="L94">    em.persist(instance);</span>
+<span class="nc" id="L95">    return instance;</span>
+  }
+
+  @Override
+  public void deleteEntity(final JPARequestEntity requestEntity, final EntityManager em)
+      throws ODataJPAProcessException {
+
+<span class="nc" id="L102">    final Object instance = em.find(requestEntity.getEntityType().getTypeClass(),</span>
+<span class="nc" id="L103">        requestEntity.getModifyUtil().createPrimaryKey(requestEntity.getEntityType(), requestEntity.getKeys(),</span>
+<span class="nc" id="L104">            requestEntity.getEntityType()));</span>
+<span class="nc" id="L105">    validateETag(requestEntity, instance);</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">    if (instance != null)</span>
+<span class="nc" id="L107">      em.remove(instance);</span>
+<span class="nc" id="L108">  }</span>
+
+  @Override
+  public JPAUpdateResult updateEntity(final JPARequestEntity requestEntity, final EntityManager em,
+      final HttpMethod method) throws ODataJPAProcessException {
+
+<span class="nc bnc" id="L114" title="All 4 branches missed.">    if (method == HttpMethod.PATCH || method == HttpMethod.DELETE) {</span>
+<span class="nc" id="L115">      Object primaryKey= null;</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">      if(((IntermediateEntityType&lt;?&gt;)requestEntity.getEntityType()).asSingleton()) {</span>
+        try {
+<span class="nc" id="L118">          Object singletonInstance = requestEntity.getEntityType().getTypeClass().getConstructor().newInstance();</span>
+<span class="nc" id="L119">          primaryKey = singletonInstance.getClass().getMethod(&quot;get&quot; + requestEntity.getEntityType().getKey().get(0).getExternalName()).invoke(singletonInstance);</span>
+<span class="nc" id="L120">        } catch (Exception e) {</span>
+
+<span class="nc" id="L122">        }</span>
+      } else {
+<span class="nc" id="L124">          primaryKey =  requestEntity.getModifyUtil()</span>
+<span class="nc" id="L125">                .createPrimaryKey(requestEntity.getEntityType(), requestEntity.getKeys(), requestEntity.getEntityType());</span>
+      }
+<span class="nc bnc" id="L127" title="All 2 branches missed.">      if(primaryKey == null)</span>
+<span class="nc" id="L128">          throw new JPAExampleModifyException(PRIMARY_KEY_NULL, HttpStatusCode.NOT_FOUND);</span>
+<span class="nc" id="L129">      Object instance = em.find(requestEntity.getEntityType().getTypeClass(), primaryKey);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">      if (instance == null) throw new JPAExampleModifyException(ENTITY_NOT_FOUND, HttpStatusCode.NOT_FOUND);</span>
+<span class="nc" id="L131">      validateETag(requestEntity, instance);</span>
+<span class="nc" id="L132">      requestEntity.getModifyUtil().setAttributesDeep(requestEntity.getData(), instance, requestEntity.getEntityType());</span>
+<span class="nc" id="L133">      updateLinks(requestEntity, em, instance);</span>
+<span class="nc" id="L134">      setAuditInformation(instance, requestEntity.getClaims(), false);</span>
+<span class="nc" id="L135">      return new JPAUpdateResult(false, instance);</span>
+    }
+<span class="nc" id="L137">    return super.updateEntity(requestEntity, em, method);</span>
+  }
+
+  private static void validateETag(JPARequestEntity requestEntity, Object instance) throws JPAExampleModifyException {
+    try {
+<span class="nc bnc" id="L142" title="All 2 branches missed.">      if(requestEntity.getAllHeader() != null &amp;&amp;</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">          requestEntity.getAllHeader().containsKey(&quot;if-match&quot;) &amp;&amp;</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">          requestEntity.getAllHeader().get(&quot;if-match&quot;) != null &amp;&amp;</span>
+<span class="nc bnc" id="L145" title="All 4 branches missed.">          !requestEntity.getAllHeader().get(&quot;if-match&quot;).isEmpty() &amp;&amp;</span>
+          instance!= null &amp;&amp;
+<span class="nc bnc" id="L147" title="All 2 branches missed.">          instance.getClass().getMethod(&quot;getETag&quot;) != null &amp;&amp;</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">          !requestEntity.getAllHeader().get(&quot;if-match&quot;).get(0).equals(instance.getClass().getMethod(&quot;getETag&quot;).invoke(instance).toString())) {</span>
+<span class="nc" id="L149">        throw new JPAExampleModifyException(ENTITY_NOT_FOUND_WITH_ETAG, HttpStatusCode.NOT_FOUND);</span>
+      }
+<span class="nc" id="L151">    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {</span>
+<span class="nc" id="L152">      throw new JPAExampleModifyException(ENTITY_NOT_FOUND_WITH_ETAG, HttpStatusCode.NOT_FOUND);</span>
+<span class="nc" id="L153">    }</span>
+<span class="nc" id="L154">  }</span>
+
+  @Override
+  public void validateChanges(final EntityManager em) throws ODataJPAProcessException {
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">    for (final Entry&lt;Object, JPARequestEntity&gt; entity : entityBuffer.entrySet())</span>
+<span class="nc" id="L160">      processBindingLinks(entity.getValue().getRelationLinks(), entity.getKey(), entity.getValue().getModifyUtil(), em);</span>
+<span class="nc" id="L161">  }</span>
+
+  private void checkAuthorizationsOneClaim(final JPAProtectionInfo protectionInfo, final Object value,
+      final List&lt;JPAClaimsPair&lt;?&gt;&gt; pairs) throws JPAExampleModifyException {
+<span class="nc" id="L165">    boolean match = false;</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">    for (final JPAClaimsPair&lt;?&gt; pair : pairs)</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">      if (protectionInfo.supportsWildcards())</span>
+<span class="nc" id="L168">        match = checkAuthorizationsOnePairWithWildcard(value, match, pair);</span>
+      else
+<span class="nc" id="L170">        match = checkAuthorizationsOnePair(value, match, pair);</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">    if (!match)</span>
+<span class="nc" id="L172">      throw new JPAExampleModifyException(MODIFY_NOT_ALLOWED, HttpStatusCode.FORBIDDEN);</span>
+<span class="nc" id="L173">  }</span>
+
+  @SuppressWarnings({ &quot;rawtypes&quot;, &quot;unchecked&quot; })
+  private boolean checkAuthorizationsOnePair(final Object value, boolean match, final JPAClaimsPair&lt;?&gt; pair)
+      throws JPAExampleModifyException {
+<span class="nc bnc" id="L178" title="All 2 branches missed.">    if (!pair.hasUpperBoundary &amp;&amp;</span>
+<span class="nc bnc" id="L179" title="All 4 branches missed.">        (&quot;*&quot;.equals(pair.min) || value.equals(pair.min))) {</span>
+<span class="nc" id="L180">      match = true;</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">    } else if (pair.hasUpperBoundary) {</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">      if (!(value instanceof Comparable&lt;?&gt;))</span>
+<span class="nc" id="L183">        throw new JPAExampleModifyException(MODIFY_NOT_ALLOWED, HttpStatusCode.FORBIDDEN);</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">      if (((Comparable) value).compareTo(pair.min) &gt;= 0</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">          &amp;&amp; ((Comparable) value).compareTo(pair.max) &lt;= 0)</span>
+<span class="nc" id="L186">        match = true;</span>
+    }
+<span class="nc" id="L188">    return match;</span>
+  }
+
+  private boolean checkAuthorizationsOnePairWithWildcard(final Object value, boolean match, final JPAClaimsPair&lt;?&gt; pair)
+      throws JPAExampleModifyException {
+<span class="nc bnc" id="L193" title="All 2 branches missed.">    if (pair.hasUpperBoundary) {</span>
+<span class="nc" id="L194">      final String minPrefix = determineAuthorizationPrefix(pair.min);</span>
+<span class="nc" id="L195">      final String maxPrefix = determineAuthorizationPrefix(pair.max);</span>
+<span class="nc" id="L196">      final String minComparator = ((String) value).substring(0, minPrefix.length());</span>
+<span class="nc" id="L197">      final String maxComparator = ((String) value).substring(0, maxPrefix.length());</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">      if (minComparator.compareTo(minPrefix) &gt;= 0</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">          &amp;&amp; maxComparator.compareTo(maxPrefix) &lt;= 0)</span>
+<span class="nc" id="L200">        match = true;</span>
+<span class="nc" id="L201">    } else {</span>
+      // '+' and '_' --&gt; .
+      // '*' and '%' --&gt; .+
+<span class="nc" id="L204">      final String minPattern = ((String) pair.minAs()).replace(&quot;\\.&quot;, &quot;\\#&quot;).replaceAll(&quot;[+_]&quot;, &quot;.&quot;)</span>
+<span class="nc" id="L205">          .replaceAll(&quot;[*%]&quot;, &quot;.+&quot;);</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">      if (Pattern.matches(minPattern, (String) value))</span>
+<span class="nc" id="L207">        match = true;</span>
+    }
+<span class="nc" id="L209">    return match;</span>
+  }
+
+  private void checkAuthorities(final Object instance, final JPAStructuredType entityType,
+      final Optional&lt;JPAODataClaimProvider&gt; claims, final JPAModifyUtil modifyUtil) throws JPAExampleModifyException {
+    try {
+<span class="nc" id="L215">      final List&lt;JPAProtectionInfo&gt; protections = entityType.getProtections();</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">      if (!protections.isEmpty()) {</span>
+<span class="nc" id="L217">        final JPAODataClaimProvider claimsProvider = claims.orElseThrow(</span>
+<span class="nc" id="L218">            () -&gt; new JPAExampleModifyException(MODIFY_NOT_ALLOWED, HttpStatusCode.FORBIDDEN));</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">        for (final JPAProtectionInfo protectionInfo : protections) {</span>
+<span class="nc" id="L220">          final Object value = determineValue(instance, modifyUtil, protectionInfo);</span>
+<span class="nc" id="L221">          final List&lt;JPAClaimsPair&lt;?&gt;&gt; pairs = claimsProvider.get(protectionInfo.getClaimName());</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">          if (pairs.isEmpty())</span>
+<span class="nc" id="L223">            throw new JPAExampleModifyException(MODIFY_NOT_ALLOWED, HttpStatusCode.FORBIDDEN);</span>
+<span class="nc" id="L224">          checkAuthorizationsOneClaim(protectionInfo, value, pairs);</span>
+<span class="nc" id="L225">        }</span>
+      }
+<span class="nc" id="L227">    } catch (final ODataJPAModelException | NoSuchMethodException | SecurityException | IllegalAccessException</span>
+        | IllegalArgumentException | InvocationTargetException e) {
+<span class="nc" id="L229">      throw new JPAExampleModifyException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L230">    }</span>
+
+<span class="nc" id="L232">  }</span>
+
+  private Object createInstance(final Constructor&lt;?&gt; cons, final Object parent) throws ODataJPAProcessorException {
+
+    try {
+<span class="nc bnc" id="L237" title="All 2 branches missed.">      if (cons.getParameterCount() == 1)</span>
+<span class="nc" id="L238">        return cons.newInstance(parent);</span>
+<span class="nc" id="L239">      return cons.newInstance();</span>
+<span class="nc" id="L240">    } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {</span>
+<span class="nc" id="L241">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  private Object createOneEntity(final JPARequestEntity requestEntity,
+      final Object parent) throws ODataJPAProcessException {
+
+<span class="nc" id="L248">    final Object instance = createInstance(getConstructor(requestEntity.getEntityType(), parent), parent);</span>
+<span class="nc" id="L249">    requestEntity.getModifyUtil().setAttributesDeep(requestEntity.getData(), instance, requestEntity.getEntityType());</span>
+<span class="nc" id="L250">    checkAuthorities(instance, requestEntity.getEntityType(), requestEntity.getClaims(), requestEntity.getModifyUtil());</span>
+<span class="nc" id="L251">    entityBuffer.put(instance, requestEntity);</span>
+<span class="nc" id="L252">    return instance;</span>
+  }
+
+  private String determineAuthorizationPrefix(final Object restriction) throws JPAExampleModifyException {
+<span class="nc" id="L256">    final String[] minPrefix = ((String) restriction).split(&quot;[*%+_]&quot;);</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">    if (minPrefix.length &gt; 1)</span>
+<span class="nc" id="L258">      throw new JPAExampleModifyException(WILDCARD_RANGE_NOT_SUPPORTED, HttpStatusCode.NOT_IMPLEMENTED);</span>
+<span class="nc" id="L259">    return minPrefix[0];</span>
+  }
+
+  private Object determineValue(final Object instance, final JPAModifyUtil modifyUtil,
+      final JPAProtectionInfo protectionInfo) throws NoSuchMethodException, IllegalAccessException,
+      InvocationTargetException {
+<span class="nc" id="L265">    Object value = instance;</span>
+<span class="nc bnc" id="L266" title="All 2 branches missed.">    for (final JPAElement element : protectionInfo.getPath().getPath()) {</span>
+<span class="nc" id="L267">      final JPAAttribute attribute = (JPAAttribute) element;</span>
+<span class="nc" id="L268">      final String getterName = &quot;get&quot; + modifyUtil.buildMethodNameSuffix(attribute);</span>
+<span class="nc" id="L269">      final Method getter = value.getClass().getMethod(getterName);</span>
+<span class="nc" id="L270">      value = getter.invoke(value);</span>
+<span class="nc" id="L271">    }</span>
+<span class="nc" id="L272">    return value;</span>
+  }
+
+  private Object findEntity(final JPARequestEntity requestEntity, final EntityManager em)
+      throws ODataJPAProcessorException,
+      ODataJPAInvocationTargetException {
+
+<span class="nc" id="L279">    final Object key = requestEntity.getModifyUtil().createPrimaryKey(requestEntity.getEntityType(), requestEntity</span>
+<span class="nc" id="L280">        .getKeys(), requestEntity.getEntityType());</span>
+<span class="nc" id="L281">    return em.getReference(requestEntity.getEntityType().getTypeClass(), key);</span>
+  }
+
+  private Constructor&lt;?&gt; getConstructor(final JPAStructuredType st, final Object parentInstance)
+      throws ODataJPAProcessorException {
+    // If a parent exists, try to use a constructor that accepts the parent
+<span class="nc bnc" id="L287" title="All 2 branches missed.">    if (parentInstance != null) try {</span>
+<span class="nc" id="L288">      return st.getTypeClass().getConstructor(parentInstance.getClass());</span>
+<span class="nc" id="L289">    } catch (NoSuchMethodException | SecurityException e) {} // NOSONAR</span>
+    try {
+<span class="nc" id="L291">      return st.getTypeClass().getConstructor();</span>
+<span class="nc" id="L292">    } catch (NoSuchMethodException | SecurityException e) {</span>
+<span class="nc" id="L293">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  private void processBindingLinks(final Map&lt;JPAAssociationPath, List&lt;JPARequestLink&gt;&gt; relationLinks,
+      final Object instance, final JPAModifyUtil util, final EntityManager em) throws ODataJPAProcessException {
+
+<span class="nc bnc" id="L300" title="All 2 branches missed.">    for (final Entry&lt;JPAAssociationPath, List&lt;JPARequestLink&gt;&gt; entity : relationLinks.entrySet()) {</span>
+<span class="nc" id="L301">      final JPAAssociationPath pathInfo = entity.getKey();</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">      for (final JPARequestLink requestLink : entity.getValue()) {</span>
+<span class="nc" id="L303">        final Object targetKey = util.createPrimaryKey((JPAEntityType) pathInfo.getTargetType(), requestLink</span>
+<span class="nc" id="L304">            .getRelatedKeys(), pathInfo.getSourceType());</span>
+<span class="nc" id="L305">        final Object target = em.find(pathInfo.getTargetType().getTypeClass(), targetKey);</span>
+<span class="nc" id="L306">        util.linkEntities(instance, target, pathInfo);</span>
+<span class="nc" id="L307">      }</span>
+<span class="nc" id="L308">    }</span>
+<span class="nc" id="L309">  }</span>
+
+  private void processRelatedEntities(final Map&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; relatedEntities,
+      final Object parentInstance, final JPAModifyUtil util, final EntityManager em)
+      throws ODataJPAProcessException {
+
+<span class="nc bnc" id="L315" title="All 2 branches missed.">    for (final Map.Entry&lt;JPAAssociationPath, List&lt;JPARequestEntity&gt;&gt; entity : relatedEntities.entrySet()) {</span>
+<span class="nc" id="L316">      final JPAAssociationPath pathInfo = entity.getKey();</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">      for (final JPARequestEntity requestEntity : entity.getValue()) {</span>
+
+<span class="nc" id="L319">        final Object newInstance = createOneEntity(requestEntity, parentInstance);</span>
+<span class="nc" id="L320">        util.linkEntities(parentInstance, newInstance, pathInfo);</span>
+        try {
+<span class="nc" id="L322">          final JPAAssociationAttribute attribute = pathInfo.getPartner();</span>
+<span class="nc bnc" id="L323" title="All 2 branches missed.">          if (attribute != null) {</span>
+<span class="nc" id="L324">            util.linkEntities(newInstance, parentInstance, attribute.getPath());</span>
+          }
+<span class="nc" id="L326">        } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L327">          throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L328">        }</span>
+<span class="nc" id="L329">        processRelatedEntities(requestEntity.getRelatedEntities(), newInstance, util, em);</span>
+<span class="nc" id="L330">      }</span>
+<span class="nc" id="L331">    }</span>
+<span class="nc" id="L332">  }</span>
+
+  private void setAuditInformation(final Object instance, final Optional&lt;JPAODataClaimProvider&gt; claims,
+      final boolean created) {
+
+<span class="nc bnc" id="L337" title="All 2 branches missed.">    if (instance instanceof JPAExampleAuditable) {</span>
+<span class="nc" id="L338">      final JPAExampleAuditable auditable = (JPAExampleAuditable) instance;</span>
+<span class="nc bnc" id="L339" title="All 2 branches missed.">      if (created) {</span>
+<span class="nc" id="L340">        auditable.setCreatedAt(now);</span>
+<span class="nc" id="L341">        claims.ifPresent(c -&gt; auditable.setCreatedBy(c.user().orElse(&quot;&quot;)));</span>
+      }
+<span class="nc" id="L343">      auditable.setUpdatedAt(now);</span>
+<span class="nc" id="L344">      claims.ifPresent(c -&gt; auditable.setUpdatedBy(c.user().orElse(&quot;&quot;)));</span>
+    }
+<span class="nc" id="L346">  }</span>
+
+  private void updateLinks(final JPARequestEntity requestEntity, final EntityManager em, final Object instance)
+      throws ODataJPAProcessorException, ODataJPAInvocationTargetException {
+<span class="nc bnc" id="L350" title="All 2 branches missed.">    if (requestEntity.getRelationLinks() != null)</span>
+<span class="nc bnc" id="L351" title="All 2 branches missed.">      for (final Entry&lt;JPAAssociationPath, List&lt;JPARequestLink&gt;&gt; links : requestEntity.getRelationLinks().entrySet()) {</span>
+<span class="nc bnc" id="L352" title="All 2 branches missed.">        for (final JPARequestLink link : links.getValue()) {</span>
+<span class="nc" id="L353">          final Object related = em.find(link.getEntityType().getTypeClass(), requestEntity.getModifyUtil()</span>
+<span class="nc" id="L354">              .createPrimaryKey(link.getEntityType(), link.getRelatedKeys(), link.getEntityType()));</span>
+<span class="nc" id="L355">          requestEntity.getModifyUtil().linkEntities(instance, related, links.getKey());</span>
+<span class="nc" id="L356">        }</span>
+<span class="nc" id="L357">      }</span>
+<span class="nc" id="L358">  }</span>
+
+  private boolean hasGeneratedKey(final JPARequestEntity requestEntity, final EntityManager em) {
+
+<span class="nc" id="L362">    final JPAEntityType et = requestEntity.getEntityType();</span>
+<span class="nc" id="L363">    return em.getMetamodel()</span>
+<span class="nc" id="L364">        .getEntities()</span>
+<span class="nc" id="L365">        .stream()</span>
+<span class="nc" id="L366">        .filter(e -&gt; e.getName().equals(et.getExternalName()))</span>
+<span class="nc" id="L367">        .findFirst()</span>
+<span class="nc" id="L368">        .map(jpaEt -&gt; hasGeneratedKeyInt(et, jpaEt))</span>
+<span class="nc" id="L369">        .orElse(false);</span>
+  }
+
+  private boolean hasGeneratedKeyInt(final JPAEntityType et, final EntityType&lt;?&gt; jpaEt) {
+    try {
+<span class="nc bnc" id="L374" title="All 2 branches missed.">      if (jpaEt.hasSingleIdAttribute()) {</span>
+<span class="nc" id="L375">        final JPAAttribute key = et.getKey().get(0);</span>
+<span class="nc" id="L376">        final SingularAttribute&lt;?, ?&gt; at = jpaEt.getId(key.getType());</span>
+<span class="nc bnc" id="L377" title="All 2 branches missed.">        if (at != null &amp;&amp;</span>
+<span class="nc bnc" id="L378" title="All 2 branches missed.">            ((AnnotatedElement) at.getJavaMember()).getAnnotation(GeneratedValue.class) != null)</span>
+<span class="nc" id="L379">          return true;</span>
+      }
+<span class="nc" id="L381">      return false;</span>
+<span class="nc" id="L382">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L383">      return false;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAAttributeWrapper.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">JPAAttributeWrapper.java</span></div><h1>JPAAttributeWrapper.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.lang.reflect.Constructor;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.criteria.Selection;
+
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmItem;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransientPropertyCalculator;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+class JPAAttributeWrapper implements JPAAttribute {
+  private final Selection&lt;?&gt; selection;
+
+<span class="nc" id="L23">  public JPAAttributeWrapper(final Selection&lt;?&gt; sel) {</span>
+<span class="nc" id="L24">    this.selection = sel;</span>
+<span class="nc" id="L25">  }</span>
+
+  @Override
+  public FullQualifiedName getExternalFQN() {
+<span class="nc" id="L29">    return null;</span>
+  }
+
+  @Override
+  public String getExternalName() {
+<span class="nc" id="L34">    return null;</span>
+  }
+
+  @Override
+  public String getInternalName() {
+<span class="nc" id="L39">    return null;</span>
+  }
+
+  @Override
+  public &lt;X, Y&gt; AttributeConverter&lt;X, Y&gt; getConverter() {
+<span class="nc" id="L44">    return null;</span>
+  }
+
+  @Override
+  public &lt;X, Y&gt; AttributeConverter&lt;X, Y&gt; getRawConverter() {
+<span class="nc" id="L49">    return null;</span>
+  }
+
+  @Override
+  public EdmPrimitiveTypeKind getEdmType() throws ODataJPAModelException {
+<span class="nc" id="L54">    return null;</span>
+  }
+
+  @Override
+  public CsdlAbstractEdmItem getProperty() throws ODataJPAModelException {
+<span class="nc" id="L59">    return null;</span>
+  }
+
+  @Override
+  public JPAStructuredType getStructuredType() throws ODataJPAModelException {
+<span class="nc" id="L64">    return null;</span>
+  }
+
+  @Override
+  public Set&lt;String&gt; getProtectionClaimNames() {
+<span class="nc" id="L69">    return Collections.emptySet();</span>
+  }
+
+  @Override
+  public List&lt;String&gt; getProtectionPath(final String claimName) throws ODataJPAModelException {
+<span class="nc" id="L74">    return Collections.emptyList();</span>
+  }
+
+  @Override
+  public Class&lt;?&gt; getType() {
+<span class="nc" id="L79">    return selection.getJavaType();</span>
+  }
+
+  @Override
+  public Class&lt;?&gt; getDbType() {
+<span class="nc" id="L84">    return selection.getJavaType();</span>
+  }
+
+  @Override
+  public boolean isAssociation() {
+<span class="nc" id="L89">    return false;</span>
+  }
+
+  @Override
+  public boolean isCollection() {
+<span class="nc" id="L94">    return false;</span>
+  }
+
+  @Override
+  public boolean isComplex() {
+<span class="nc" id="L99">    return false;</span>
+  }
+
+  @Override
+  public boolean isEnum() {
+<span class="nc" id="L104">    return false;</span>
+  }
+
+  @Override
+  public boolean isEtag() {
+<span class="nc" id="L109">    return false;</span>
+  }
+
+  @Override
+  public boolean isKey() {
+<span class="nc" id="L114">    return false;</span>
+  }
+
+  @Override
+  public boolean isSearchable() {
+<span class="nc" id="L119">    return false;</span>
+  }
+
+  @Override
+  public boolean hasProtection() {
+<span class="nc" id="L124">    return false;</span>
+  }
+
+  @Override
+  public boolean isTransient() {
+<span class="nc" id="L129">    return false;</span>
+  }
+
+  @Override
+  public &lt;T extends EdmTransientPropertyCalculator&lt;?&gt;&gt; Constructor&lt;T&gt; getCalculatorConstructor() {
+<span class="nc" id="L134">    return null;</span>
+  }
+
+  @Override
+  public List&lt;String&gt; getRequiredProperties() {
+<span class="nc" id="L139">    return Collections.emptyList();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ExpressionJoiner.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.joiner</a> &gt; <span class="el_source">ExpressionJoiner.java</span></div><h1>ExpressionJoiner.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.joiner;
+
+import java.util.Objects;
+
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Predicate.BooleanOperator;
+
+final class ExpressionJoiner {
+
+  private final CriteriaBuilder cb;
+  private final BooleanOperator operator;
+  private boolean isFirst;
+  private Expression&lt;Boolean&gt; expression;
+
+<span class="nc" id="L17">  ExpressionJoiner(@Nonnull final CriteriaBuilder cb, @Nonnull final BooleanOperator operator) {</span>
+<span class="nc" id="L18">    this.cb = Objects.requireNonNull(cb);</span>
+<span class="nc" id="L19">    this.operator = Objects.requireNonNull(operator);</span>
+<span class="nc" id="L20">    this.isFirst = true;</span>
+<span class="nc" id="L21">  }</span>
+
+  public ExpressionJoiner add(@Nonnull final Expression&lt;Boolean&gt; newExpression) {
+<span class="nc bnc" id="L24" title="All 2 branches missed.">    if (isFirst) {</span>
+<span class="nc" id="L25">      this.expression = newExpression;</span>
+<span class="nc" id="L26">      isFirst = false;</span>
+<span class="nc bnc" id="L27" title="All 2 branches missed.">    } else if (operator == BooleanOperator.AND) {</span>
+<span class="nc" id="L28">      this.expression = cb.and(expression, newExpression);</span>
+    } else {
+<span class="nc" id="L30">      this.expression = cb.or(expression, newExpression);</span>
+    }
+<span class="nc" id="L32">    return this;</span>
+  }
+
+  public ExpressionJoiner merge() {
+<span class="nc" id="L36">    return this;</span>
+  }
+
+  public Expression&lt;Boolean&gt; finish() {
+<span class="nc" id="L40">    return expression;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

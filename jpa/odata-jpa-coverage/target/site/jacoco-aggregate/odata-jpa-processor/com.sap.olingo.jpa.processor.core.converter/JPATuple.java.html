@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPATuple.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.converter</a> &gt; <span class="el_source">JPATuple.java</span></div><h1>JPATuple.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.converter;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Tuple;
+import javax.persistence.TupleElement;
+
+<span class="nc bnc" id="L11" title="All 2 branches missed.">public final class JPATuple implements Tuple {</span>
+
+<span class="nc" id="L13">  private List&lt;TupleElement&lt;?&gt;&gt; elements = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L14">  private Map&lt;String, Object&gt; values = new HashMap&lt;&gt;();</span>
+
+  public void addElement(final String alias, Class&lt;?&gt; javaType, final Object value) {
+<span class="nc" id="L17">    elements.add(new JPATupleElement&lt;Object&gt;(alias, javaType));</span>
+<span class="nc" id="L18">    values.put(alias, value);</span>
+
+<span class="nc" id="L20">  }</span>
+
+  @Override
+  public Object get(final int arg0) {
+<span class="nc bnc" id="L24" title="All 2 branches missed.">    assert 1 == 2;</span>
+<span class="nc" id="L25">    return null;</span>
+  }
+
+  @Override
+  public &lt;X&gt; X get(final int arg0, final Class&lt;X&gt; arg1) {
+<span class="nc bnc" id="L30" title="All 2 branches missed.">    assert 1 == 2;</span>
+<span class="nc" id="L31">    return null;</span>
+  }
+
+  /**
+   * Get the value of the tuple element to which the
+   * specified alias has been assigned.
+   * @param alias alias assigned to tuple element
+   * @return value of the tuple element
+   * @throws IllegalArgumentException if alias
+   * does not correspond to an element in the
+   * query result tuple
+   */
+  @Override
+  public Object get(final String alias) {
+<span class="nc" id="L45">    return values.get(alias);</span>
+  }
+
+  @Override
+  public &lt;X&gt; X get(final String arg0, final Class&lt;X&gt; arg1) {
+<span class="nc bnc" id="L50" title="All 2 branches missed.">    assert 1 == 2;</span>
+<span class="nc" id="L51">    return null;</span>
+  }
+
+  @Override
+  public &lt;X&gt; X get(final TupleElement&lt;X&gt; arg0) {
+<span class="nc" id="L56">    return null;</span>
+  }
+
+  @Override
+  public List&lt;TupleElement&lt;?&gt;&gt; getElements() {
+<span class="nc" id="L61">    return elements;</span>
+  }
+
+  @Override
+  public Object[] toArray() {
+<span class="nc" id="L66">    return new Object[] {};</span>
+  }
+
+  private static class JPATupleElement&lt;X&gt; implements TupleElement&lt;X&gt; {
+
+    private final String alias;
+    private final Class&lt;? extends X&gt; javaType;
+
+<span class="nc" id="L74">    public JPATupleElement(final String alias, final Class&lt;? extends X&gt; javaType) {</span>
+<span class="nc" id="L75">      this.alias = alias;</span>
+<span class="nc" id="L76">      this.javaType = javaType;</span>
+<span class="nc" id="L77">    }</span>
+
+    @Override
+    public String getAlias() {
+<span class="nc" id="L81">      return alias;</span>
+    }
+
+    @Override
+    public Class&lt;? extends X&gt; getJavaType() {
+<span class="nc" id="L86">      return javaType;</span>
+    }
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

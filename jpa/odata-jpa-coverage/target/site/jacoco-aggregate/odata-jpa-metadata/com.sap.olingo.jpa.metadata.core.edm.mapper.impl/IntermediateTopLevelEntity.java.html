@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateTopLevelEntity.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateTopLevelEntity.java</span></div><h1>IntermediateTopLevelEntity.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.olingo.commons.api.edm.provider.CsdlNavigationPropertyBinding;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmQueryExtensionProvider;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAQueryExtension;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPATopLevelEntity;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+abstract class IntermediateTopLevelEntity extends IntermediateModelElement implements JPATopLevelEntity {
+
+  final IntermediateEntityType&lt;?&gt; entityType;
+
+  IntermediateTopLevelEntity(final JPAEdmNameBuilder nameBuilder, final IntermediateEntityType&lt;?&gt; et) {
+<span class="nc" id="L24">    super(nameBuilder, IntNameBuilder.buildEntitySetName(nameBuilder, et));</span>
+<span class="nc" id="L25">    this.entityType = et;</span>
+<span class="nc" id="L26">  }</span>
+
+  protected List&lt;CsdlNavigationPropertyBinding&gt; determinePropertyBinding() throws ODataJPAModelException {
+<span class="nc" id="L29">    final List&lt;CsdlNavigationPropertyBinding&gt; navPropBindingList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L30">    final List&lt;JPAAssociationPath&gt; navigationPropertyList = entityType.getAssociationPathList();</span>
+<span class="nc bnc" id="L31" title="All 4 branches missed.">    if (navigationPropertyList != null &amp;&amp; !navigationPropertyList.isEmpty()) {</span>
+      // http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406398035
+
+<span class="nc bnc" id="L34" title="All 2 branches missed.">      for (final JPAAssociationPath navigationPropertyPath : navigationPropertyList) {</span>
+<span class="nc" id="L35">        final JPAStructuredType targetType = navigationPropertyPath.getTargetType();</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        if (targetType instanceof IntermediateEntityType</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">            &amp;&amp; !(((IntermediateEntityType&lt;?&gt;) targetType).asEntitySet() || ((IntermediateEntityType&lt;?&gt;) targetType)</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">                .asSingleton())) {</span>
+<span class="nc" id="L39">          continue;</span>
+        }
+<span class="nc" id="L41">        final CsdlNavigationPropertyBinding navPropBinding = new CsdlNavigationPropertyBinding();</span>
+
+<span class="nc" id="L43">        navPropBinding.setPath(navigationPropertyPath.getAlias());</span>
+
+        // TODO Check is FQN is better here
+<span class="nc" id="L46">        final JPAAssociationAttribute navigationProperty = navigationPropertyPath.getLeaf();</span>
+<span class="nc" id="L47">        navPropBinding.setTarget(nameBuilder.buildEntitySetName(navigationProperty.getTargetEntity()</span>
+<span class="nc" id="L48">            .getExternalName()));</span>
+<span class="nc" id="L49">        navPropBindingList.add(navPropBinding);</span>
+<span class="nc" id="L50">      }</span>
+    }
+<span class="nc" id="L52">    return navPropBindingList;</span>
+  }
+
+  /**
+   * Returns the entity type that shall be used to create the metadata document.
+   * This can differ from the internally used one e.g. if multiple entity sets shall
+   * point to the same entity type, but base on different tables
+   * @return
+   * @throws ODataJPAModelException
+   */
+  public JPAEntityType getODataEntityType() {
+<span class="nc bnc" id="L63" title="All 2 branches missed.">    if (entityType.asTopLevelOnly())</span>
+<span class="nc" id="L64">      return (JPAEntityType) entityType.getBaseType();</span>
+    else
+<span class="nc" id="L66">      return entityType;</span>
+  }
+
+  /**
+   * Returns the entity type to be used internally e.g. for the query generation
+   * @return
+   */
+  public JPAEntityType getEntityType() {
+<span class="nc" id="L74">    return entityType;</span>
+  }
+
+  @Override
+  public Optional&lt;JPAQueryExtension&lt;EdmQueryExtensionProvider&gt;&gt; getQueryExtension()
+      throws ODataJPAModelException {
+<span class="nc" id="L80">    return getEntityType().getQueryExtention();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

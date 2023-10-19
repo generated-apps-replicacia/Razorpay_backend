@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPACollectionQueryResult.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPACollectionQueryResult.java</span></div><h1>JPACollectionQueryResult.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Tuple;
+
+import org.apache.olingo.commons.api.data.Entity;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.data.ValueType;
+import org.apache.olingo.server.api.ODataApplicationException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.processor.core.converter.JPACollectionResult;
+import com.sap.olingo.jpa.processor.core.converter.JPAExpandResult;
+import com.sap.olingo.jpa.processor.core.converter.JPATupleChildConverter;
+
+public class JPACollectionQueryResult implements JPACollectionResult, JPAConvertibleResult {
+  private static final Map&lt;String, List&lt;Tuple&gt;&gt; EMPTY_RESULT;
+
+  private final Map&lt;JPAAssociationPath, JPAExpandResult&gt; childrenResult;
+  private final Map&lt;String, List&lt;Tuple&gt;&gt; jpaResult;
+  private Map&lt;String, List&lt;Object&gt;&gt; collectionResult;
+  private final Map&lt;String, Long&gt; counts;
+  private final JPAEntityType jpaEntityType;
+  private final JPAAssociationPath association;
+  private final Collection&lt;JPAPath&gt; requestedSelection;
+
+  static {
+<span class="nc" id="L37">    EMPTY_RESULT = new HashMap&lt;&gt;(1);</span>
+<span class="nc" id="L38">    putEmptyResult();</span>
+<span class="nc" id="L39">  }</span>
+
+  /**
+   * Add an empty list as result for root to the EMPTY_RESULT. This is needed, as the conversion eats up the database
+   * result.
+   * @see JPATupleChildConverter
+   * @return
+   */
+  private static Map&lt;String, List&lt;Tuple&gt;&gt; putEmptyResult() {
+<span class="nc" id="L48">    EMPTY_RESULT.put(ROOT_RESULT_KEY, Collections.emptyList());</span>
+<span class="nc" id="L49">    return EMPTY_RESULT;</span>
+  }
+
+  public JPACollectionQueryResult(final JPAEntityType jpaEntityType, final JPAAssociationPath association,
+      final Collection&lt;JPAPath&gt; selectionPath) {
+
+<span class="nc" id="L55">    this(putEmptyResult(), Collections.emptyMap(), jpaEntityType, association, selectionPath);</span>
+<span class="nc" id="L56">  }</span>
+
+  public JPACollectionQueryResult(final Map&lt;String, List&lt;Tuple&gt;&gt; result, final Map&lt;String, Long&gt; counts,
+      final JPAEntityType jpaEntityType, final JPAAssociationPath association,
+      final Collection&lt;JPAPath&gt; selectionPath) {
+<span class="nc" id="L61">    super();</span>
+<span class="nc" id="L62">    this.childrenResult = new HashMap&lt;&gt;(1);</span>
+<span class="nc" id="L63">    this.jpaResult = result;</span>
+<span class="nc" id="L64">    this.counts = counts;</span>
+<span class="nc" id="L65">    this.jpaEntityType = jpaEntityType;</span>
+<span class="nc" id="L66">    this.association = association;</span>
+<span class="nc" id="L67">    this.requestedSelection = selectionPath;</span>
+<span class="nc" id="L68">  }</span>
+
+  @Override
+  public Map&lt;String, EntityCollection&gt; asEntityCollection(JPATupleChildConverter converter)
+      throws ODataApplicationException {
+<span class="nc" id="L73">    this.collectionResult = converter.getCollectionResult(this, requestedSelection);</span>
+<span class="nc" id="L74">    final Map&lt;String, EntityCollection&gt; result = new HashMap&lt;&gt;(1);</span>
+<span class="nc" id="L75">    final EntityCollection collection = new EntityCollection();</span>
+<span class="nc" id="L76">    final Entity odataEntity = new Entity();</span>
+<span class="nc" id="L77">    final JPAAttribute leaf = (JPAAttribute) association.getPath().get(association.getPath().size() - 1);</span>
+
+<span class="nc" id="L79">    odataEntity.getProperties().add(new Property(</span>
+        null,
+<span class="nc" id="L81">        leaf.getExternalName(),</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        leaf.isComplex() ? ValueType.COLLECTION_COMPLEX : ValueType.COLLECTION_PRIMITIVE,</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        collectionResult.get(ROOT_RESULT_KEY) != null ? collectionResult.get(ROOT_RESULT_KEY) : Collections</span>
+<span class="nc" id="L84">            .emptyList()));</span>
+<span class="nc" id="L85">    collection.getEntities().add(odataEntity);</span>
+<span class="nc" id="L86">    result.put(ROOT_RESULT_KEY, collection);</span>
+
+<span class="nc" id="L88">    return result;</span>
+  }
+
+  @Override
+  public void convert(JPATupleChildConverter converter) throws ODataApplicationException {
+<span class="nc" id="L93">    this.collectionResult = converter.getCollectionResult(this, requestedSelection);</span>
+<span class="nc" id="L94">  }</span>
+
+  @Override
+  public JPAAssociationPath getAssociation() {
+<span class="nc" id="L98">    return association;</span>
+  }
+
+  @Override
+  public JPAExpandResult getChild(final JPAAssociationPath associationPath) {
+<span class="nc" id="L103">    return null;</span>
+  }
+
+  @Override
+  public Map&lt;JPAAssociationPath, JPAExpandResult&gt; getChildren() {
+<span class="nc" id="L108">    return childrenResult;</span>
+  }
+
+  @Override
+  public Long getCount(final String key) {
+<span class="nc bnc" id="L113" title="All 2 branches missed.">    return counts != null ? counts.get(key) : null;</span>
+  }
+
+  @Override
+  public EntityCollection getEntityCollection(String key) {
+    // Not needed yet. Collections with navigation properties not supported
+<span class="nc" id="L119">    return new EntityCollection();</span>
+  }
+
+  @Override
+  public JPAEntityType getEntityType() {
+<span class="nc" id="L124">    return jpaEntityType;</span>
+  }
+
+  @Override
+  public List&lt;Object&gt; getPropertyCollection(final String key) {
+<span class="nc bnc" id="L129" title="All 2 branches missed.">    return collectionResult.containsKey(key) ? collectionResult.get(key) : Collections.emptyList();</span>
+  }
+
+  @Override
+  public List&lt;Tuple&gt; getResult(final String key) {
+<span class="nc" id="L134">    return jpaResult.get(key);</span>
+  }
+
+  @Override
+  public Map&lt;String, List&lt;Tuple&gt;&gt; getResults() {
+<span class="nc" id="L139">    return jpaResult;</span>
+  }
+
+  @Override
+  public boolean hasCount() {
+<span class="nc bnc" id="L144" title="All 2 branches missed.">    return counts != null;</span>
+  }
+
+  @Override
+  public void putChildren(final Map&lt;JPAAssociationPath, JPAExpandResult&gt; childResults)
+      throws ODataApplicationException {
+    // Not needed yet. Collections with navigation properties not supported
+<span class="nc" id="L151">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

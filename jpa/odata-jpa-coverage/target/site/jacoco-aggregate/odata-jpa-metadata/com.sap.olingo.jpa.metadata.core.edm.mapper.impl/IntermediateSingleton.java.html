@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateSingleton.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateSingleton.java</span></div><h1>IntermediateSingleton.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.util.List;
+
+import org.apache.olingo.commons.api.edm.provider.CsdlAnnotation;
+import org.apache.olingo.commons.api.edm.provider.CsdlEntityType;
+import org.apache.olingo.commons.api.edm.provider.CsdlSingleton;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPASingleton;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateSingletonAccess;
+
+/**
+ * &lt;a href=
+ * &quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406398032&quot;&gt;OData
+ * Version 4.0 Part 3 - 13.3 Element edm:Singleton&lt;/a&gt;
+ * @author Oliver Grande
+ * @since 1.0.3
+ */
+final class IntermediateSingleton extends IntermediateTopLevelEntity implements IntermediateSingletonAccess,
+    JPASingleton {
+
+  private CsdlSingleton edmSingleton;
+
+  IntermediateSingleton(final JPAEdmNameBuilder nameBuilder, final IntermediateEntityType&lt;?&gt; et)
+      throws ODataJPAModelException {
+<span class="nc" id="L28">    super(nameBuilder, et);</span>
+<span class="nc" id="L29">    setExternalName(nameBuilder.buildSingletonName(et.getEdmItem()));</span>
+<span class="nc" id="L30">  }</span>
+
+  @Override
+  public void addAnnotations(final List&lt;CsdlAnnotation&gt; annotations) {
+<span class="nc" id="L34">    this.edmAnnotations.addAll(annotations);</span>
+<span class="nc" id="L35">  }</span>
+
+  @Override
+  protected synchronized void lazyBuildEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L39" title="All 2 branches missed.">    if (edmSingleton == null) {</span>
+<span class="nc" id="L40">      postProcessor.processSingleton(this);</span>
+<span class="nc" id="L41">      edmSingleton = new CsdlSingleton();</span>
+
+<span class="nc" id="L43">      final CsdlEntityType edmEt = ((IntermediateEntityType&lt;?&gt;) getODataEntityType()).getEdmItem();</span>
+<span class="nc" id="L44">      edmSingleton.setName(getExternalName());</span>
+<span class="nc" id="L45">      edmSingleton.setType(buildFQN(edmEt.getName()));</span>
+<span class="nc" id="L46">      edmSingleton.setMapping(null);</span>
+      // Create navigation Property Binding
+      // V4: An entity set or a singleton SHOULD contain an edm:NavigationPropertyBinding element for each navigation
+      // property of its entity type, including navigation properties defined on complex typed properties.
+      // If omitted, clients MUST assume that the target entity set or singleton can vary per related entity.
+<span class="nc" id="L51">      edmSingleton.setNavigationPropertyBindings(determinePropertyBinding());</span>
+<span class="nc" id="L52">      edmSingleton.setAnnotations(edmAnnotations);</span>
+    }
+<span class="nc" id="L54">  }</span>
+
+  @Override
+  CsdlSingleton getEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L58" title="All 2 branches missed.">    if (edmSingleton == null) {</span>
+<span class="nc" id="L59">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L61">    return edmSingleton;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

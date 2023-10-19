@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAProcessorFactory.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPAProcessorFactory.java</span></div><h1>JPAProcessorFactory.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.QUERY_SERVER_DRIVEN_PAGING_GONE;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.QUERY_SERVER_DRIVEN_PAGING_NOT_IMPLEMENTED;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpHeader;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.queryoption.SystemQueryOption;
+import org.apache.olingo.server.api.uri.queryoption.SystemQueryOptionKind;
+
+import com.sap.olingo.jpa.processor.core.api.JPAODataPage;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.api.JPAODataSessionContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAIllegalAccessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.modify.JPAConversionHelper;
+import com.sap.olingo.jpa.processor.core.query.JPACountQuery;
+import com.sap.olingo.jpa.processor.core.query.JPAJoinQuery;
+import com.sap.olingo.jpa.processor.core.serializer.JPASerializerFactory;
+
+public final class JPAProcessorFactory {
+  private final JPAODataSessionContextAccess sessionContext;
+  private final JPASerializerFactory serializerFactory;
+  private final OData odata;
+  private final ServiceMetadata serviceMetadata;
+
+  public JPAProcessorFactory(final OData odata, final ServiceMetadata serviceMetadata,
+      final JPAODataSessionContextAccess context) {
+<span class="nc" id="L43">    super();</span>
+<span class="nc" id="L44">    this.sessionContext = context;</span>
+<span class="nc" id="L45">    this.serializerFactory = new JPASerializerFactory(odata, serviceMetadata, context);</span>
+<span class="nc" id="L46">    this.odata = odata;</span>
+<span class="nc" id="L47">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L48">  }</span>
+
+  public JPACUDRequestProcessor createCUDRequestProcessor(final UriInfo uriInfo, final ContentType responseFormat,
+      final JPAODataRequestContextAccess context, final Map&lt;String, List&lt;String&gt;&gt; header) throws ODataException {
+
+<span class="nc" id="L53">    final JPAODataRequestContextAccess requestContext = new JPAODataInternalRequestContext(uriInfo, serializerFactory</span>
+<span class="nc" id="L54">        .createCUDSerializer(responseFormat, uriInfo, Optional.ofNullable(header.get(HttpHeader.ODATA_MAX_VERSION))),</span>
+        context, header);
+
+<span class="nc" id="L57">    return new JPACUDRequestProcessor(odata, serviceMetadata, requestContext, new JPAConversionHelper());</span>
+  }
+
+  public JPACUDRequestProcessor createCUDRequestProcessor(final UriInfo uriInfo,
+      final JPAODataRequestContextAccess context, final Map&lt;String, List&lt;String&gt;&gt; header) throws ODataException {
+
+<span class="nc" id="L63">    final JPAODataRequestContextAccess requestContext = new JPAODataInternalRequestContext(uriInfo, context, header);</span>
+
+<span class="nc" id="L65">    return new JPACUDRequestProcessor(odata, serviceMetadata, requestContext, new JPAConversionHelper());</span>
+  }
+
+  public JPAActionRequestProcessor createActionProcessor(final UriInfo uriInfo, final ContentType responseFormat,
+      final Map&lt;String, List&lt;String&gt;&gt; header, final JPAODataRequestContextAccess context) throws ODataException {
+
+<span class="nc" id="L71">    final JPAODataRequestContextAccess requestContext = new JPAODataInternalRequestContext(uriInfo,</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        responseFormat != null ? serializerFactory.createSerializer(responseFormat, uriInfo, Optional.ofNullable(header</span>
+<span class="nc" id="L73">            .get(HttpHeader.ODATA_MAX_VERSION))) : null, context, header);</span>
+
+<span class="nc" id="L75">    return new JPAActionRequestProcessor(odata, requestContext);</span>
+
+  }
+
+  public JPARequestProcessor createProcessor(final UriInfo uriInfo, final ContentType responseFormat,
+      final Map&lt;String, List&lt;String&gt;&gt; header, final JPAODataRequestContextAccess context) throws ODataException {
+
+<span class="nc" id="L82">    final List&lt;UriResource&gt; resourceParts = uriInfo.getUriResourceParts();</span>
+<span class="nc" id="L83">    final UriResource lastItem = resourceParts.get(resourceParts.size() - 1);</span>
+<span class="nc" id="L84">    final JPAODataPage page = getPage(header, uriInfo, context);</span>
+    JPAODataRequestContextAccess requestContext;
+    try {
+<span class="nc" id="L87">      requestContext = new JPAODataInternalRequestContext(page, serializerFactory</span>
+<span class="nc" id="L88">          .createSerializer(responseFormat, page.getUriInfo(), Optional.ofNullable(header.get(</span>
+              HttpHeader.ODATA_MAX_VERSION))), context, header);
+<span class="nc" id="L90">    } catch (final ODataJPAIllegalAccessException e) {</span>
+<span class="nc" id="L91">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L92">    }</span>
+
+<span class="nc bnc" id="L94" title="All 4 branches missed.">    switch (lastItem.getKind()) {</span>
+      case count:
+<span class="nc" id="L96">        return new JPACountRequestProcessor(odata, requestContext);</span>
+      case function:
+<span class="nc" id="L98">        checkFunctionPathSupported(resourceParts);</span>
+<span class="nc" id="L99">        return new JPAFunctionRequestProcessor(odata, requestContext);</span>
+      case complexProperty:
+      case primitiveProperty:
+      case navigationProperty:
+      case entitySet:
+      case singleton:
+      case value:
+<span class="nc" id="L106">        checkNavigationPathSupported(resourceParts);</span>
+<span class="nc" id="L107">        return new JPANavigationRequestProcessor(odata, serviceMetadata, requestContext);</span>
+      default:
+<span class="nc" id="L109">        throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_RESOURCE_TYPE,</span>
+<span class="nc" id="L110">            HttpStatusCode.NOT_IMPLEMENTED, lastItem.getKind().toString());</span>
+    }
+  }
+
+  private void checkFunctionPathSupported(final List&lt;UriResource&gt; resourceParts) throws ODataApplicationException {
+<span class="nc bnc" id="L115" title="All 2 branches missed.">    if (resourceParts.size() &gt; 2)</span>
+<span class="nc" id="L116">      throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_FUNC_WITH_NAVI,</span>
+          HttpStatusCode.NOT_IMPLEMENTED);
+<span class="nc" id="L118">  }</span>
+
+  private void checkNavigationPathSupported(final List&lt;UriResource&gt; resourceParts) throws ODataApplicationException {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">    for (final UriResource resourceItem : resourceParts) {</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">      if (resourceItem.getKind() != UriResourceKind.complexProperty</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">          &amp;&amp; resourceItem.getKind() != UriResourceKind.primitiveProperty</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">          &amp;&amp; resourceItem.getKind() != UriResourceKind.navigationProperty</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">          &amp;&amp; resourceItem.getKind() != UriResourceKind.entitySet</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">          &amp;&amp; resourceItem.getKind() != UriResourceKind.singleton</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">          &amp;&amp; resourceItem.getKind() != UriResourceKind.value)</span>
+<span class="nc" id="L128">        throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_RESOURCE_TYPE,</span>
+<span class="nc" id="L129">            HttpStatusCode.NOT_IMPLEMENTED, resourceItem.getKind().toString());</span>
+<span class="nc" id="L130">    }</span>
+<span class="nc" id="L131">  }</span>
+
+  private JPAODataPage getPage(final Map&lt;String, List&lt;String&gt;&gt; headers, final UriInfo uriInfo,
+      final JPAODataRequestContextAccess requestContext) throws ODataException {
+
+<span class="nc" id="L136">    JPAODataPage page = new JPAODataPage(uriInfo, 0, Integer.MAX_VALUE, null);</span>
+    // Server-Driven-Paging
+<span class="nc bnc" id="L138" title="All 2 branches missed.">    if (serverDrivenPaging(uriInfo)) {</span>
+<span class="nc" id="L139">      final String skipToken = skipToken(uriInfo);</span>
+<span class="nc bnc" id="L140" title="All 4 branches missed.">      if (skipToken != null &amp;&amp; !skipToken.isEmpty()) {</span>
+<span class="nc" id="L141">        page = sessionContext.getPagingProvider().getNextPage(skipToken);</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        if (page == null)</span>
+<span class="nc" id="L143">          throw new ODataJPAProcessorException(QUERY_SERVER_DRIVEN_PAGING_GONE, HttpStatusCode.GONE, skipToken);</span>
+      } else {
+<span class="nc" id="L145">        final JPACountQuery countQuery = new JPAJoinQuery(odata, new JPAODataInternalRequestContext(uriInfo,</span>
+            requestContext, headers));
+<span class="nc" id="L147">        final Integer preferredPagesize = getPreferredPagesize(headers);</span>
+<span class="nc" id="L148">        final JPAODataPage firstPage = sessionContext.getPagingProvider().getFirstPage(uriInfo, preferredPagesize,</span>
+<span class="nc" id="L149">            countQuery, requestContext.getEntityManager());</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">        page = firstPage != null ? firstPage : page;</span>
+      }
+    }
+<span class="nc" id="L153">    return page;</span>
+  }
+
+  private Integer getPreferredPagesize(final Map&lt;String, List&lt;String&gt;&gt; headers) throws ODataJPAProcessorException {
+
+<span class="nc" id="L158">    final List&lt;String&gt; preferredHeaders = getHeader(&quot;Prefer&quot;, headers);</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">    if (preferredHeaders != null) {</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">      for (final String header : preferredHeaders) {</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        if (header.startsWith(&quot;odata.maxpagesize&quot;)) {</span>
+          try {
+<span class="nc" id="L163">            return Integer.valueOf((header.split(&quot;=&quot;)[1]));</span>
+<span class="nc" id="L164">          } catch (final NumberFormatException e) {</span>
+<span class="nc" id="L165">            throw new ODataJPAProcessorException(e, HttpStatusCode.BAD_REQUEST);</span>
+          }
+        }
+<span class="nc" id="L168">      }</span>
+    }
+<span class="nc" id="L170">    return null;</span>
+  }
+
+  private boolean serverDrivenPaging(final UriInfo uriInfo) throws ODataJPAProcessorException {
+
+<span class="nc bnc" id="L175" title="All 2 branches missed.">    for (final SystemQueryOption option : uriInfo.getSystemQueryOptions()) {</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">      if (option.getKind() == SystemQueryOptionKind.SKIPTOKEN</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">          &amp;&amp; sessionContext.getPagingProvider() == null)</span>
+<span class="nc" id="L178">        throw new ODataJPAProcessorException(QUERY_SERVER_DRIVEN_PAGING_NOT_IMPLEMENTED,</span>
+            HttpStatusCode.NOT_IMPLEMENTED);
+<span class="nc" id="L180">    }</span>
+<span class="nc" id="L181">    final List&lt;UriResource&gt; resourceParts = uriInfo.getUriResourceParts();</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">    return sessionContext.getPagingProvider() != null</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        &amp;&amp; resourceParts.get(resourceParts.size() - 1).getKind() != UriResourceKind.function;</span>
+  }
+
+  private String skipToken(final UriInfo uriInfo) {
+<span class="nc bnc" id="L187" title="All 2 branches missed.">    for (final SystemQueryOption option : uriInfo.getSystemQueryOptions()) {</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">      if (option.getKind() == SystemQueryOptionKind.SKIPTOKEN)</span>
+<span class="nc" id="L189">        return option.getText();</span>
+<span class="nc" id="L190">    }</span>
+<span class="nc" id="L191">    return null;</span>
+  }
+
+  private List&lt;String&gt; getHeader(final String name, final Map&lt;String, List&lt;String&gt;&gt; headers) {
+<span class="nc bnc" id="L195" title="All 2 branches missed.">    for (final Entry&lt;String, List&lt;String&gt;&gt; header : headers.entrySet()) {</span>
+<span class="nc bnc" id="L196" title="All 2 branches missed.">      if (header.getKey().equalsIgnoreCase(name)) {</span>
+<span class="nc" id="L197">        return header.getValue();</span>
+      }
+<span class="nc" id="L199">    }</span>
+<span class="nc" id="L200">    return Collections.emptyList();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

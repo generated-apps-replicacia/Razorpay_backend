@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PredicateImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">PredicateImpl.java</span></div><h1>PredicateImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Selection;
+import javax.persistence.criteria.Subquery;
+
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+import com.sap.olingo.jpa.processor.cb.joiner.SqlConvertible;
+import com.sap.olingo.jpa.processor.cb.joiner.StringBuilderCollector;
+
+/**
+ *
+ * @author Oliver Grande
+ *
+ */
+abstract class PredicateImpl extends ExpressionImpl&lt;Boolean&gt; implements Predicate {
+
+  private static final int REQUIRED_NO_OPERATOR = 2;
+  protected final List&lt;SqlConvertible&gt; expressions;
+
+  static Predicate and(final Predicate[] restrictions) {
+<span class="nc bnc" id="L34" title="All 4 branches missed.">    if (restrictions == null || arrayIsEmpty(restrictions, REQUIRED_NO_OPERATOR))</span>
+<span class="nc" id="L35">      throw new IllegalArgumentException(&quot;Parameter 'restrictions' has to have at least 2 elements&quot;);</span>
+<span class="nc" id="L36">    Predicate p = restrictions[0];</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">    for (int i = 1; i &lt; restrictions.length; i++) {</span>
+<span class="nc" id="L38">      p = new AndPredicate(p, restrictions[i]);</span>
+    }
+<span class="nc" id="L40">    return p;</span>
+  }
+
+  static Predicate or(final Predicate[] restrictions) {
+<span class="nc bnc" id="L44" title="All 4 branches missed.">    if (restrictions == null || arrayIsEmpty(restrictions, REQUIRED_NO_OPERATOR))</span>
+<span class="nc" id="L45">      throw new IllegalArgumentException(&quot;Parameter 'restrictions' has to have at least 2 elements&quot;);</span>
+<span class="nc" id="L46">    Predicate p = restrictions[0];</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">    for (int i = 1; i &lt; restrictions.length; i++) {</span>
+<span class="nc" id="L48">      p = new OrPredicate(p, restrictions[i]);</span>
+    }
+<span class="nc" id="L50">    return p;</span>
+  }
+
+  private static boolean arrayIsEmpty(final Predicate[] restrictions, final int requiredNoElements) {
+<span class="nc bnc" id="L54" title="All 2 branches missed.">    for (int i = 0; i &lt; restrictions.length; i++) {</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">      if (restrictions[i] == null)</span>
+<span class="nc" id="L56">        return true;</span>
+    }
+<span class="nc bnc" id="L58" title="All 2 branches missed.">    return restrictions.length &lt; requiredNoElements;</span>
+  }
+
+  protected PredicateImpl(final SqlConvertible... expressions) {
+<span class="nc" id="L62">    super();</span>
+<span class="nc" id="L63">    this.expressions = Collections.unmodifiableList(Arrays.asList(expressions));</span>
+<span class="nc" id="L64">  }</span>
+
+  @Override
+  public Selection&lt;Boolean&gt; alias(final String name) {
+<span class="nc" id="L68">    alias = Optional.ofNullable(name);</span>
+<span class="nc" id="L69">    return this;</span>
+  }
+
+  @Override
+  public &lt;X&gt; Expression&lt;X&gt; as(final Class&lt;X&gt; type) {
+<span class="nc" id="L74">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  @CheckForNull
+  public String getAlias() {
+<span class="nc" id="L80">    return alias.orElse(null);</span>
+  }
+
+  @Override
+  public List&lt;Selection&lt;?&gt;&gt; getCompoundSelectionItems() {
+<span class="nc" id="L85">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public List&lt;Expression&lt;Boolean&gt;&gt; getExpressions() {
+<span class="nc" id="L90">    return asExpression();</span>
+  }
+
+  @Override
+  public Class&lt;? extends Boolean&gt; getJavaType() {
+<span class="nc" id="L95">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(final Collection&lt;?&gt; values) {
+<span class="nc" id="L100">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(final Expression&lt;?&gt;... values) {
+<span class="nc" id="L105">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(final Expression&lt;Collection&lt;?&gt;&gt; values) {
+<span class="nc" id="L110">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(final Object... values) {
+<span class="nc" id="L115">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public boolean isCompoundSelection() {
+<span class="nc" id="L120">    return false;</span>
+  }
+
+  /**
+   * Whether the predicate has been created from another
+   * predicate by applying the &lt;code&gt;Predicate.not()&lt;/code&gt; method
+   * or the &lt;code&gt;CriteriaBuilder.not()&lt;/code&gt; method.
+   * @return boolean indicating if the predicate is
+   * a negated predicate
+   */
+  @Override
+  public boolean isNegated() {
+<span class="nc" id="L132">    return false;</span>
+  }
+
+  @Override
+  public Predicate not() {
+<span class="nc" id="L137">    return new NotPredicate(this);</span>
+  }
+
+  private List&lt;Expression&lt;Boolean&gt;&gt; asExpression() {
+<span class="nc" id="L141">    return Collections.emptyList();</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L146">    return &quot;PredicateImpl [sql=&quot; + asSQL(new StringBuilder()) + &quot;]&quot;;</span>
+  }
+
+  static class AndPredicate extends BooleanPredicate {
+
+    AndPredicate(final Expression&lt;Boolean&gt; x, final Expression&lt;Boolean&gt; y) {
+<span class="nc" id="L152">      super(x, y);</span>
+<span class="nc" id="L153">    }</span>
+
+    /**
+     * Return the boolean operator for the predicate.
+     * If the predicate is simple, this is &lt;code&gt;AND&lt;/code&gt;.
+     * @return boolean operator for the predicate
+     */
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L162">      return Predicate.BooleanOperator.AND;</span>
+    }
+  }
+
+  static class BetweenExpressionPredicate extends PredicateImpl {
+
+    private final ExpressionImpl&lt;?&gt; attribute;
+
+    BetweenExpressionPredicate(final ExpressionImpl&lt;?&gt; attribute, final Expression&lt;?&gt; left, final Expression&lt;?&gt; right) {
+<span class="nc" id="L171">      super((SqlConvertible) left, (SqlConvertible) right);</span>
+<span class="nc" id="L172">      this.attribute = attribute;</span>
+<span class="nc" id="L173">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L177">      statement.append(OPENING_BRACKET);</span>
+<span class="nc" id="L178">      this.attribute.asSQL(statement)</span>
+<span class="nc" id="L179">          .append(&quot; &quot;)</span>
+<span class="nc" id="L180">          .append(SqlKeyWords.BETWEEN)</span>
+<span class="nc" id="L181">          .append(&quot; &quot;);</span>
+<span class="nc" id="L182">      this.expressions.get(0).asSQL(statement)</span>
+<span class="nc" id="L183">          .append(&quot; &quot;)</span>
+<span class="nc" id="L184">          .append(SqlKeyWords.AND)</span>
+<span class="nc" id="L185">          .append(&quot; &quot;);</span>
+<span class="nc" id="L186">      return this.expressions.get(1).asSQL(statement).append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L191">      return null;</span>
+    }
+  }
+
+  static class BinaryExpressionPredicate extends PredicateImpl {
+    private final Operation expression;
+
+    BinaryExpressionPredicate(final Operation operation, final Expression&lt;?&gt; left, final Expression&lt;?&gt; right) {
+<span class="nc" id="L199">      super((SqlConvertible) left, (SqlConvertible) right);</span>
+<span class="nc" id="L200">      this.expression = operation;</span>
+<span class="nc" id="L201">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L205">      statement.append(OPENING_BRACKET);</span>
+<span class="nc" id="L206">      this.expressions.get(0).asSQL(statement)</span>
+<span class="nc" id="L207">          .append(&quot; &quot;)</span>
+<span class="nc" id="L208">          .append(expression)</span>
+<span class="nc" id="L209">          .append(&quot; &quot;);</span>
+<span class="nc" id="L210">      return this.expressions.get(1).asSQL(statement).append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L215">      return null;</span>
+    }
+
+<span class="nc" id="L218">    enum Operation {</span>
+<span class="nc" id="L219">      EQ(&quot;=&quot;), NE(&quot;&lt;&gt;&quot;), GT(&quot;&gt;&quot;), GE(&quot;&gt;=&quot;), LT(&quot;&lt;&quot;), LE(&quot;&lt;=&quot;);</span>
+
+      private String keyWord;
+
+<span class="nc" id="L223">      private Operation(final String keyWord) {</span>
+<span class="nc" id="L224">        this.keyWord = keyWord;</span>
+<span class="nc" id="L225">      }</span>
+
+      @Override
+      public String toString() {
+<span class="nc" id="L229">        return keyWord;</span>
+      }
+    }
+  }
+
+  abstract static class BooleanPredicate extends PredicateImpl {
+
+    BooleanPredicate(final Expression&lt;Boolean&gt; x, final Expression&lt;Boolean&gt; y) {
+<span class="nc" id="L237">      super((SqlConvertible) x, (SqlConvertible) y);</span>
+<span class="nc" id="L238">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L242">      statement.append(OPENING_BRACKET);</span>
+<span class="nc" id="L243">      expressions.get(0).asSQL(statement)</span>
+<span class="nc" id="L244">          .append(&quot; &quot;)</span>
+<span class="nc" id="L245">          .append(getOperator())</span>
+<span class="nc" id="L246">          .append(&quot; &quot;);</span>
+<span class="nc" id="L247">      expressions.get(1).asSQL(statement);</span>
+<span class="nc" id="L248">      statement.append(CLOSING_BRACKET);</span>
+<span class="nc" id="L249">      return statement;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L254">      return &quot;AndPredicate [left=&quot; + expressions.get(0) + &quot;, right=&quot; + expressions.get(1) + &quot;]&quot;;</span>
+    }
+  }
+
+  static class LikePredicate extends PredicateImpl {
+    private final ParameterExpression&lt;String, ?&gt; pattern;
+    private final Optional&lt;ParameterExpression&lt;Character, ?&gt;&gt; escape;
+
+    public LikePredicate(final Expression&lt;String&gt; column, final ParameterExpression&lt;String, ?&gt; pattern) {
+<span class="nc" id="L263">      this(column, pattern, Optional.empty());</span>
+<span class="nc" id="L264">    }</span>
+
+    public LikePredicate(final Expression&lt;String&gt; column, final ParameterExpression&lt;String, ?&gt; pattern,
+        final Optional&lt;ParameterExpression&lt;Character, ?&gt;&gt; escapeChar) {
+<span class="nc" id="L268">      super((SqlConvertible) column);</span>
+<span class="nc" id="L269">      this.pattern = pattern;</span>
+<span class="nc" id="L270">      this.escape = escapeChar;</span>
+<span class="nc" id="L271">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L275">      statement.append(OPENING_BRACKET);</span>
+<span class="nc" id="L276">      this.expressions.get(0).asSQL(statement)</span>
+<span class="nc" id="L277">          .append(&quot; &quot;)</span>
+<span class="nc" id="L278">          .append(SqlKeyWords.LIKE)</span>
+<span class="nc" id="L279">          .append(&quot; &quot;);</span>
+<span class="nc" id="L280">      this.pattern.asSQL(statement);</span>
+<span class="nc" id="L281">      this.escape.ifPresent(e -&gt; statement</span>
+<span class="nc" id="L282">          .append(&quot; &quot;)</span>
+<span class="nc" id="L283">          .append(SqlKeyWords.ESCAPE)</span>
+<span class="nc" id="L284">          .append(&quot; &quot;));</span>
+<span class="nc" id="L285">      this.escape.ifPresent(e -&gt; e.asSQL(statement));</span>
+<span class="nc" id="L286">      return statement.append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L291">      return null;</span>
+    }
+  }
+
+  static class NotPredicate extends PredicateImpl {
+
+    private final SqlConvertible positive;
+
+<span class="nc" id="L299">    NotPredicate(final SqlConvertible predicate) {</span>
+<span class="nc" id="L300">      this.positive = predicate;</span>
+<span class="nc" id="L301">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L305">      statement</span>
+<span class="nc" id="L306">          .append(OPENING_BRACKET)</span>
+<span class="nc" id="L307">          .append(SqlKeyWords.NOT)</span>
+<span class="nc" id="L308">          .append(&quot; &quot;);</span>
+<span class="nc" id="L309">      return positive.asSQL(statement)</span>
+<span class="nc" id="L310">          .append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L315">      return null;</span>
+    }
+
+    @Override
+    public boolean isNegated() {
+<span class="nc" id="L320">      return true;</span>
+    }
+  }
+
+  static class NullPredicate extends PredicateImpl {
+
+    private final SqlNullCheck check;
+
+    NullPredicate(@Nonnull final Expression&lt;?&gt; expression, @Nonnull final SqlNullCheck check) {
+<span class="nc" id="L329">      super((SqlConvertible) Objects.requireNonNull(expression));</span>
+<span class="nc" id="L330">      this.check = Objects.requireNonNull(check);</span>
+<span class="nc" id="L331">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L335">      return expressions.get(0).asSQL(statement.append(OPENING_BRACKET))</span>
+<span class="nc" id="L336">          .append(&quot; &quot;).append(check).append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L341">      return null;</span>
+    }
+  }
+
+  static class OrPredicate extends BooleanPredicate {
+
+    OrPredicate(final Expression&lt;Boolean&gt; x, final Expression&lt;Boolean&gt; y) {
+<span class="nc" id="L348">      super(x, y);</span>
+<span class="nc" id="L349">    }</span>
+
+    /**
+     * Return the boolean operator for the predicate.
+     * If the predicate is simple, this is &lt;code&gt;AND&lt;/code&gt;.
+     * @return boolean operator for the predicate
+     */
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L358">      return Predicate.BooleanOperator.OR;</span>
+    }
+  }
+
+  static class In&lt;X&gt; extends PredicateImpl implements CriteriaBuilder.In&lt;X&gt; {
+    private final List&lt;Path&lt;? extends X&gt;&gt; paths;
+
+    In(final List&lt;Path&lt;? extends X&gt;&gt; paths, final Subquery&lt;?&gt; subquery) {
+<span class="nc" id="L366">      super((SqlConvertible) Objects.requireNonNull(subquery));</span>
+<span class="nc" id="L367">      this.paths = paths;</span>
+<span class="nc" id="L368">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L372">      statement.append(OPENING_BRACKET);</span>
+<span class="nc" id="L373">      statement.append(paths</span>
+<span class="nc" id="L374">          .stream()</span>
+<span class="nc" id="L375">          .map(p -&gt; ((Expression&lt;?&gt;) p)) // NOSONAR</span>
+<span class="nc" id="L376">          .collect(new StringBuilderCollector.ExpressionCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L377">      statement.append(CLOSING_BRACKET)</span>
+<span class="nc" id="L378">          .append(&quot; &quot;)</span>
+<span class="nc" id="L379">          .append(SqlKeyWords.IN)</span>
+<span class="nc" id="L380">          .append(&quot; &quot;)</span>
+<span class="nc" id="L381">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L382">      final SqlConvertible sub = expressions.get(0);</span>
+<span class="nc" id="L383">      return sub.asSQL(statement).append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public javax.persistence.criteria.CriteriaBuilder.In&lt;X&gt; value(final X value) {
+<span class="nc" id="L388">      throw new NotImplementedException();</span>
+    }
+
+    @Override
+    public javax.persistence.criteria.CriteriaBuilder.In&lt;X&gt; value(final Expression&lt;? extends X&gt; value) {
+<span class="nc" id="L393">      throw new NotImplementedException();</span>
+    }
+
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L398">      return BooleanOperator.AND;</span>
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Override
+    public Expression&lt;X&gt; getExpression() {
+<span class="nc bnc" id="L404" title="All 2 branches missed.">      return paths.isEmpty() ? null : (Expression&lt;X&gt;) paths.get(0);</span>
+    }
+
+  }
+
+  static class SubQuery extends PredicateImpl {
+    private final SqlConvertible query;
+    private final SqlSubQuery operator;
+
+<span class="nc" id="L413">    public SubQuery(@Nonnull final Subquery&lt;?&gt; subquery, @Nonnull final SqlSubQuery operator) {</span>
+<span class="nc" id="L414">      this.query = (SqlConvertible) Objects.requireNonNull(subquery);</span>
+<span class="nc" id="L415">      this.operator = operator;</span>
+<span class="nc" id="L416">    }</span>
+
+    @Override
+    public StringBuilder asSQL(@Nonnull final StringBuilder statement) {
+<span class="nc" id="L420">      statement.append(operator)</span>
+<span class="nc" id="L421">          .append(&quot; &quot;)</span>
+<span class="nc" id="L422">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L423">      return query.asSQL(statement).append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public BooleanOperator getOperator() {
+<span class="nc" id="L428">      return null;</span>
+    }
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

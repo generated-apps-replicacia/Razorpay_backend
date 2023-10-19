@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAAbstractFilter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAAbstractFilter.java</span></div><h1>JPAAbstractFilter.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import java.util.Collections;
+import java.util.List;
+
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+import org.apache.olingo.server.api.uri.queryoption.expression.VisitableExpression;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+
+public abstract class JPAAbstractFilter implements JPAFilterComplier, JPAFilterComplierAccess {
+  final JPAEntityType jpaEntityType;
+  final VisitableExpression expression;
+  final JPAAssociationPath association;
+
+  JPAAbstractFilter(final JPAEntityType jpaEntityType, final VisitableExpression expression) {
+<span class="nc" id="L23">    this(jpaEntityType, expression, null);</span>
+<span class="nc" id="L24">  }</span>
+
+  JPAAbstractFilter(final JPAEntityType jpaEntityType, final UriInfoResource uriResource,
+      final JPAAssociationPath association) {
+<span class="nc" id="L28">    super();</span>
+<span class="nc" id="L29">    this.jpaEntityType = jpaEntityType;</span>
+<span class="nc bnc" id="L30" title="All 4 branches missed.">    if (uriResource != null &amp;&amp; uriResource.getFilterOption() != null) {</span>
+<span class="nc" id="L31">      this.expression = uriResource.getFilterOption().getExpression();</span>
+    } else {
+<span class="nc" id="L33">      this.expression = null;</span>
+    }
+<span class="nc" id="L35">    this.association = association;</span>
+<span class="nc" id="L36">  }</span>
+
+  JPAAbstractFilter(final JPAEntityType jpaEntityType, final VisitableExpression expression,
+      final JPAAssociationPath association) {
+<span class="nc" id="L40">    super();</span>
+<span class="nc" id="L41">    this.jpaEntityType = jpaEntityType;</span>
+<span class="nc" id="L42">    this.expression = expression;</span>
+<span class="nc" id="L43">    this.association = association;</span>
+<span class="nc" id="L44">  }</span>
+
+  @Override
+  public List&lt;JPAPath&gt; getMember() throws ODataApplicationException {
+<span class="nc" id="L48">    final JPAMemberVisitor visitor = new JPAMemberVisitor(jpaEntityType);</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">    if (expression != null) {</span>
+      try {
+<span class="nc" id="L51">        expression.accept(visitor);</span>
+<span class="nc" id="L52">      } catch (final ExpressionVisitException e) {</span>
+<span class="nc" id="L53">        throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L54">      }</span>
+<span class="nc" id="L55">      return Collections.unmodifiableList(visitor.get());</span>
+    } else {
+<span class="nc" id="L57">      return Collections.emptyList();</span>
+    }
+  }
+
+  @Override
+  public JPAAssociationPath getAssociation() {
+<span class="nc" id="L63">    return association;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

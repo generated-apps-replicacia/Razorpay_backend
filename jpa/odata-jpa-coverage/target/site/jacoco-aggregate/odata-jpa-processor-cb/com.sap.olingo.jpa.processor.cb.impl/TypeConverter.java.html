@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>TypeConverter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">TypeConverter.java</span></div><h1>TypeConverter.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.Temporal;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+class TypeConverter {
+<span class="nc" id="L22">  private static final Log LOGGER = LogFactory.getLog(TypeConverter.class);</span>
+
+  private TypeConverter() {}
+
+  static Object convert(final Object source, final Class&lt;?&gt; target) { // NOSONAR
+<span class="nc bnc" id="L27" title="All 4 branches missed.">    if (target == null || source == null)</span>
+<span class="nc" id="L28">      return source;</span>
+<span class="nc bnc" id="L29" title="All 2 branches missed.">    if (!target.isAssignableFrom(source.getClass())) {</span>
+<span class="nc bnc" id="L30" title="All 2 branches missed.">      if (target == String.class) {</span>
+<span class="nc" id="L31">        return source.toString();</span>
+      }
+<span class="nc bnc" id="L33" title="All 4 branches missed.">      if (boxed(target) == Boolean.class &amp;&amp; source instanceof String)</span>
+<span class="nc" id="L34">        return Boolean.valueOf((String) source);</span>
+<span class="nc bnc" id="L35" title="All 4 branches missed.">      if (boxed(target) == Boolean.class &amp;&amp; source instanceof Number)</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        return ((Number) source).intValue() == 0 ? Boolean.FALSE : Boolean.TRUE;</span>
+<span class="nc bnc" id="L37" title="All 4 branches missed.">      if (source instanceof Number &amp;&amp; Number.class.isAssignableFrom(boxed(target))) {</span>
+<span class="nc" id="L38">        return convertNumber((Number) source, target);</span>
+      }
+<span class="nc bnc" id="L40" title="All 2 branches missed.">      if (Temporal.class.isAssignableFrom(target)) {</span>
+<span class="nc" id="L41">        return convertTemporal(source, target);</span>
+      }
+<span class="nc bnc" id="L43" title="All 4 branches missed.">      if (boxed(target) == Character.class &amp;&amp; source instanceof String) {</span>
+<span class="nc" id="L44">        return convertToCharacter((String) source);</span>
+      }
+<span class="nc bnc" id="L46" title="All 2 branches missed.">      if (target == Duration.class) {</span>
+<span class="nc" id="L47">        return convertDuration(source);</span>
+      } else {
+<span class="nc" id="L49">        LOGGER.debug(&quot;No converter found to convert &quot; + source.getClass().getSimpleName() + &quot; to &quot; + target</span>
+<span class="nc" id="L50">            .getSimpleName());</span>
+<span class="nc" id="L51">        throw new IllegalArgumentException(createCastException(source, target));</span>
+      }
+    }
+<span class="nc" id="L54">    return target.cast(source);</span>
+
+  }
+
+  private static Character convertToCharacter(final String source) {
+<span class="nc bnc" id="L59" title="All 2 branches missed.">    if (source.length() &gt; 1) {</span>
+<span class="nc" id="L60">      LOGGER.debug(&quot;Implicit conversion to Character from String only supported if String not longer than 1&quot;);</span>
+<span class="nc" id="L61">      throw new IllegalArgumentException(&quot;String to long&quot;);</span>
+    }
+<span class="nc bnc" id="L63" title="All 2 branches missed.">    if (source.length() == 0)</span>
+<span class="nc" id="L64">      return ' ';</span>
+<span class="nc" id="L65">    return source.charAt(0);</span>
+  }
+
+  private static Duration convertDuration(final Object source) {
+<span class="nc bnc" id="L69" title="All 2 branches missed.">    if (boxed(source.getClass()) == Long.class)</span>
+<span class="nc" id="L70">      return Duration.ofSeconds((long) source);</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">    if (source.getClass() == String.class)</span>
+<span class="nc" id="L72">      return Duration.parse((String) source);</span>
+<span class="nc" id="L73">    LOGGER.debug(&quot;No converter found to convert &quot; + source.getClass().getSimpleName() + &quot; to Duration&quot;);</span>
+<span class="nc" id="L74">    throw new IllegalArgumentException(createCastException(source, Duration.class));</span>
+  }
+
+  private static Temporal convertTemporal(final Object source, final Class&lt;?&gt; target) { // NOSONAR
+<span class="nc bnc" id="L78" title="All 2 branches missed.">    if (temporalConversionAllowed(source.getClass(), target)) {</span>
+      try {
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (target == Instant.class) {</span>
+<span class="nc" id="L81">          return convertTemporalToInstant(source, target);</span>
+        }
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        if (target == LocalDate.class) {</span>
+<span class="nc" id="L84">          return convertTemporalToLocalDate(source, target);</span>
+        }
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (target == LocalDateTime.class) {</span>
+<span class="nc" id="L87">          return convertTemporalToLocalDateTime(source, target);</span>
+        }
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        if (target == LocalTime.class) {</span>
+<span class="nc" id="L90">          return convertTemporalToLocalTime(source, target);</span>
+        }
+<span class="nc bnc" id="L92" title="All 2 branches missed.">        if (target == OffsetTime.class) {</span>
+<span class="nc" id="L93">          return OffsetTime.parse((String) source);</span>
+        }
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        if (target == OffsetDateTime.class) {</span>
+<span class="nc" id="L96">          return OffsetDateTime.parse((String) source);</span>
+        }
+<span class="nc" id="L98">      } catch (final DateTimeParseException e) {</span>
+<span class="nc" id="L99">        throw new IllegalArgumentException(e);</span>
+<span class="nc" id="L100">      }</span>
+    }
+<span class="nc" id="L102">    throw new IllegalArgumentException(createCastException(source, target));</span>
+  }
+
+  private static LocalTime convertTemporalToLocalTime(final Object source, final Class&lt;?&gt; target) {
+<span class="nc bnc" id="L106" title="All 2 branches missed.">    if (source.getClass() == Time.class)</span>
+<span class="nc" id="L107">      return ((Time) source).toLocalTime();</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">    if (source.getClass() == String.class)</span>
+<span class="nc" id="L109">      return LocalTime.parse((String) source);</span>
+<span class="nc" id="L110">    throw new IllegalArgumentException(createCastException(source, target));</span>
+  }
+
+  private static LocalDateTime convertTemporalToLocalDateTime(final Object source, final Class&lt;?&gt; target) {
+<span class="nc bnc" id="L114" title="All 2 branches missed.">    if (source.getClass() == Timestamp.class)</span>
+<span class="nc" id="L115">      return ((Timestamp) source).toLocalDateTime();</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">    if (source.getClass() == String.class)</span>
+<span class="nc" id="L117">      return LocalDateTime.parse((String) source);</span>
+<span class="nc" id="L118">    throw new IllegalArgumentException(createCastException(source, target));</span>
+  }
+
+  private static LocalDate convertTemporalToLocalDate(final Object source, final Class&lt;?&gt; target) {
+<span class="nc bnc" id="L122" title="All 2 branches missed.">    if (source.getClass() == Date.class)</span>
+<span class="nc" id="L123">      return ((Date) source).toLocalDate();</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">    if (source.getClass() == Timestamp.class)</span>
+<span class="nc" id="L125">      return ((Timestamp) source).toLocalDateTime().toLocalDate();</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">    if (source.getClass() == String.class)</span>
+<span class="nc" id="L127">      return LocalDate.parse((String) source);</span>
+<span class="nc" id="L128">    throw new IllegalArgumentException(createCastException(source, target));</span>
+  }
+
+  private static Instant convertTemporalToInstant(final Object source, final Class&lt;?&gt; target) {
+<span class="nc bnc" id="L132" title="All 2 branches missed.">    if (source.getClass() == Long.class)</span>
+<span class="nc" id="L133">      return Instant.ofEpochMilli(((Number) source).longValue());</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">    if (source.getClass() == String.class)</span>
+<span class="nc" id="L135">      return Instant.parse((String) source);</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">    if (source.getClass() == Timestamp.class)</span>
+<span class="nc" id="L137">      return ((Timestamp) source).toInstant();</span>
+<span class="nc" id="L138">    throw new IllegalArgumentException(createCastException(source, target));</span>
+  }
+
+  public static Class&lt;?&gt; boxed(final Class&lt;?&gt; javaType) {
+<span class="nc bnc" id="L142" title="All 2 branches missed.">    if (javaType == int.class) return Integer.class;</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">    if (javaType == long.class) return Long.class;</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">    if (javaType == boolean.class) return Boolean.class;</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">    if (javaType == byte.class) return Byte.class;</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">    if (javaType == char.class) return Character.class;</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">    if (javaType == float.class) return Float.class;</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">    if (javaType == short.class) return Short.class;</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">    if (javaType == double.class) return Double.class;</span>
+<span class="nc" id="L150">    return javaType;</span>
+  }
+
+  private static Object convertNumber(final Number source, final Class&lt;?&gt; target) { // NOSONAR
+<span class="nc bnc" id="L154" title="All 2 branches missed.">    if (numberConversionAllowed(source.getClass(), target)) {</span>
+      try {
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (boxed(target) == Long.class) {</span>
+<span class="nc" id="L157">          return source.longValue();</span>
+        }
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if (boxed(target) == Integer.class) {</span>
+<span class="nc" id="L160">          return source.intValue();</span>
+        }
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        if (boxed(target) == Short.class) {</span>
+<span class="nc" id="L163">          return source.shortValue();</span>
+        }
+<span class="nc bnc" id="L165" title="All 2 branches missed.">        if (boxed(target) == Byte.class) {</span>
+<span class="nc" id="L166">          return source.byteValue();</span>
+        }
+<span class="nc bnc" id="L168" title="All 2 branches missed.">        if (boxed(target) == Float.class) {</span>
+<span class="nc" id="L169">          return source.floatValue();</span>
+        }
+<span class="nc bnc" id="L171" title="All 2 branches missed.">        if (boxed(target) == Double.class) {</span>
+<span class="nc" id="L172">          return source.doubleValue();</span>
+        }
+<span class="nc bnc" id="L174" title="All 2 branches missed.">        if (target == BigInteger.class) {</span>
+<span class="nc" id="L175">          return BigInteger.valueOf(source.longValue());</span>
+        }
+<span class="nc bnc" id="L177" title="All 2 branches missed.">        if (target == BigDecimal.class) {</span>
+<span class="nc" id="L178">          return convertToBigDecimal(source);</span>
+        }
+<span class="nc" id="L180">      } catch (final NumberFormatException e) {</span>
+<span class="nc" id="L181">        throw new IllegalArgumentException(e);</span>
+<span class="nc" id="L182">      }</span>
+    }
+<span class="nc" id="L184">    throw new IllegalArgumentException(createCastException(source, target));</span>
+  }
+
+  private static Object convertToBigDecimal(final Number result) {
+<span class="nc bnc" id="L188" title="All 4 branches missed.">    if (result instanceof Float || result instanceof Double) {</span>
+<span class="nc" id="L189">      final Double d = result.doubleValue();</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">      if (Double.isInfinite(d))</span>
+<span class="nc" id="L191">        throw new IllegalArgumentException(</span>
+<span class="nc" id="L192">            String.format(&quot;Type cast error: Can't convert infinity value of type '%s' to BigDecimal. @Convert required&quot;,</span>
+                result));
+<span class="nc bnc" id="L194" title="All 2 branches missed.">      if (Double.isNaN(d))</span>
+<span class="nc" id="L195">        throw new IllegalArgumentException(</span>
+            &quot;Type cast error: Can't convert 'Not A Number' to BigDecimal. @Convert required&quot;);
+<span class="nc" id="L197">      return BigDecimal.valueOf(result.doubleValue());</span>
+    }
+<span class="nc" id="L199">    return BigDecimal.valueOf(result.longValue());</span>
+  }
+
+  private static String createCastException(final Object result, final Class&lt;?&gt; target) {
+<span class="nc" id="L203">    return String.format(&quot;Type cast error: Can't convert '%s' to '%s'. @Convert required&quot;,</span>
+<span class="nc" id="L204">        result.getClass(), target);</span>
+  }
+
+  private static boolean numberConversionAllowed(final Class&lt;?&gt; source, final Class&lt;?&gt; target) { // NOSONAR
+<span class="nc bnc" id="L208" title="All 8 branches missed.">    if (target == Short.class || target == short.class) return source == Byte.class || source == Integer.class;</span>
+<span class="nc bnc" id="L209" title="All 10 branches missed.">    if (target == Integer.class || target == int.class) return source == Byte.class || source == Short.class</span>
+        || source == Long.class;
+<span class="nc bnc" id="L211" title="All 14 branches missed.">    if (target == Long.class || target == long.class) return source == Byte.class || source == Short.class</span>
+        || source == Integer.class|| source == BigInteger.class || source == BigDecimal.class;
+<span class="nc bnc" id="L213" title="All 12 branches missed.">    if (target == BigInteger.class) return source == Byte.class || source == Short.class || source == Integer.class</span>
+        || source == Long.class|| source == BigDecimal.class;
+<span class="nc bnc" id="L215" title="All 16 branches missed.">    if (target == Float.class || target == float.class) return source == Byte.class || source == Short.class</span>
+        || source == Integer.class || source == Long.class || source == BigInteger.class || source == BigDecimal.class;
+<span class="nc bnc" id="L217" title="All 18 branches missed.">    if (target == Double.class || target == double.class) return source == Byte.class || source == Short.class</span>
+        || source == Integer.class || source == Long.class || source == BigInteger.class || source == BigDecimal.class
+        || source == Float.class;
+<span class="nc bnc" id="L220" title="All 16 branches missed.">    if (target == BigDecimal.class) return source == Byte.class || source == Short.class || source == Integer.class</span>
+        || source == Long.class || source == BigInteger.class || source == Float.class || source == Double.class;
+<span class="nc" id="L222">    return false;</span>
+  }
+
+  private static boolean temporalConversionAllowed(final Class&lt;?&gt; source, final Class&lt;?&gt; target) { // NOSONAR
+<span class="nc bnc" id="L226" title="All 8 branches missed.">    if (target == Instant.class) return source == Long.class || source == String.class || source == Timestamp.class;</span>
+<span class="nc bnc" id="L227" title="All 8 branches missed.">    if (target == LocalDate.class) return source == Date.class || source == Timestamp.class || source == String.class;</span>
+<span class="nc bnc" id="L228" title="All 6 branches missed.">    if (target == LocalDateTime.class) return source == Timestamp.class || source == String.class;</span>
+<span class="nc bnc" id="L229" title="All 6 branches missed.">    if (target == LocalTime.class) return source == Time.class || source == String.class;</span>
+<span class="nc bnc" id="L230" title="All 4 branches missed.">    if (target == OffsetDateTime.class) return source == String.class;</span>
+<span class="nc bnc" id="L231" title="All 4 branches missed.">    if (target == OffsetTime.class) return source == String.class;</span>
+<span class="nc" id="L232">    return false;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

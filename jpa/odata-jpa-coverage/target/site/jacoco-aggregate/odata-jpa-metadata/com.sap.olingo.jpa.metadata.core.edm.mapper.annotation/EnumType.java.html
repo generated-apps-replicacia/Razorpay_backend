@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>EnumType.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.annotation</a> &gt; <span class="el_source">EnumType.java</span></div><h1>EnumType.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.annotation;
+
+import org.apache.olingo.commons.api.edm.provider.CsdlEnumType;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+<span class="nc" id="L9">public class EnumType extends CsdlEnumType {</span>
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Name&quot;, isAttribute = true)
+  public CsdlEnumType setName(final String name) {
+<span class="nc" id="L14">    return super.setName(name);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;IsFlags&quot;, isAttribute = true)
+  public CsdlEnumType setFlags(final boolean isFlags) {
+<span class="nc" id="L20">    return super.setFlags(isFlags);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;UnderlyingType&quot;)
+  public CsdlEnumType setUnderlyingType(final String underlyingType) {
+<span class="nc" id="L26">    return super.setUnderlyingType(underlyingType);</span>
+  }
+
+  @JacksonXmlProperty(localName = &quot;Member&quot;)
+  public void setMembers(final Member[] members) {
+<span class="nc bnc" id="L31" title="All 2 branches missed.">    for (final Member m : members) {</span>
+<span class="nc" id="L32">      this.getMembers().add(m);</span>
+    }
+<span class="nc" id="L34">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

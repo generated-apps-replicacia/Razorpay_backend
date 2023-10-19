@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataRequestHandler.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAODataRequestHandler.java</span></div><h1>JPAODataRequestHandler.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import java.util.Optional;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataHttpHandler;
+
+import com.sap.olingo.jpa.metadata.api.JPAEdmProvider;
+import com.sap.olingo.jpa.processor.core.processor.JPAODataInternalRequestContext;
+
+public class JPAODataRequestHandler {
+  private static final String REQUEST_MAPPING_ATTRIBUTE = &quot;requestMapping&quot;;
+  public final Optional&lt;? extends EntityManagerFactory&gt; emf;
+  private final JPAODataServiceContext serviceContext;
+  private final JPAODataInternalRequestContext requestContext;
+  final OData odata;
+
+  /**
+   * Create a handler without special request context. Default implementations are used if present.
+   * @param serviceContext
+   */
+  public JPAODataRequestHandler(final JPAODataSessionContextAccess serviceContext) {
+<span class="nc" id="L30">    this(serviceContext, OData.newInstance());</span>
+<span class="nc" id="L31">  }</span>
+
+  /**
+   *
+   * @param serviceContext
+   * @param requestContext
+   */
+  public JPAODataRequestHandler(final JPAODataSessionContextAccess serviceContext,
+      final JPAODataRequestContext requestContext) {
+<span class="nc" id="L40">    this(serviceContext, requestContext, OData.newInstance());</span>
+<span class="nc" id="L41">  }</span>
+
+  /**
+   * Give the option to inject the odata helper e.g. for testing
+   * @param serviceContext
+   * @param odata
+   */
+  JPAODataRequestHandler(final JPAODataSessionContextAccess serviceContext, final OData odata) {
+<span class="nc" id="L49">    this(serviceContext, JPAODataRequestContext.with().build(), odata);</span>
+<span class="nc" id="L50">  }</span>
+
+  JPAODataRequestHandler(final JPAODataSessionContextAccess serviceContext, final JPAODataRequestContext requestContext,
+<span class="nc" id="L53">      final OData odata) {</span>
+<span class="nc" id="L54">    this.emf = serviceContext.getEntityManagerFactory();</span>
+<span class="nc" id="L55">    this.serviceContext = (JPAODataServiceContext) serviceContext;</span>
+<span class="nc" id="L56">    this.requestContext = new JPAODataInternalRequestContext(requestContext, serviceContext);</span>
+<span class="nc" id="L57">    this.odata = odata;</span>
+<span class="nc" id="L58">  }</span>
+
+  public void process(final HttpServletRequest request, final HttpServletResponse response) throws ODataException {
+<span class="nc bnc" id="L61" title="All 4 branches missed.">    if (emf.isPresent() &amp;&amp; this.requestContext.getEntityManager() == null) {</span>
+<span class="nc" id="L62">      final EntityManager em = emf.get().createEntityManager();</span>
+      try {
+<span class="nc" id="L64">        this.requestContext.setEntityManager(em);</span>
+<span class="nc" id="L65">        processInternal(request, response);</span>
+      } finally {
+<span class="nc" id="L67">        em.close();</span>
+      }
+<span class="nc" id="L69">    } else {</span>
+<span class="nc" id="L70">      processInternal(request, response);</span>
+    }
+<span class="nc" id="L72">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private void processInternal(final HttpServletRequest request, final HttpServletResponse response)
+      throws ODataException {
+
+<span class="nc" id="L78">    final JPAEdmProvider jpaEdm = requestContext.getEdmProvider();</span>
+<span class="nc" id="L79">    final ODataHttpHandler handler = odata.createHandler(odata.createServiceMetadata(jpaEdm, jpaEdm.getReferences()));</span>
+<span class="nc" id="L80">    serviceContext.getEdmProvider().setRequestLocales(request.getLocales());</span>
+<span class="nc" id="L81">    final HttpServletRequest mappedRequest = prepareRequestMapping(request, serviceContext.getMappingPath());</span>
+<span class="nc" id="L82">    handler.register(requestContext.getDebugSupport());</span>
+<span class="nc" id="L83">    handler.register(new JPAODataRequestProcessor(serviceContext, requestContext));</span>
+<span class="nc" id="L84">    handler.register(serviceContext.getBatchProcessorFactory().getBatchProcessor(serviceContext, requestContext));</span>
+<span class="nc" id="L85">    handler.register(serviceContext.getEdmProvider().getServiceDocument());</span>
+<span class="nc" id="L86">    handler.register(serviceContext.getErrorProcessor());</span>
+<span class="nc" id="L87">    handler.register(new JPAODataServiceDocumentProcessor(serviceContext));</span>
+<span class="nc" id="L88">    handler.process(mappedRequest, response);</span>
+<span class="nc" id="L89">  }</span>
+
+  private HttpServletRequest prepareRequestMapping(final HttpServletRequest req, final String requestPath) {
+<span class="nc bnc" id="L92" title="All 4 branches missed.">    if (requestPath != null &amp;&amp; !requestPath.isEmpty()) {</span>
+<span class="nc" id="L93">      final HttpServletRequestWrapper request = new HttpServletRequestWrapper(req);</span>
+<span class="nc" id="L94">      request.setAttribute(REQUEST_MAPPING_ATTRIBUTE, requestPath);</span>
+<span class="nc" id="L95">      return request;</span>
+    } else {
+<span class="nc" id="L97">      return req;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

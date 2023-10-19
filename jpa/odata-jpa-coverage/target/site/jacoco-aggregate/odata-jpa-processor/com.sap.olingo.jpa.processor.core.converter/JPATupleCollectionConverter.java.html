@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPATupleCollectionConverter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.converter</a> &gt; <span class="el_source">JPATupleCollectionConverter.java</span></div><h1>JPATupleCollectionConverter.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.converter;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Tuple;
+import javax.persistence.TupleElement;
+
+import org.apache.olingo.commons.api.data.ComplexValue;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.uri.UriHelper;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransientPropertyCalculator;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+
+public class JPATupleCollectionConverter extends JPATupleResultConverter {
+
+  public JPATupleCollectionConverter(final JPAServiceDocument sd, final UriHelper uriHelper,
+      final ServiceMetadata serviceMetadata, final JPAODataRequestContextAccess requestContext) {
+<span class="nc" id="L38">    super(sd, uriHelper, serviceMetadata, requestContext);</span>
+<span class="nc" id="L39">  }</span>
+
+  @Override
+  public Map&lt;String, List&lt;Object&gt;&gt; getResult(final JPAExpandResult dbResult,
+      final Collection&lt;JPAPath&gt; requestedSelection) throws ODataApplicationException {
+
+<span class="nc" id="L45">    jpaQueryResult = dbResult;</span>
+<span class="nc" id="L46">    final JPACollectionResult jpaResult = (JPACollectionResult) dbResult;</span>
+<span class="nc" id="L47">    final JPAAssociationAttribute attribute = jpaResult.getAssociation().getLeaf();</span>
+<span class="nc" id="L48">    final boolean isTransient = attribute.isTransient();</span>
+
+<span class="nc" id="L50">    final Map&lt;String, List&lt;Tuple&gt;&gt; childResult = jpaResult.getResults();</span>
+<span class="nc" id="L51">    final Map&lt;String, List&lt;Object&gt;&gt; result = new HashMap&lt;&gt;(childResult.size());</span>
+
+    try {
+<span class="nc" id="L54">      final JPAStructuredType st = determineCollectionRoot(jpaResult.getEntityType(), jpaResult.getAssociation()</span>
+<span class="nc" id="L55">          .getPath());</span>
+<span class="nc" id="L56">      final String prefix = determinePrefix(jpaResult.getAssociation().getAlias());</span>
+
+<span class="nc bnc" id="L58" title="All 2 branches missed.">      for (Entry&lt;String, List&lt;Tuple&gt;&gt; tuple : childResult.entrySet()) {</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        if (isTransient) {</span>
+<span class="nc" id="L60">          result.put(tuple.getKey(), convertTransientCollection(attribute, tuple));</span>
+        } else {
+<span class="nc" id="L62">          result.put(tuple.getKey(),</span>
+<span class="nc" id="L63">              convertPersistentCollection(jpaResult, attribute, st, prefix, tuple, requestedSelection));</span>
+        }
+<span class="nc" id="L65">      }</span>
+<span class="nc" id="L66">    } catch (ODataJPAModelException e) {</span>
+<span class="nc" id="L67">      throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_RESULT_CONV_ERROR,</span>
+          HttpStatusCode.INTERNAL_SERVER_ERROR, e);
+    } finally {
+<span class="nc" id="L70">      childResult.replaceAll((k, v) -&gt; null);</span>
+    }
+<span class="nc" id="L72">    return result;</span>
+  }
+
+  private List&lt;Object&gt; convertPersistentCollection(final JPACollectionResult jpaResult,
+      final JPAAssociationAttribute attribute, final JPAStructuredType st, final String prefix,
+      Entry&lt;String, List&lt;Tuple&gt;&gt; tuple, final Collection&lt;JPAPath&gt; requestedSelection) throws ODataJPAModelException,
+      ODataApplicationException {
+
+<span class="nc" id="L80">    final List&lt;Object&gt; collection = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L81">    final List&lt;Tuple&gt; rows = tuple.getValue();</span>
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">    for (final Tuple row : rows) {</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">      if (attribute.isComplex()) {</span>
+<span class="nc" id="L85">        final ComplexValue value = new ComplexValue();</span>
+<span class="nc" id="L86">        final Map&lt;String, ComplexValue&gt; complexValueBuffer = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        if (requestedSelection.isEmpty()) {</span>
+<span class="nc" id="L88">          convertWithOutSelection(st, prefix, row, value, complexValueBuffer);</span>
+        } else {
+<span class="nc" id="L90">          convertRowWithSelection(row, requestedSelection, complexValueBuffer, null, value.getValue());</span>
+        }
+<span class="nc" id="L92">        collection.add(complexValueBuffer.get(jpaResult.getAssociation().getAlias()));</span>
+<span class="nc" id="L93">      } else {</span>
+<span class="nc" id="L94">        collection.add(convertPrimitiveCollectionAttribute(row.get(jpaResult.getAssociation().getAlias()),</span>
+            (JPACollectionAttribute) attribute));
+      }
+
+<span class="nc" id="L98">    }</span>
+<span class="nc" id="L99">    return collection;</span>
+  }
+
+  private void convertWithOutSelection(final JPAStructuredType st, final String prefix, final Tuple row,
+      final ComplexValue value, final Map&lt;String, ComplexValue&gt; complexValueBuffer) throws ODataJPAModelException,
+      ODataApplicationException {
+
+<span class="nc bnc" id="L106" title="All 2 branches missed.">    for (final TupleElement&lt;?&gt; element : row.getElements()) {</span>
+<span class="nc" id="L107">      final String alias = determineAlias(element.getAlias(), prefix);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">      if (alias != null) {</span>
+<span class="nc" id="L109">        final JPAPath path = st.getPath(alias);</span>
+<span class="nc" id="L110">        convertAttribute(row.get(element.getAlias()), path, complexValueBuffer,</span>
+<span class="nc" id="L111">            value.getValue(), row, prefix, null);</span>
+      }
+<span class="nc" id="L113">    }</span>
+<span class="nc" id="L114">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private List&lt;Object&gt; convertTransientCollection(final JPAAssociationAttribute attribute,
+      Entry&lt;String, List&lt;Tuple&gt;&gt; tuple) throws ODataJPAProcessorException {
+
+<span class="nc" id="L120">    final Optional&lt;EdmTransientPropertyCalculator&lt;?&gt;&gt; calculator = requestContext.getCalculator(attribute);</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">    if (calculator.isPresent()) {</span>
+      // The tuple contains only one row with required fields
+<span class="nc" id="L123">      return (List&lt;Object&gt;) calculator.get().calculateCollectionProperty(tuple.getValue().get(0));</span>
+    }
+<span class="nc" id="L125">    return Collections.emptyList();</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private &lt;T extends Object, S extends Object&gt; S convertPrimitiveCollectionAttribute(final Object value,
+      final JPAAttribute attribute) {
+
+<span class="nc bnc" id="L132" title="All 2 branches missed.">    if (attribute.getConverter() != null) {</span>
+<span class="nc" id="L133">      final AttributeConverter&lt;T, S&gt; converter = attribute.getConverter();</span>
+<span class="nc" id="L134">      return converter.convertToDatabaseColumn((T) value);</span>
+    }
+<span class="nc" id="L136">    return (S) value;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

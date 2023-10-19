@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>SelectionPath.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">SelectionPath.java</span></div><h1>SelectionPath.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Path;
+import javax.persistence.metamodel.Bindable;
+import javax.persistence.metamodel.MapAttribute;
+import javax.persistence.metamodel.PluralAttribute;
+import javax.persistence.metamodel.SingularAttribute;
+
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+
+/**
+ *
+ * @author Oliver Grande
+ * @since 1.0.1
+ * @created 29.12.2020
+ * @param &lt;X&gt;
+ */
+class SelectionPath&lt;X&gt; extends ExpressionImpl&lt;X&gt; implements Path&lt;X&gt; {
+  final SqlSelection&lt;X&gt; selection;
+  final Optional&lt;String&gt; tableAlias;
+
+<span class="nc" id="L28">  SelectionPath(@Nonnull final SqlSelection&lt;X&gt; selImpl, @Nonnull final Optional&lt;String&gt; tableAlias) {</span>
+<span class="nc" id="L29">    this.selection = selImpl;</span>
+<span class="nc" id="L30">    this.tableAlias = tableAlias;</span>
+<span class="nc" id="L31">  }</span>
+
+  @Override
+  public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L35">    tableAlias.ifPresent(p -&gt; {</span>
+<span class="nc" id="L36">      statement.append(p);</span>
+<span class="nc" id="L37">      statement.append(DOT);</span>
+<span class="nc" id="L38">    });</span>
+<span class="nc" id="L39">    return statement.append(selection.getAlias().replaceAll(SELECTION_REPLACEMENT_REGEX, SELECTION_REPLACEMENT));</span>
+  }
+
+  @Override
+  public &lt;Y&gt; Path&lt;Y&gt; get(final SingularAttribute&lt;? super X, Y&gt; arg0) {
+<span class="nc" id="L44">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;E, C extends Collection&lt;E&gt;&gt; Expression&lt;C&gt; get(final PluralAttribute&lt;X, C, E&gt; arg0) {
+<span class="nc" id="L49">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;K, V, M extends Map&lt;K, V&gt;&gt; Expression&lt;M&gt; get(final MapAttribute&lt;X, K, V&gt; arg0) {
+<span class="nc" id="L54">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;Y&gt; Path&lt;Y&gt; get(final String arg0) {
+<span class="nc" id="L59">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Bindable&lt;X&gt; getModel() {
+<span class="nc" id="L64">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Path&lt;?&gt; getParentPath() {
+<span class="nc" id="L69">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;Class&lt;? extends X&gt;&gt; type() {
+<span class="nc" id="L74">    throw new NotImplementedException();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

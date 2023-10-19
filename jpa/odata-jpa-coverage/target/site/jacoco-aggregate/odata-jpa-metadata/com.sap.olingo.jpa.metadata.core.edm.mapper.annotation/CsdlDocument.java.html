@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>CsdlDocument.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.annotation</a> &gt; <span class="el_source">CsdlDocument.java</span></div><h1>CsdlDocument.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.annotation;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.apache.olingo.commons.api.edm.provider.CsdlSchema;
+import org.apache.olingo.commons.api.edm.provider.CsdlTerm;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JacksonXmlRootElement(localName = &quot;Edmx&quot;, namespace = &quot;edmx&quot;)
+<span class="nc" id="L18">public class CsdlDocument {</span>
+
+  @JacksonXmlProperty(localName = &quot;Reference&quot;)
+  private EdmxReference[] reference;
+
+  @JacksonXmlProperty(localName = &quot;DataServices&quot;)
+  private EdmxDataServices service;
+
+  EdmxDataServices getDataService() {
+<span class="nc" id="L27">    return service;</span>
+  }
+
+  List&lt;EdmxReference&gt; getReference() {
+<span class="nc" id="L31">    return Arrays.asList(reference);</span>
+  }
+
+  public Map&lt;String, CsdlSchema&gt; getSchemas() {
+
+<span class="nc bnc" id="L36" title="All 2 branches missed.">    if (service != null) return service.getSchemas().stream()</span>
+<span class="nc" id="L37">        .collect(Collectors.toMap(Schema::getNamespace, Schema::asCsdlSchema));</span>
+<span class="nc" id="L38">    return Collections.emptyMap();</span>
+  }
+
+  public Map&lt;String, Map&lt;String, CsdlTerm&gt;&gt; getTerms() {
+
+<span class="nc bnc" id="L43" title="All 2 branches missed.">    if (service != null) return service.getSchemas().stream()</span>
+<span class="nc" id="L44">        .collect(Collectors.toMap(</span>
+            Schema::getNamespace,
+<span class="nc" id="L46">            schema -&gt; schema.getTerms().stream()</span>
+<span class="nc" id="L47">                .collect(Collectors.toMap(CsdlTerm::getName, t -&gt; t))));</span>
+<span class="nc" id="L48">    return Collections.emptyMap();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

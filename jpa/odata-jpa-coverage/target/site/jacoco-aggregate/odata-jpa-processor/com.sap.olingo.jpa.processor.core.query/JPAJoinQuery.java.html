@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAJoinQuery.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPAJoinQuery.java</span></div><h1>JPAJoinQuery.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import static com.sap.olingo.jpa.processor.core.converter.JPAExpandResult.ROOT_RESULT_KEY;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_ENTITY_UNKNOWN;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.INTERNAL_SERVER_ERROR;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.persistence.Tuple;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.AbstractQuery;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.From;
+
+import org.apache.olingo.commons.api.edm.EdmBindingTarget;
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriResource;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+
+public class JPAJoinQuery extends JPAAbstractJoinQuery implements JPACountQuery {
+
+  private static List&lt;JPANavigationPropertyInfo&gt; determineNavigationInfo(
+      final JPAServiceDocument sd, final UriInfoResource uriResource) throws ODataException {
+
+<span class="nc" id="L41">    return Util.determineNavigationPath(sd, uriResource.getUriResourceParts(), uriResource);</span>
+  }
+
+  private static JPAEntityType determineTargetEntityType(final JPAODataRequestContextAccess requestContext)
+      throws ODataException {
+
+<span class="nc" id="L47">    final List&lt;UriResource&gt; resources = requestContext.getUriInfo().getUriResourceParts();</span>
+<span class="nc" id="L48">    final EdmBindingTarget bindingTarget = Util.determineBindingTarget(resources);</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">    if (bindingTarget instanceof EdmBoundCast)</span>
+<span class="nc" id="L50">      return requestContext.getEdmProvider().getServiceDocument().getEntity(bindingTarget.getEntityType());</span>
+<span class="nc" id="L51">    return requestContext.getEdmProvider().getServiceDocument().getEntity(bindingTarget.getName());</span>
+  }
+
+  @Nonnull
+  private static JPAEntityType determineODataTargetEntityType(final JPAODataRequestContextAccess requestContext)
+      throws ODataApplicationException {
+
+<span class="nc" id="L58">    final List&lt;UriResource&gt; resources = requestContext.getUriInfo().getUriResourceParts();</span>
+    try {
+<span class="nc" id="L60">      final EdmBindingTarget bindingTarget = Util.determineBindingTarget(resources);</span>
+<span class="nc" id="L61">      return Optional.ofNullable(requestContext.getEdmProvider().getServiceDocument()</span>
+<span class="nc" id="L62">          .getEntity(bindingTarget.getEntityType()))</span>
+<span class="nc" id="L63">          .orElseThrow(() -&gt; new ODataJPAQueryException(QUERY_PREPARATION_ENTITY_UNKNOWN, INTERNAL_SERVER_ERROR,</span>
+<span class="nc" id="L64">              bindingTarget.getEntityType().getName()));</span>
+<span class="nc" id="L65">    } catch (final ODataException e) {</span>
+<span class="nc" id="L66">      throw new ODataJPAQueryException(e, INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  public JPAJoinQuery(final OData odata, final JPAODataRequestContextAccess requestContext)
+      throws ODataException {
+
+<span class="nc" id="L73">    super(odata, determineTargetEntityType(requestContext),</span>
+<span class="nc" id="L74">        requestContext, determineNavigationInfo(requestContext.getEdmProvider().getServiceDocument(), requestContext</span>
+<span class="nc" id="L75">            .getUriInfo()));</span>
+<span class="nc" id="L76">  }</span>
+
+  /**
+   * Fulfill $count requests. For details see
+   * &lt;a href=
+   * &quot;http://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part1-protocol/odata-v4.0-errata03-os-part1-protocol-complete.html#_Toc453752288&quot;
+   * &gt;OData Version 4.0 Part 1 - 11.2.5.5 System Query Option $count&lt;/a&gt;
+   * @return
+   * @throws ODataApplicationException
+   */
+  @Override
+  public Long countResults() throws ODataApplicationException {
+    /*
+     * URL example:
+     * .../Organizations?$count=true
+     * .../Organizations/$count
+     * .../Organizations('3')/Roles/$count
+     */
+<span class="nc" id="L94">    final int handle = debugger.startRuntimeMeasurement(this, &quot;countResults&quot;);</span>
+<span class="nc" id="L95">    final CriteriaQuery&lt;Number&gt; countQuery = cb.createQuery(Number.class);</span>
+    try {
+<span class="nc" id="L97">      createFromClause(Collections.emptyList(), Collections.emptyList(), countQuery, lastInfo);</span>
+
+<span class="nc" id="L99">      final javax.persistence.criteria.Expression&lt;Boolean&gt; whereClause = createWhere();</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">      if (whereClause != null)</span>
+<span class="nc" id="L101">        countQuery.where(whereClause);</span>
+<span class="nc" id="L102">      countQuery.select(cb.countDistinct(target));</span>
+<span class="nc" id="L103">      return em.createQuery(countQuery).getSingleResult().longValue();</span>
+<span class="nc" id="L104">    } catch (final JPANoSelectionException e) {</span>
+<span class="nc" id="L105">      return 0L;</span>
+    } finally {
+<span class="nc" id="L107">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+  }
+
+  @Override
+  public JPAConvertibleResult execute() throws ODataApplicationException {
+    // Pre-process URI parameter, so they can be used at different places
+<span class="nc" id="L114">    final int handle = debugger.startRuntimeMeasurement(this, &quot;execute&quot;);</span>
+
+<span class="nc" id="L116">    final List&lt;JPAAssociationPath&gt; orderByNaviAttributes = extractOrderByNaviAttributes(uriResource.getOrderByOption());</span>
+<span class="nc" id="L117">    final SelectionPathInfo&lt;JPAPath&gt; selectionPath = buildSelectionPathList(this.uriResource);</span>
+    try {
+<span class="nc" id="L119">      final Map&lt;String, From&lt;?, ?&gt;&gt; joinTables = createFromClause(orderByNaviAttributes,</span>
+<span class="nc" id="L120">          selectionPath.joinedPersistent(), cq, lastInfo);</span>
+
+<span class="nc" id="L122">      cq.multiselect(createSelectClause(joinTables, selectionPath.joinedPersistent(), target, groups))</span>
+<span class="nc" id="L123">          .distinct(determineDistinct());</span>
+
+<span class="nc" id="L125">      final javax.persistence.criteria.Expression&lt;Boolean&gt; whereClause = createWhere();</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">      if (whereClause != null)</span>
+<span class="nc" id="L127">        cq.where(whereClause);</span>
+
+<span class="nc" id="L129">      cq.orderBy(new JPAOrderByBuilder(jpaEntity, target, cb, groups).createOrderByList(joinTables, uriResource));</span>
+
+<span class="nc bnc" id="L131" title="All 2 branches missed.">      if (!orderByNaviAttributes.isEmpty())</span>
+<span class="nc" id="L132">        cq.groupBy(createGroupBy(joinTables, root, selectionPath.joinedPersistent()));</span>
+
+<span class="nc" id="L134">      final TypedQuery&lt;Tuple&gt; tq = em.createQuery(cq);</span>
+<span class="nc" id="L135">      addTopSkip(tq);</span>
+
+<span class="nc" id="L137">      final HashMap&lt;String, List&lt;Tuple&gt;&gt; result = new HashMap&lt;&gt;(1);</span>
+<span class="nc" id="L138">      final int resultHandle = debugger.startRuntimeMeasurement(tq, &quot;getResultList&quot;);</span>
+<span class="nc" id="L139">      final List&lt;Tuple&gt; intermediateResult = tq.getResultList();</span>
+
+<span class="nc" id="L141">      debugger.stopRuntimeMeasurement(resultHandle);</span>
+<span class="nc" id="L142">      result.put(ROOT_RESULT_KEY, intermediateResult);</span>
+<span class="nc" id="L143">      return returnResult(selectionPath.joinedRequested(), result);</span>
+<span class="nc" id="L144">    } catch (final JPANoSelectionException e) {</span>
+<span class="nc" id="L145">      return returnEmptyResult(selectionPath.joinedRequested());</span>
+    } finally {
+<span class="nc" id="L147">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+  }
+
+  public List&lt;JPANavigationPropertyInfo&gt; getNavigationInfo() {
+<span class="nc" id="L152">    return navigationInfo;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public AbstractQuery&lt;Tuple&gt; getQuery() {
+<span class="nc" id="L158">    return cq;</span>
+  }
+
+  private javax.persistence.criteria.Expression&lt;Boolean&gt; createWhere() throws ODataApplicationException {
+<span class="nc" id="L162">    return addWhereClause(super.createWhere(uriResource, navigationInfo), createProtectionWhere(claimsProvider));</span>
+  }
+
+  /**
+   * Desired if SELECT DISTINCT shall be generated. This is required e.g. if multiple values for the same claims are
+   * present. As a DISTINCT is usually slower the decision algorithm my need to be enhanced in the future
+   * @return
+   */
+  private boolean determineDistinct() {
+<span class="nc" id="L171">    return claimsProvider.isPresent();</span>
+  }
+
+  private JPAConvertibleResult returnEmptyResult(final Collection&lt;JPAPath&gt; selectionPath) {
+<span class="nc bnc" id="L175" title="All 2 branches missed.">    if (lastInfo.getAssociationPath() != null</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">        &amp;&amp; (lastInfo.getAssociationPath().getLeaf() instanceof JPACollectionAttribute))</span>
+<span class="nc" id="L177">      return new JPACollectionQueryResult(jpaEntity, lastInfo.getAssociationPath(), selectionPath);</span>
+<span class="nc" id="L178">    return new JPAExpandQueryResult(jpaEntity, selectionPath);</span>
+  }
+
+  private JPAConvertibleResult returnResult(@Nonnull final Collection&lt;JPAPath&gt; selectionPath,
+      final HashMap&lt;String, List&lt;Tuple&gt;&gt; result) throws ODataApplicationException {
+<span class="nc" id="L183">    final JPAEntityType odataEntityType = determineODataTargetEntityType(requestContext);</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">    if (lastInfo.getAssociationPath() != null</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">        &amp;&amp; (lastInfo.getAssociationPath().getLeaf() instanceof JPACollectionAttribute))</span>
+<span class="nc" id="L186">      return new JPACollectionQueryResult(result, null, odataEntityType, lastInfo.getAssociationPath(), selectionPath);</span>
+<span class="nc" id="L187">    return new JPAExpandQueryResult(result, Collections.emptyMap(), odataEntityType, selectionPath);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

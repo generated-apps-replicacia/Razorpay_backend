@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPASerializeComplex.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.serializer</a> &gt; <span class="el_source">JPASerializeComplex.java</span></div><h1>JPASerializeComplex.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.serializer;
+
+import java.net.URISyntaxException;
+import java.util.List;
+
+import org.apache.olingo.commons.api.data.Annotatable;
+import org.apache.olingo.commons.api.data.ComplexValue;
+import org.apache.olingo.commons.api.data.ContextURL;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.edm.EdmBindingTarget;
+import org.apache.olingo.commons.api.edm.EdmComplexType;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.serializer.ComplexSerializerOptions;
+import org.apache.olingo.server.api.serializer.ODataSerializer;
+import org.apache.olingo.server.api.serializer.SerializerException;
+import org.apache.olingo.server.api.serializer.SerializerResult;
+
+import com.sap.olingo.jpa.processor.core.api.JPAODataSessionContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPASerializerException;
+import com.sap.olingo.jpa.processor.core.query.Util;
+import org.apache.olingo.server.api.uri.UriHelper;
+import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceComplexProperty;
+import org.apache.olingo.server.api.uri.UriResourceEntitySet;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.UriResourceNavigation;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+import org.apache.olingo.server.api.uri.UriResourceSingleton;
+
+public final class JPASerializeComplex implements JPAOperationSerializer {
+  private final ServiceMetadata serviceMetadata;
+  private final UriInfo uriInfo;
+  private final UriHelper uriHelper;
+  private final ODataSerializer serializer;
+  private final ContentType responseFormat;
+  private final JPAODataSessionContextAccess serviceContext;
+
+  JPASerializeComplex(final ServiceMetadata serviceMetadata, final ODataSerializer serializer,
+      final UriHelper uriHelper, final UriInfo uriInfo, final ContentType responseFormat,
+<span class="nc" id="L46">      final JPAODataSessionContextAccess serviceContext) {</span>
+
+<span class="nc" id="L48">    this.uriInfo = uriInfo;</span>
+<span class="nc" id="L49">    this.serializer = serializer;</span>
+<span class="nc" id="L50">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L51">    this.uriHelper = uriHelper;</span>
+<span class="nc" id="L52">    this.responseFormat = responseFormat;</span>
+<span class="nc" id="L53">    this.serviceContext = serviceContext;</span>
+<span class="nc" id="L54">  }</span>
+
+  @Override
+  public ContentType getContentType() {
+<span class="nc" id="L58">    return responseFormat;</span>
+  }
+
+  @Override
+  public SerializerResult serialize(final Annotatable result, final EdmType complexType, final ODataRequest request)
+      throws SerializerException, ODataJPASerializerException {
+
+    try {
+<span class="nc" id="L66">      final ContextURL contextUrl = ContextURL.with().serviceRoot(buildServiceRoot(request, serviceContext)).build();</span>
+<span class="nc" id="L67">      final ComplexSerializerOptions options = ComplexSerializerOptions.with().contextURL(contextUrl).build();</span>
+<span class="nc" id="L68">      return serializer.complex(serviceMetadata, (EdmComplexType) complexType, (Property) result, options);</span>
+<span class="nc" id="L69">    } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L70">      throw new ODataJPASerializerException(e, HttpStatusCode.BAD_REQUEST);</span>
+    }
+  }
+
+  @Override
+  public SerializerResult serialize(final ODataRequest request, final EntityCollection result)
+      throws SerializerException, ODataJPASerializerException {
+
+<span class="nc" id="L78">    final EdmBindingTarget targetEdmBindingTarget = Util.determineBindingTarget(uriInfo.getUriResourceParts());</span>
+<span class="nc" id="L79">    final List&lt;UriResource&gt; resourceParts = uriInfo.getUriResourceParts();</span>
+<span class="nc" id="L80">    final UriResourceProperty uriProperty = (UriResourceProperty) resourceParts.get(resourceParts.size() - 1);</span>
+<span class="nc" id="L81">    final EdmComplexType edmPropertyType = ((UriResourceComplexProperty) uriProperty).getComplexType();</span>
+
+<span class="nc" id="L83">    final String selectList = uriHelper.buildContextURLSelectList(targetEdmBindingTarget.getEntityType(),</span>
+<span class="nc" id="L84">        uriInfo.getExpandOption(), uriInfo.getSelectOption());</span>
+
+    try {
+<span class="nc" id="L87">      final ContextURL contextUrl = ContextURL.with()</span>
+<span class="nc" id="L88">          .serviceRoot(buildServiceRoot(request, serviceContext))</span>
+<span class="nc" id="L89">          .entitySetOrSingletonOrType(targetEdmBindingTarget.getName())</span>
+<span class="nc" id="L90">          .navOrPropertyPath(Util.determinePropertyNavigationPath(uriInfo.getUriResourceParts()))</span>
+<span class="nc" id="L91">          .selectList(selectList)</span>
+<span class="nc" id="L92">          .build();</span>
+
+<span class="nc" id="L94">      final ComplexSerializerOptions options = ComplexSerializerOptions.with()</span>
+<span class="nc" id="L95">          .contextURL(contextUrl)</span>
+<span class="nc" id="L96">          .select(uriInfo.getSelectOption())</span>
+<span class="nc" id="L97">          .expand(uriInfo.getExpandOption())</span>
+<span class="nc" id="L98">          .build();</span>
+
+<span class="nc bnc" id="L100" title="All 2 branches missed.">      if (uriProperty.getProperty().isCollection())</span>
+<span class="nc" id="L101">        return serializer.complexCollection(serviceMetadata, edmPropertyType, determineProperty(targetEdmBindingTarget,</span>
+            result), options);
+      else
+<span class="nc" id="L104">        return serializer.complex(serviceMetadata, edmPropertyType, determineProperty(targetEdmBindingTarget, result),</span>
+            options);
+<span class="nc" id="L106">    } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L107">      throw new ODataJPASerializerException(e, HttpStatusCode.BAD_REQUEST);</span>
+    }
+  }
+
+  private Property determineProperty(final EdmBindingTarget targetEdmBindingTarget, final EntityCollection result) {
+<span class="nc" id="L112">    UriResourceProperty uriProperty = null;</span>
+<span class="nc" id="L113">    Property property = null;</span>
+
+<span class="nc" id="L115">    boolean found = false;</span>
+<span class="nc" id="L116">    List&lt;Property&gt; properties = result.getEntities().get(0).getProperties();</span>
+
+<span class="nc bnc" id="L118" title="All 2 branches missed.">    for (final UriResource hop : uriInfo.getUriResourceParts()) {</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">      if (hop.getKind().equals(UriResourceKind.entitySet)</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">          &amp;&amp; ((UriResourceEntitySet) hop).getEntitySet() == targetEdmBindingTarget</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">          || hop.getKind().equals(UriResourceKind.navigationProperty)</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">              &amp;&amp; ((UriResourceNavigation) hop).getType() == targetEdmBindingTarget.getEntityType()</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">          || hop.getKind().equals(UriResourceKind.singleton)</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">              &amp;&amp; ((UriResourceSingleton)hop).getSingleton() == targetEdmBindingTarget)</span>
+<span class="nc" id="L125">        found = true;</span>
+<span class="nc bnc" id="L126" title="All 4 branches missed.">      if (found &amp;&amp; hop.getKind().equals(UriResourceKind.complexProperty)) {</span>
+<span class="nc" id="L127">        uriProperty = (UriResourceProperty) hop;</span>
+<span class="nc" id="L128">        property = getProperty(uriProperty.getProperty().getName(), properties);</span>
+<span class="nc bnc" id="L129" title="All 4 branches missed.">        if (!uriProperty.isCollection() &amp;&amp; property != null)// Here it is assumed that the collection is the last hop</span>
+                                                            // anyhow
+<span class="nc" id="L131">          properties = ((ComplexValue) property.getValue()).getValue();</span>
+      }
+<span class="nc" id="L133">    }</span>
+<span class="nc" id="L134">    return property;</span>
+  }
+
+  private Property getProperty(final String name, final List&lt;Property&gt; properties) {
+<span class="nc bnc" id="L138" title="All 2 branches missed.">    for (final Property p : properties)</span>
+<span class="nc bnc" id="L139" title="All 4 branches missed.">      if (p.getName().equals(name) &amp;&amp; p.isComplex())</span>
+<span class="nc" id="L140">        return p;</span>
+<span class="nc" id="L141">    return null;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

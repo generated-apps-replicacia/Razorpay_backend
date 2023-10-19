@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPADefaultEdmNameBuilder.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">JPADefaultEdmNameBuilder.java</span></div><h1>JPADefaultEdmNameBuilder.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.util.Objects;
+
+import javax.annotation.Nonnull;
+import javax.persistence.metamodel.Attribute;
+import javax.persistence.metamodel.EmbeddableType;
+import javax.persistence.metamodel.EntityType;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+
+public final class JPADefaultEdmNameBuilder implements JPAEdmNameBuilder {
+  private static final int DISTANCE_NEXT_TO_LAST_CHAR = 2;
+  private static final int DISTANCE_LAST_CHAR = 1;
+  // V2 NameBuilder: package org.apache.olingo.odata2.jpa.processor.core.access.model
+  private static final String ENTITY_CONTAINER_SUFFIX = &quot;Container&quot;;
+  private static final String ENTITY_SET_SUFFIX = &quot;s&quot;;
+
+  public static String firstToLower(final String substring) {
+<span class="nc" id="L20">    return Character.toLowerCase(substring.charAt(0)) + substring.substring(1);</span>
+  }
+
+  public static String firstToUpper(final String jpaAttributeName) {
+<span class="nc" id="L24">    return Character.toUpperCase(jpaAttributeName.charAt(0)) + jpaAttributeName.substring(1);</span>
+  }
+
+  private final String namespace;
+
+  public JPADefaultEdmNameBuilder(@Nonnull final String namespace) {
+<span class="nc" id="L30">    super();</span>
+<span class="nc" id="L31">    this.namespace = Objects.requireNonNull(namespace);</span>
+<span class="nc" id="L32">  }</span>
+
+  /**
+   * EDM Complex Type Name - RULE: &lt;p&gt;
+   * Use JPA Embeddable Type Simple Name as Complex Type Name
+   */
+  @Override
+  public final String buildComplexTypeName(final EmbeddableType&lt;?&gt; jpaEmbeddedType) {
+<span class="nc" id="L40">    return jpaEmbeddedType.getJavaType().getSimpleName();</span>
+  }
+
+  /**
+   * EDM EntityContainer Name - RULE: &lt;p&gt;
+   * The Entity Container Name is build of EDM Namespace + Literal &quot;Container&quot;. Container names are simple identifiers,
+   * so contain only letter, digits and underscores. However namespaces
+   * can contain also dots =&gt; eliminate dots and convert to camel case.
+   */
+  @Override
+  public String buildContainerName() {
+<span class="nc" id="L51">    final StringBuilder containerName = new StringBuilder();</span>
+<span class="nc" id="L52">    final String[] elements = namespace.split(&quot;\\.&quot;);</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">    for (final String element : elements) {</span>
+<span class="nc" id="L54">      containerName.append(firstToUpper(element));</span>
+    }
+<span class="nc" id="L56">    containerName.append(ENTITY_CONTAINER_SUFFIX);</span>
+<span class="nc" id="L57">    return containerName.toString();</span>
+  }
+
+  /**
+   * EDM EntitySet Name - RULE:&lt;p&gt;
+   * Use plural of entity type name. The naming bases on the assumption that English nouns are used.&lt;br&gt;
+   * Entity Set Name = JPA Entity Type Name + Literal &quot;s&quot;
+   */
+  @Override
+  public final String buildEntitySetName(final String entityTypeName) {
+<span class="nc bnc" id="L67" title="All 2 branches missed.">    if (entityTypeName.charAt(entityTypeName.length() - DISTANCE_LAST_CHAR) == 'y'</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        &amp;&amp; entityTypeName.charAt(entityTypeName.length() - DISTANCE_NEXT_TO_LAST_CHAR) != 'a'</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        &amp;&amp; entityTypeName.charAt(entityTypeName.length() - DISTANCE_NEXT_TO_LAST_CHAR) != 'e'</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">        &amp;&amp; entityTypeName.charAt(entityTypeName.length() - DISTANCE_NEXT_TO_LAST_CHAR) != 'i'</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        &amp;&amp; entityTypeName.charAt(entityTypeName.length() - DISTANCE_NEXT_TO_LAST_CHAR) != 'o'</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        &amp;&amp; entityTypeName.charAt(entityTypeName.length() - DISTANCE_NEXT_TO_LAST_CHAR) != 'u') {</span>
+<span class="nc" id="L73">      return entityTypeName.substring(0, entityTypeName.length() - DISTANCE_LAST_CHAR) + &quot;ie&quot; + ENTITY_SET_SUFFIX;</span>
+    }
+<span class="nc" id="L75">    return entityTypeName + ENTITY_SET_SUFFIX;</span>
+  }
+
+  /**
+   * EDM EntityType Name - RULE:&lt;p&gt;
+   * Use JPA Entity Name as EDM Entity Type Name
+   */
+  @Override
+  public String buildEntityTypeName(final EntityType&lt;?&gt; jpaEntityType) {
+<span class="nc" id="L84">    return jpaEntityType.getName();</span>
+  }
+
+  @Override
+  public final String getNamespace() {
+<span class="nc" id="L89">    return namespace;</span>
+  }
+
+  /**
+   * EDM Navigation Property Name - RULE:&lt;p&gt;
+   * OData requires: &quot;The name of the navigation property MUST be unique
+   * within the set of structural and navigation properties of the containing
+   * structured type and any of its base types.&quot;
+   * This is fulfilled by taking the property name it self.
+   * @param jpaAttribute
+   * @return
+   */
+  @Override
+  public final String buildNaviPropertyName(final Attribute&lt;?, ?&gt; jpaAttribute) {
+<span class="nc" id="L103">    return buildPropertyName(jpaAttribute.getName());</span>
+  }
+
+  /**
+   * EDM Property Name - RULE:&lt;p&gt;
+   * OData Property Names are represented in Camel Case. The first character
+   * of JPA Attribute Name is converted to an UpperCase Character.
+   * @param jpaAttributeName
+   * @return
+   */
+  @Override
+  public final String buildPropertyName(final String jpaAttributeName) {
+<span class="nc" id="L115">    return firstToUpper(jpaAttributeName);</span>
+  }
+
+  /**
+   * Convert the internal name of a java based operation into the external entity data model name.
+   * @param internalOperationName
+   * @return
+   */
+  @Override
+  public final String buildOperationName(final String internalOperationName) {
+<span class="nc" id="L125">    return firstToUpper(internalOperationName);</span>
+  }
+
+  /**
+   * Convert the internal java class name of an enumeration into the external entity data model name.
+   * @param javaEnum
+   * @return
+   */
+  @Override
+  public final String buildEnumerationTypeName(final Class&lt;? extends Enum&lt;?&gt;&gt; javaEnum) {
+<span class="nc" id="L135">    return javaEnum.getSimpleName();</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

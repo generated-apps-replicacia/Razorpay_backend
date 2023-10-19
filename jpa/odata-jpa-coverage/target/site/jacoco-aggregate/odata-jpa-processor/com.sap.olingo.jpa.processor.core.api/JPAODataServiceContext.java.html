@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataServiceContext.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAODataServiceContext.java</span></div><h1>JPAODataServiceContext.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import java.lang.reflect.InvocationTargetException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceException;
+import javax.sql.DataSource;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.olingo.commons.api.edmx.EdmxReference;
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.processor.ErrorProcessor;
+
+import com.sap.olingo.jpa.metadata.api.JPAEdmMetadataPostProcessor;
+import com.sap.olingo.jpa.metadata.api.JPAEdmProvider;
+import com.sap.olingo.jpa.metadata.api.JPAEntityManagerFactory;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPADefaultEdmNameBuilder;
+import com.sap.olingo.jpa.processor.core.database.JPADefaultDatabaseProcessor;
+import com.sap.olingo.jpa.processor.core.database.JPAODataDatabaseOperations;
+import com.sap.olingo.jpa.processor.core.database.JPAODataDatabaseProcessorFactory;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException;
+
+public final class JPAODataServiceContext implements JPAODataSessionContextAccess {
+  /**
+   *
+   */
+<span class="nc" id="L39">  private static final Log LOGGER = LogFactory.getLog(JPAODataServiceContext.class);</span>
+<span class="nc" id="L40">  private List&lt;EdmxReference&gt; references = new ArrayList&lt;&gt;();</span>
+  private final JPAODataDatabaseOperations operationConverter;
+  private JPAEdmProvider jpaEdm;
+  private final JPAODataDatabaseProcessor databaseProcessor;
+  private final JPAEdmMetadataPostProcessor postProcessor;
+  private final String[] packageName;
+  private final ErrorProcessor errorProcessor;
+  private final JPAODataPagingProvider pagingProvider;
+  private final Optional&lt;? extends EntityManagerFactory&gt; emf;
+  private final String namespace;
+  private final String mappingPath;
+  private final JPAODataBatchProcessorFactory&lt;JPAODataBatchProcessor&gt; batchProcessorFactory;
+  private final boolean useAbsoluteContextURL;
+
+  public static Builder with() {
+<span class="nc" id="L55">    return new Builder();</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L59">  private JPAODataServiceContext(final Builder builder) {</span>
+
+<span class="nc" id="L61">    operationConverter = builder.operationConverter;</span>
+<span class="nc" id="L62">    databaseProcessor = builder.databaseProcessor;</span>
+<span class="nc" id="L63">    references = builder.references;</span>
+<span class="nc" id="L64">    postProcessor = builder.postProcessor;</span>
+<span class="nc" id="L65">    packageName = builder.packageName;</span>
+<span class="nc" id="L66">    errorProcessor = builder.errorProcessor;</span>
+<span class="nc" id="L67">    pagingProvider = builder.pagingProvider;</span>
+<span class="nc" id="L68">    jpaEdm = builder.jpaEdm;</span>
+<span class="nc" id="L69">    emf = builder.emf;</span>
+<span class="nc" id="L70">    namespace = builder.namespace;</span>
+<span class="nc" id="L71">    mappingPath = builder.mappingPath;</span>
+<span class="nc" id="L72">    batchProcessorFactory = (JPAODataBatchProcessorFactory&lt;JPAODataBatchProcessor&gt;) builder.batchProcessorFactory;</span>
+<span class="nc" id="L73">    useAbsoluteContextURL = builder.useAbsoluteContextURL;</span>
+<span class="nc" id="L74">  }</span>
+
+  @Override
+  public JPAODataDatabaseProcessor getDatabaseProcessor() {
+<span class="nc" id="L78">    return databaseProcessor;</span>
+  }
+
+  @Override
+  public JPAEdmProvider getEdmProvider() throws ODataException {
+<span class="nc" id="L83">    return jpaEdm;</span>
+  }
+
+  public JPAEdmProvider getEdmProvider(@Nonnull final EntityManager em) throws ODataException {
+<span class="nc bnc" id="L87" title="All 2 branches missed.">    if (jpaEdm == null) {</span>
+<span class="nc" id="L88">      Objects.nonNull(em);</span>
+<span class="nc" id="L89">      jpaEdm = new JPAEdmProvider(this.namespace, em.getMetamodel(), postProcessor, packageName);</span>
+    }
+<span class="nc" id="L91">    return jpaEdm;</span>
+  }
+
+  @Override
+  public Optional&lt;? extends EntityManagerFactory&gt; getEntityManagerFactory() {
+<span class="nc" id="L96">    return emf;</span>
+  }
+
+  @Override
+  public ErrorProcessor getErrorProcessor() {
+<span class="nc bnc" id="L101" title="All 2 branches missed.">    return this.errorProcessor == null ? new JPADefaultErrorProcessor() : this.errorProcessor;</span>
+  }
+
+  @Override
+  public JPAODataDatabaseOperations getOperationConverter() {
+<span class="nc" id="L106">    return operationConverter;</span>
+  }
+
+  @Override
+  public List&lt;String&gt; getPackageName() {
+<span class="nc" id="L111">    return Arrays.asList(packageName);</span>
+  }
+
+  @Override
+  public JPAODataPagingProvider getPagingProvider() {
+<span class="nc" id="L116">    return pagingProvider;</span>
+  }
+
+  @Override
+  public List&lt;EdmxReference&gt; getReferences() {
+<span class="nc" id="L121">    return references;</span>
+  }
+
+  @Override
+  public String getMappingPath() {
+<span class="nc" id="L126">    return mappingPath;</span>
+  }
+
+  @Override
+  public boolean useAbsoluteContextURL() {
+<span class="nc" id="L131">    return useAbsoluteContextURL;</span>
+  }
+
+  @Override
+  public JPAODataBatchProcessorFactory&lt;JPAODataBatchProcessor&gt; getBatchProcessorFactory() {
+<span class="nc" id="L136">    return batchProcessorFactory;</span>
+  }
+
+  public static class Builder {
+
+    private String namespace;
+<span class="nc" id="L142">    private List&lt;EdmxReference&gt; references = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L143">    private JPAODataDatabaseOperations operationConverter = new JPADefaultDatabaseProcessor();</span>
+    private JPAODataDatabaseProcessor databaseProcessor;
+    private JPAEdmMetadataPostProcessor postProcessor;
+    private String[] packageName;
+    private ErrorProcessor errorProcessor;
+    private JPAODataPagingProvider pagingProvider;
+<span class="nc" id="L149">    private Optional&lt;? extends EntityManagerFactory&gt; emf = Optional.empty();</span>
+    private DataSource ds;
+    private JPAEdmProvider jpaEdm;
+    private JPAEdmNameBuilder nameBuilder;
+    private String mappingPath;
+    private JPAODataBatchProcessorFactory&lt;?&gt; batchProcessorFactory;
+<span class="nc" id="L155">    private boolean useAbsoluteContextURL = false;</span>
+
+    private Builder() {
+<span class="nc" id="L158">      super();</span>
+<span class="nc" id="L159">    }</span>
+
+    public JPAODataSessionContextAccess build() throws ODataException {
+      try {
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        if (nameBuilder == null) {</span>
+<span class="nc" id="L164">          LOGGER.trace(&quot;No name-builder provided, use JPADefaultEdmNameBuilder&quot;);</span>
+<span class="nc" id="L165">          nameBuilder = new JPADefaultEdmNameBuilder(namespace);</span>
+        }
+<span class="nc bnc" id="L167" title="All 2 branches missed.">        if (packageName == null)</span>
+<span class="nc" id="L168">          packageName = new String[0];</span>
+<span class="nc bnc" id="L169" title="All 6 branches missed.">        if (!emf.isPresent() &amp;&amp; ds != null &amp;&amp; namespace != null)</span>
+<span class="nc" id="L170">          emf = Optional.ofNullable(JPAEntityManagerFactory.getEntityManagerFactory(namespace, ds));</span>
+<span class="nc" id="L171">        createEmfWrapper();</span>
+<span class="nc bnc" id="L172" title="All 4 branches missed.">        if (emf.isPresent() &amp;&amp; jpaEdm == null)</span>
+<span class="nc" id="L173">          jpaEdm = new JPAEdmProvider(emf.get().getMetamodel(), postProcessor, packageName, nameBuilder);</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">        if (databaseProcessor == null) {</span>
+<span class="nc" id="L175">          LOGGER.trace(&quot;No database-processor provided, use JPAODataDatabaseProcessorFactory to create one&quot;);</span>
+<span class="nc" id="L176">          databaseProcessor = new JPAODataDatabaseProcessorFactory().create(ds);</span>
+        }
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        if (batchProcessorFactory == null) {</span>
+<span class="nc" id="L179">          LOGGER.trace(&quot;No batch-processor-factory provided, use default factory to create one&quot;);</span>
+<span class="nc" id="L180">          batchProcessorFactory = new JPADefaultBatchProcessorFactory();</span>
+        }
+<span class="nc" id="L182">      } catch (SQLException | PersistenceException e) {</span>
+<span class="nc" id="L183">        throw new ODataJPAFilterException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L184">      }</span>
+<span class="nc" id="L185">      return new JPAODataServiceContext(this);</span>
+    }
+
+    /**
+     * A database processor allows database specific implementations for search and odata function with function import
+     * that are implemented as database functions.&lt;br&gt;
+     * In case no database processor is provided and non could be determined via an data source
+     * {@link JPADefaultDatabaseProcessor} is used.
+     * @param databaseProcessor
+     * @return
+     */
+    public Builder setDatabaseProcessor(final JPAODataDatabaseProcessor databaseProcessor) {
+<span class="nc" id="L197">      this.databaseProcessor = databaseProcessor;</span>
+<span class="nc" id="L198">      return this;</span>
+    }
+
+    /**
+     * The data source is used to create an entity manager factory if not provided, see
+     * {@link Builder#setEntityManagerFactory(EntityManagerFactory)}, and to determine the type of
+     * database used to select an integrated database processor, in case the database processor was not set via
+     * {@link Builder#setDatabaseProcessor(JPAODataDatabaseProcessor)}}.
+     * @param ds
+     * @return
+     */
+    public Builder setDataSource(final DataSource ds) {
+<span class="nc" id="L210">      this.ds = ds;</span>
+<span class="nc" id="L211">      return this;</span>
+    }
+
+    /**
+     * Allows to provide an Olingo error processor. The error processor allows to enrich an error response. See
+     * &lt;a
+     * href=&quot;http://docs.oasis-open.org/odata/odata-json-format/v4.0/errata03/os/odata-json-format-v4.0-errata03-os-complete.html#_Toc453766668&quot;
+     * &gt;JSON Error Response&lt;/a&gt; or
+     * &lt;a
+     * href=&quot;http://docs.oasis-open.org/odata/odata-atom-format/v4.0/cs02/odata-atom-format-v4.0-cs02.html#_Toc372792829&quot;&gt;Atom
+     * Error Response&lt;/a&gt;.
+     * @param errorProcessor
+     */
+    public Builder setErrorProcessor(final ErrorProcessor errorProcessor) {
+<span class="nc" id="L225">      this.errorProcessor = errorProcessor;</span>
+<span class="nc" id="L226">      return this;</span>
+    }
+
+    /**
+     *
+     * @param postProcessor
+     * @return
+     */
+    public Builder setMetadataPostProcessor(final JPAEdmMetadataPostProcessor postProcessor) {
+<span class="nc" id="L235">      this.postProcessor = postProcessor;</span>
+<span class="nc" id="L236">      return this;</span>
+    }
+
+    /**
+     *
+     * @param jpaOperationConverter
+     * @return
+     */
+    public Builder setOperationConverter(final JPAODataDatabaseOperations jpaOperationConverter) {
+<span class="nc" id="L245">      this.operationConverter = jpaOperationConverter;</span>
+<span class="nc" id="L246">      return this;</span>
+    }
+
+    /**
+     * Register a provider that is able to decides based on a given query if the server like to return only a sub set of
+     * the requested results as well as a $skiptoken.
+     * @param provider
+     */
+    public Builder setPagingProvider(final JPAODataPagingProvider provider) {
+<span class="nc" id="L255">      this.pagingProvider = provider;</span>
+<span class="nc" id="L256">      return this;</span>
+    }
+
+    /**
+     * The name of the persistence-unit to be used. It is taken to create a entity manager factory
+     * ({@link Builder#setEntityManagerFactory(EntityManagerFactory)}), if not provided and
+     * as namespace of the OData service, in case the default name builder shall be used.
+     * @param pUnit
+     * @return
+     */
+    public Builder setPUnit(final String pUnit) {
+<span class="nc" id="L267">      this.namespace = pUnit;</span>
+<span class="nc" id="L268">      return this;</span>
+    }
+
+    /**
+     *
+     * @param references
+     * @return
+     */
+    public Builder setReferences(final List&lt;EdmxReference&gt; references) {
+<span class="nc" id="L277">      this.references = references;</span>
+<span class="nc" id="L278">      return this;</span>
+    }
+
+    /**
+     * Name of the top level package to look for
+     * &lt;ul&gt;
+     * &lt;li&gt; Enumeration Types
+     * &lt;li&gt; Java class based Functions
+     * &lt;/ul&gt;
+     * @param packageName
+     */
+    public Builder setTypePackage(final String... packageName) {
+<span class="nc" id="L290">      this.packageName = packageName;</span>
+<span class="nc" id="L291">      return this;</span>
+    }
+
+    public Builder setRequestMappingPath(final String mappingPath) {
+<span class="nc" id="L295">      this.mappingPath = mappingPath;</span>
+<span class="nc" id="L296">      return this;</span>
+    }
+
+    /**
+     * Set an externally created entity manager factory.&lt;br&gt;
+     * This is necessary e.g. in case a spring based service shall run without a &lt;code&gt;persistance.xml&lt;/code&gt;.
+     * @param emf
+     * @return
+     */
+    public Builder setEntityManagerFactory(final EntityManagerFactory emf) {
+<span class="nc" id="L306">      this.emf = Optional.of(emf);</span>
+<span class="nc" id="L307">      return this;</span>
+    }
+
+    /**
+     * Set a custom EDM name builder {@link JPAEdmNameBuilder}. If non is provided {@link JPADefaultEdmNameBuilder} is
+     * used, which uses the provided persistence-unit name ({@link JPAODataServiceContext.Builder#setPUnit}) as
+     * namespace.
+     * @param nameBuilder
+     * @return
+     */
+    public Builder setEdmNameBuilder(final JPAEdmNameBuilder nameBuilder) {
+<span class="nc" id="L318">      this.nameBuilder = nameBuilder;</span>
+<span class="nc" id="L319">      return this;</span>
+    }
+
+    public &lt;T extends JPAODataBatchProcessor&gt; Builder setBatchProcessorFactory(
+        final JPAODataBatchProcessorFactory&lt;T&gt; batchProcessorFactory) {
+<span class="nc" id="L324">      this.batchProcessorFactory = batchProcessorFactory;</span>
+<span class="nc" id="L325">      return this;</span>
+    }
+
+    /**
+     * Some clients, like Excel, require context url's with an absolute path. The default generation of relative paths
+     * can be overruled.&lt;br&gt;
+     * @see &lt;a href=&quot;https://issues.apache.org/jira/browse/OLINGO-787&quot;&gt;Issue OLINGO-787&lt;/a&gt;
+     * @param useAbsoluteContextURL
+     * @return
+     */
+    public Builder setUseAbsoluteContextURL(final boolean useAbsoluteContextURL) {
+<span class="nc" id="L336">      this.useAbsoluteContextURL = useAbsoluteContextURL;</span>
+<span class="nc" id="L337">      return this;</span>
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private void createEmfWrapper() {
+<span class="nc bnc" id="L342" title="All 2 branches missed.">      if (emf.isPresent()) {</span>
+        try {
+<span class="nc" id="L344">          final Class&lt;? extends EntityManagerFactory&gt; wrapperClass = (Class&lt;? extends EntityManagerFactory&gt;) Class</span>
+<span class="nc" id="L345">              .forName(&quot;com.sap.olingo.jpa.processor.cb.api.EntityManagerFactoryWrapper&quot;);</span>
+<span class="nc bnc" id="L346" title="All 2 branches missed.">          if (jpaEdm == null)</span>
+<span class="nc" id="L347">            jpaEdm = new JPAEdmProvider(emf.get().getMetamodel(), postProcessor, packageName, nameBuilder);</span>
+<span class="nc" id="L348">          emf = Optional.of(wrapperClass.getConstructor(EntityManagerFactory.class,</span>
+<span class="nc" id="L349">              JPAServiceDocument.class).newInstance(emf.get(), jpaEdm.getServiceDocument()));</span>
+<span class="nc" id="L350">          LOGGER.trace(&quot;Criteria Builder Extension found. It will be used&quot;);</span>
+<span class="nc" id="L351">        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException</span>
+            | NoSuchMethodException | SecurityException e) {
+<span class="nc" id="L353">          LOGGER.debug(&quot;Exception thrown while trying to create instance of emf wrapper&quot;, e);</span>
+<span class="nc" id="L354">        } catch (final ClassNotFoundException e) {</span>
+          // No Criteria Extension: everything is fine
+<span class="nc" id="L356">          LOGGER.trace(&quot;No Criteria Builder Extension found: use provided Entity Manager Factory&quot;);</span>
+<span class="nc" id="L357">        } catch (final ODataException e) {</span>
+<span class="nc" id="L358">          LOGGER.debug(&quot;Exception thrown while trying to create EdmProvider&quot;, e);</span>
+<span class="nc" id="L359">        }</span>
+      }
+<span class="nc" id="L361">    }</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

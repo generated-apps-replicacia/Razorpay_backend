@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAHookFactory.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPAHookFactory.java</span></div><h1>JPAHookFactory.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Parameter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.persistence.EntityManager;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+
+import com.sap.olingo.jpa.metadata.api.JPAHttpHeaderMap;
+import com.sap.olingo.jpa.metadata.api.JPARequestParameterMap;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmQueryExtensionProvider;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransientPropertyCalculator;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAQueryExtension;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+
+final class JPAHookFactory {
+<span class="nc" id="L28">  private static final Log LOGGER = LogFactory.getLog(JPAHookFactory.class);</span>
+  private final Map&lt;JPAAttribute, EdmTransientPropertyCalculator&lt;?&gt;&gt; transientCalculatorCache;
+  private final Map&lt;JPAEntityType, EdmQueryExtensionProvider&gt; queryExtensionProviderCache;
+  private final JPAHttpHeaderMap header;
+  private final EntityManager em;
+  private final JPARequestParameterMap requestParameter;
+
+  JPAHookFactory(final EntityManager em, final JPAHttpHeaderMap header, final JPARequestParameterMap parameter) {
+<span class="nc" id="L36">    super();</span>
+<span class="nc" id="L37">    this.transientCalculatorCache = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L38">    this.queryExtensionProviderCache = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L39">    this.em = em;</span>
+<span class="nc" id="L40">    this.header = header;</span>
+<span class="nc" id="L41">    this.requestParameter = parameter;</span>
+<span class="nc" id="L42">  }</span>
+
+  public Optional&lt;EdmTransientPropertyCalculator&lt;?&gt;&gt; getTransientPropertyCalculator(
+      @Nonnull final JPAAttribute transientProperty) throws ODataJPAProcessorException {
+    try {
+<span class="nc bnc" id="L47" title="All 2 branches missed.">      if (transientProperty.isTransient()) {</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        if (!transientCalculatorCache.containsKey(transientProperty)) {</span>
+<span class="nc" id="L49">          createCalculator(transientProperty);</span>
+        }
+<span class="nc" id="L51">        return Optional.of(transientCalculatorCache.get(transientProperty));</span>
+      }
+<span class="nc" id="L53">    } catch (ODataJPAModelException | InstantiationException | IllegalAccessException | IllegalArgumentException</span>
+        | InvocationTargetException e) {
+<span class="nc" id="L55">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L56">    }</span>
+<span class="nc" id="L57">    return Optional.empty();</span>
+  }
+
+  public Optional&lt;EdmQueryExtensionProvider&gt; getQueryExtensionProvider(
+      @Nonnull final JPAEntityType et) throws ODataJPAProcessorException {
+
+<span class="nc bnc" id="L63" title="All 2 branches missed.">    if (!queryExtensionProviderCache.containsKey(et)) {</span>
+      try {
+<span class="nc" id="L65">        queryExtensionProviderCache.put(et, et.getQueryExtention()</span>
+<span class="nc" id="L66">            .map(this::createQueryExtensionProvider)</span>
+<span class="nc" id="L67">            .orElse(null));</span>
+<span class="nc" id="L68">      } catch (final Exception e) {</span>
+<span class="nc" id="L69">        throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L70">      }</span>
+    }
+<span class="nc" id="L72">    return Optional.ofNullable(queryExtensionProviderCache.get(et));</span>
+  }
+
+  private void createCalculator(final JPAAttribute transientProperty) throws ODataJPAModelException,
+      InstantiationException, IllegalAccessException, InvocationTargetException {
+<span class="nc" id="L77">    final Constructor&lt;? extends EdmTransientPropertyCalculator&lt;?&gt;&gt; c = transientProperty</span>
+<span class="nc" id="L78">        .getCalculatorConstructor();</span>
+<span class="nc" id="L79">    final Parameter[] parameters = c.getParameters();</span>
+<span class="nc" id="L80">    final Object[] paramValues = new Object[parameters.length];</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">    for (int i = 0; i &lt; parameters.length; i++) {</span>
+<span class="nc" id="L82">      final Parameter parameter = parameters[i];</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">      if (parameter.getType().isAssignableFrom(EntityManager.class))</span>
+<span class="nc" id="L84">        paramValues[i] = em;</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">      if (parameter.getType().isAssignableFrom(JPAHttpHeaderMap.class))</span>
+<span class="nc" id="L86">        paramValues[i] = header;</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">      if (parameter.getType().isAssignableFrom(JPARequestParameterMap.class))</span>
+<span class="nc" id="L88">        paramValues[i] = requestParameter;</span>
+    }
+<span class="nc" id="L90">    final EdmTransientPropertyCalculator&lt;?&gt; calculator = c.newInstance(paramValues);</span>
+<span class="nc" id="L91">    transientCalculatorCache.put(transientProperty, calculator);</span>
+<span class="nc" id="L92">  }</span>
+
+  private EdmQueryExtensionProvider createQueryExtensionProvider(
+      final JPAQueryExtension&lt;EdmQueryExtensionProvider&gt; queryExtension) {
+
+<span class="nc" id="L97">    final Constructor&lt;?&gt; c = queryExtension.getConstructor();</span>
+    try {
+<span class="nc" id="L99">      final Parameter[] parameters = c.getParameters();</span>
+<span class="nc" id="L100">      final Object[] paramValues = new Object[parameters.length];</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">      for (int i = 0; i &lt; parameters.length; i++) {</span>
+<span class="nc" id="L102">        final Parameter parameter = parameters[i];</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        if (parameter.getType().isAssignableFrom(JPAHttpHeaderMap.class))</span>
+<span class="nc" id="L104">          paramValues[i] = header;</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        if (parameter.getType().isAssignableFrom(JPARequestParameterMap.class))</span>
+<span class="nc" id="L106">          paramValues[i] = requestParameter;</span>
+      }
+<span class="nc" id="L108">      return (EdmQueryExtensionProvider) c.newInstance(paramValues);</span>
+<span class="nc" id="L109">    } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {</span>
+<span class="nc" id="L110">      LOGGER.error(&quot;Cloud not create Query Extension: &quot; + c.getDeclaringClass().getName(), e);</span>
+<span class="nc" id="L111">      return null;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

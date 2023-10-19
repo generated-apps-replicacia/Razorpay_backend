@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAAbstractDatabaseProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.database</a> &gt; <span class="el_source">JPAAbstractDatabaseProcessor.java</span></div><h1>JPAAbstractDatabaseProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.database;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPADBAdaptorException.MessageKeys.PARAMETER_CONVERSION_ERROR;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPADBAdaptorException.MessageKeys.PARAMETER_MISSING;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.BAD_REQUEST;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.INTERNAL_SERVER_ERROR;
+
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+
+import org.apache.olingo.commons.api.edm.EdmElement;
+import org.apache.olingo.commons.api.edm.EdmFunction;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveType;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeException;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceEntitySet;
+import org.apache.olingo.server.api.uri.UriResourceFunction;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPADataBaseFunction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAParameter;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAODataDatabaseProcessor;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPADBAdaptorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+
+<span class="nc" id="L31">public abstract class JPAAbstractDatabaseProcessor implements JPAODataDatabaseProcessor {</span>
+  static final String FUNC_NAME_PLACEHOLDER = &quot;$FUNCTIONNAME$&quot;;
+  static final String PARAMETER_PLACEHOLDER = &quot;$PARAMETER$&quot;;
+
+  protected UriResourceEntitySet determineTargetEntitySet(final List&lt;UriResource&gt; uriParts) {
+<span class="nc bnc" id="L36" title="All 2 branches missed.">    for (int i = uriParts.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">      if (uriParts.get(i).getKind() == UriResourceKind.entitySet)</span>
+<span class="nc" id="L38">        return (UriResourceEntitySet) uriParts.get(i);</span>
+    }
+<span class="nc" id="L40">    return null;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  protected &lt;T&gt; List&lt;T&gt; executeQuery(final List&lt;UriResource&gt; uriParts, final JPADataBaseFunction jpaFunction,
+      final EntityManager em, final String pattern)
+      throws ODataApplicationException {
+
+<span class="nc" id="L48">    final UriResourceFunction uriFunction = (UriResourceFunction) uriParts.get(uriParts.size() - 1);</span>
+<span class="nc" id="L49">    final String queryString = generateQueryString(pattern, jpaFunction);</span>
+<span class="nc" id="L50">    final Query functionQuery = em.createNativeQuery(queryString, jpaFunction.getResultParameter().getType());</span>
+<span class="nc" id="L51">    fillParameter(determineTargetEntitySet(uriParts), jpaFunction, uriFunction, functionQuery);</span>
+<span class="nc" id="L52">    return functionQuery.getResultList();</span>
+  }
+
+  protected void fillParameter(final UriResourceEntitySet es, final JPADataBaseFunction jpaFunction,
+      final UriResourceFunction uriResourceFunction, final Query functionQuery)
+      throws ODataApplicationException {
+
+    try {
+<span class="nc bnc" id="L60" title="All 4 branches missed.">      if (jpaFunction.isBound() &amp;&amp; uriResourceFunction.getParameters().isEmpty())</span>
+<span class="nc" id="L61">        fillParameterFromEntity(jpaFunction, es, functionQuery);</span>
+      else
+<span class="nc" id="L63">        fillParameterFromFunction(jpaFunction, uriResourceFunction, functionQuery);</span>
+<span class="nc" id="L64">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L65">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L66">    }</span>
+<span class="nc" id="L67">  }</span>
+
+  protected String generateQueryString(final String queryPattern, final JPADataBaseFunction jpaFunction)
+      throws ODataJPAProcessorException {
+
+<span class="nc" id="L72">    final StringBuilder parameterList = new StringBuilder();</span>
+
+<span class="nc" id="L74">    final String queryString = queryPattern.replace(FUNC_NAME_PLACEHOLDER, jpaFunction.getDBName());</span>
+    try {
+<span class="nc bnc" id="L76" title="All 2 branches missed.">      for (int i = 1; i &lt;= jpaFunction.getParameter().size(); i++) {</span>
+<span class="nc" id="L77">        parameterList.append(',');</span>
+<span class="nc" id="L78">        parameterList.append('?');</span>
+<span class="nc" id="L79">        parameterList.append(i);</span>
+      }
+<span class="nc" id="L81">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L82">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L83">    }</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">    if(parameterList.length() &gt;  0)</span>
+<span class="nc" id="L85">      parameterList.deleteCharAt(0);</span>
+<span class="nc" id="L86">    return queryString.replace(PARAMETER_PLACEHOLDER, parameterList.toString());</span>
+  }
+
+  protected UriParameter findParameterByExternalName(final JPAParameter parameter,
+      final List&lt;UriParameter&gt; uriParameters) throws ODataApplicationException {
+
+<span class="nc bnc" id="L92" title="All 2 branches missed.">    for (final UriParameter uriParameter : uriParameters) {</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">      if (uriParameter.getName().equals(parameter.getName()))</span>
+<span class="nc" id="L94">        return uriParameter;</span>
+<span class="nc" id="L95">    }</span>
+<span class="nc" id="L96">    throw new ODataJPADBAdaptorException(PARAMETER_MISSING, BAD_REQUEST, parameter.getName());</span>
+  }
+
+  protected void fillParameterFromEntity(final JPADataBaseFunction jpaFunction, final UriResourceEntitySet es,
+      final Query functionQuery) throws ODataApplicationException {
+
+<span class="nc" id="L102">    int count = 1;</span>
+    try {
+<span class="nc bnc" id="L104" title="All 2 branches missed.">      for (final JPAParameter parameter : jpaFunction.getParameter()) {</span>
+<span class="nc" id="L105">        final UriParameter uriParameter = findParameterByExternalName(parameter, es.getKeyPredicates());</span>
+<span class="nc" id="L106">        final Object value = getValue(es.getEntityType().getProperty(parameter.getName()), parameter, uriParameter</span>
+<span class="nc" id="L107">            .getText());</span>
+<span class="nc" id="L108">        functionQuery.setParameter(count, value);</span>
+<span class="nc" id="L109">        count += 1;</span>
+<span class="nc" id="L110">      }</span>
+<span class="nc" id="L111">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L112">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L113">    }</span>
+<span class="nc" id="L114">  }</span>
+
+  protected Long executeCountQuery(final List&lt;UriResource&gt; uriParts, final JPADataBaseFunction jpaFunction,
+      final EntityManager em, final String pattern) throws ODataApplicationException {
+
+<span class="nc" id="L119">    final UriResourceFunction uriFunction = (UriResourceFunction) uriParts.get(uriParts.size() - 2);</span>
+<span class="nc" id="L120">    final String queryString = generateQueryString(pattern, jpaFunction);</span>
+<span class="nc" id="L121">    final Query functionQuery = em.createNativeQuery(queryString);</span>
+
+<span class="nc" id="L123">    fillParameter(determineTargetEntitySet(uriParts), jpaFunction, uriFunction, functionQuery);</span>
+<span class="nc" id="L124">    return (Long) functionQuery.getSingleResult();</span>
+
+  }
+
+  protected void fillParameterFromFunction(final JPADataBaseFunction jpaFunction,
+      final UriResourceFunction uriResourceFunction, final Query functionQuery) throws ODataApplicationException {
+
+<span class="nc" id="L131">    final EdmFunction edmFunction = uriResourceFunction.getFunction();</span>
+<span class="nc" id="L132">    int count = 1;</span>
+    try {
+<span class="nc bnc" id="L134" title="All 2 branches missed.">      for (final JPAParameter parameter : jpaFunction.getParameter()) {</span>
+<span class="nc" id="L135">        final UriParameter uriParameter = findParameterByExternalName(parameter, uriResourceFunction.getParameters());</span>
+<span class="nc" id="L136">        final Object value = getValue(edmFunction.getParameter(parameter.getName()), parameter, uriParameter.getText());</span>
+<span class="nc" id="L137">        functionQuery.setParameter(count, value);</span>
+<span class="nc" id="L138">        count += 1;</span>
+<span class="nc" id="L139">      }</span>
+<span class="nc" id="L140">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L141">      throw new ODataJPAProcessorException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L142">    }</span>
+<span class="nc" id="L143">  }</span>
+
+  private Object getValue(final EdmElement edmElement, final JPAParameter parameter, final String uriValue)
+      throws ODataApplicationException {
+
+<span class="nc" id="L148">    final String value = uriValue.replace(&quot;'&quot;, &quot;&quot;);</span>
+    try {
+<span class="nc" id="L150">      return ((EdmPrimitiveType) edmElement.getType()).valueOfString(value, false, parameter.getMaxLength(),</span>
+<span class="nc" id="L151">          parameter.getPrecision(), parameter.getScale(), true, parameter.getType());</span>
+<span class="nc" id="L152">    } catch (final EdmPrimitiveTypeException e) {</span>
+      // Unable to convert value %1$s of parameter %2$s
+<span class="nc" id="L154">      throw new ODataJPADBAdaptorException(PARAMETER_CONVERSION_ERROR, INTERNAL_SERVER_ERROR, e, uriValue, parameter</span>
+<span class="nc" id="L155">          .getName());</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

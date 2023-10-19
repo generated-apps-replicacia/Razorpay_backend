@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPASerializeFunction.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.serializer</a> &gt; <span class="el_source">JPASerializeFunction.java</span></div><h1>JPASerializeFunction.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.serializer;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.olingo.commons.api.data.Annotatable;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.serializer.SerializerException;
+import org.apache.olingo.server.api.serializer.SerializerResult;
+import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceAction;
+import org.apache.olingo.server.api.uri.UriResourceFunction;
+import org.apache.olingo.server.api.uri.UriResourcePartTyped;
+
+import com.sap.olingo.jpa.processor.core.exception.ODataJPASerializerException;
+
+final class JPASerializeFunction implements JPAOperationSerializer {
+  private final JPAOperationSerializer serializer;
+
+  public JPASerializeFunction(final UriInfo uriInfo, final ContentType responseFormat,
+      final JPASerializerFactory jpaSerializerFactory, Optional&lt;List&lt;String&gt;&gt; responseVersion)
+<span class="nc" id="L27">      throws ODataJPASerializerException, SerializerException {</span>
+
+<span class="nc" id="L29">    this.serializer = (JPAOperationSerializer) createSerializer(jpaSerializerFactory, responseFormat, uriInfo,</span>
+        responseVersion);
+<span class="nc" id="L31">  }</span>
+
+  @Override
+  public SerializerResult serialize(final ODataRequest request, final EntityCollection result)
+      throws SerializerException, ODataJPASerializerException {
+<span class="nc" id="L36">    return serializer.serialize(request, result);</span>
+  }
+
+  @Override
+  public SerializerResult serialize(final Annotatable annotatable, final EdmType entityType, final ODataRequest request)
+      throws SerializerException, ODataJPASerializerException {
+<span class="nc" id="L42">    return serializer.serialize(annotatable, entityType, request);</span>
+  }
+
+  JPASerializer getSerializer() {
+<span class="nc" id="L46">    return serializer;</span>
+  }
+
+  private JPASerializer createSerializer(final JPASerializerFactory jpaSerializerFactory,
+      final ContentType responseFormat, final UriInfo uriInfo, final Optional&lt;List&lt;String&gt;&gt; responseVersion)
+      throws ODataJPASerializerException, SerializerException {
+
+<span class="nc" id="L53">    final List&lt;UriResource&gt; resourceParts = uriInfo.getUriResourceParts();</span>
+<span class="nc" id="L54">    final UriResourcePartTyped operation = (UriResourcePartTyped) resourceParts.get(resourceParts.size() - 1);</span>
+<span class="nc" id="L55">    final EdmTypeKind edmTypeKind = determineReturnEdmTypeKind(operation);</span>
+<span class="nc" id="L56">    return jpaSerializerFactory.createSerializer(responseFormat, uriInfo, edmTypeKind, operation.isCollection(),</span>
+        responseVersion);
+  }
+
+  private EdmTypeKind determineReturnEdmTypeKind(final UriResourcePartTyped operation) {
+<span class="nc bnc" id="L61" title="All 2 branches missed.">    if (operation instanceof UriResourceFunction)</span>
+<span class="nc" id="L62">      return ((UriResourceFunction) operation).getFunction().getReturnType().getType().getKind();</span>
+    else
+<span class="nc" id="L64">      return ((UriResourceAction) operation).getAction().getReturnType().getType().getKind();</span>
+  }
+
+  @Override
+  public ContentType getContentType() {
+<span class="nc" id="L69">    return this.serializer.getContentType();</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

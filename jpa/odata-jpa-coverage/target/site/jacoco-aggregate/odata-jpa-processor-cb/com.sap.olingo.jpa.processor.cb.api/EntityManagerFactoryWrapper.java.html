@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>EntityManagerFactoryWrapper.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.api</a> &gt; <span class="el_source">EntityManagerFactoryWrapper.java</span></div><h1>EntityManagerFactoryWrapper.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.api;
+
+import java.util.Map;
+
+import javax.persistence.Cache;
+import javax.persistence.EntityGraph;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnitUtil;
+import javax.persistence.Query;
+import javax.persistence.SynchronizationType;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.metamodel.Metamodel;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.processor.cb.impl.EntityManagerWrapper;
+
+public final class EntityManagerFactoryWrapper implements EntityManagerFactory {
+  private final EntityManagerFactory emf;
+  private final JPAServiceDocument sd;
+
+  public EntityManagerFactoryWrapper(final EntityManagerFactory emf, final JPAServiceDocument sd) {
+<span class="nc" id="L23">    super();</span>
+<span class="nc" id="L24">    this.emf = emf;</span>
+<span class="nc" id="L25">    this.sd = sd;</span>
+<span class="nc" id="L26">  }</span>
+
+  @Override
+  public EntityManager createEntityManager() {
+<span class="nc" id="L30">    return new EntityManagerWrapper(emf.createEntityManager(), sd);</span>
+  }
+
+  @Override
+  public EntityManager createEntityManager(@SuppressWarnings(&quot;rawtypes&quot;) final Map map) {
+<span class="nc" id="L35">    return new EntityManagerWrapper(emf.createEntityManager(map), sd);</span>
+  }
+
+  @Override
+  public EntityManager createEntityManager(final SynchronizationType synchronizationType) {
+<span class="nc" id="L40">    return new EntityManagerWrapper(emf.createEntityManager(synchronizationType), sd);</span>
+  }
+
+  @Override
+  public EntityManager createEntityManager(final SynchronizationType synchronizationType,
+      @SuppressWarnings(&quot;rawtypes&quot;) final Map map) {
+<span class="nc" id="L46">    return new EntityManagerWrapper(emf.createEntityManager(synchronizationType, map), sd);</span>
+  }
+
+  @Override
+  public CriteriaBuilder getCriteriaBuilder() {
+<span class="nc" id="L51">    return new EntityManagerWrapper(emf.createEntityManager(), sd).getCriteriaBuilder();</span>
+  }
+
+  @Override
+  public Metamodel getMetamodel() {
+<span class="nc" id="L56">    return emf.getMetamodel();</span>
+  }
+
+  @Override
+  public boolean isOpen() {
+<span class="nc" id="L61">    return emf.isOpen();</span>
+  }
+
+  @Override
+  public void close() {
+<span class="nc" id="L66">    emf.close();</span>
+<span class="nc" id="L67">  }</span>
+
+  @Override
+  public Map&lt;String, Object&gt; getProperties() {
+<span class="nc" id="L71">    return emf.getProperties();</span>
+  }
+
+  @Override
+  public Cache getCache() {
+<span class="nc" id="L76">    return emf.getCache();</span>
+  }
+
+  @Override
+  public PersistenceUnitUtil getPersistenceUnitUtil() {
+<span class="nc" id="L81">    return emf.getPersistenceUnitUtil();</span>
+  }
+
+  @Override
+  public void addNamedQuery(final String name, final Query query) {
+<span class="nc" id="L86">    emf.addNamedQuery(name, query);</span>
+<span class="nc" id="L87">  }</span>
+
+  @Override
+  public &lt;T&gt; T unwrap(final Class&lt;T&gt; cls) {
+<span class="nc" id="L91">    return emf.unwrap(cls);</span>
+  }
+
+  @Override
+  public &lt;T&gt; void addNamedEntityGraph(final String graphName, final EntityGraph&lt;T&gt; entityGraph) {
+<span class="nc" id="L96">    emf.addNamedEntityGraph(graphName, entityGraph);</span>
+<span class="nc" id="L97">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

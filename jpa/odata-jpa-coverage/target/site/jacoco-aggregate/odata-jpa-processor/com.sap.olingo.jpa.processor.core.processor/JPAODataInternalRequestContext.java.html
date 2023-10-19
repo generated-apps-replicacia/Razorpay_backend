@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataInternalRequestContext.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPAODataInternalRequestContext.java</span></div><h1>JPAODataInternalRequestContext.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.NO_METADATA_PROVIDER;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.INTERNAL_SERVER_ERROR;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.EntityManager;
+
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+
+import com.sap.olingo.jpa.metadata.api.JPAEdmProvider;
+import com.sap.olingo.jpa.metadata.api.JPAHttpHeaderMap;
+import com.sap.olingo.jpa.metadata.api.JPARequestParameterMap;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmQueryExtensionProvider;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransientPropertyCalculator;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.processor.core.api.JPAAbstractCUDRequestHandler;
+import com.sap.olingo.jpa.processor.core.api.JPACUDRequestHandler;
+import com.sap.olingo.jpa.processor.core.api.JPAODataClaimProvider;
+import com.sap.olingo.jpa.processor.core.api.JPAODataDatabaseProcessor;
+import com.sap.olingo.jpa.processor.core.api.JPAODataDefaultTransactionFactory;
+import com.sap.olingo.jpa.processor.core.api.JPAODataGroupProvider;
+import com.sap.olingo.jpa.processor.core.api.JPAODataPage;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContext;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.api.JPAODataServiceContext;
+import com.sap.olingo.jpa.processor.core.api.JPAODataSessionContextAccess;
+import com.sap.olingo.jpa.processor.core.api.JPAODataTransactionFactory;
+import com.sap.olingo.jpa.processor.core.api.JPAServiceDebugger;
+import com.sap.olingo.jpa.processor.core.database.JPAODataDatabaseOperations;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAIllegalAccessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.query.ExpressionUtil;
+import com.sap.olingo.jpa.processor.core.serializer.JPASerializer;
+
+public final class JPAODataInternalRequestContext implements JPAODataRequestContextAccess,
+    ODATARequestContext {
+
+  private Optional&lt;JPAODataClaimProvider&gt; claims;
+  private Optional&lt;JPAODataGroupProvider&gt; groups;
+  private EntityManager em;
+  private UriInfoResource uriInfo;
+  private JPASerializer serializer;
+  private JPAODataPage page;
+  private JPACUDRequestHandler cudRequestHandler;
+  private JPAServiceDebugger debugger;
+  private JPADebugSupportWrapper debugSupport;
+  private JPAODataTransactionFactory transactionFactory;
+  private final JPAHttpHeaderMap header;
+  private JPARequestParameterMap customParameter;
+  private List&lt;Locale&gt; locales;
+  private final JPAHookFactory hookFactory;
+  private JPAODataDatabaseProcessor dbProcessor;
+  private Optional&lt;JPAEdmProvider&gt; edmProvider;
+  private JPAODataDatabaseOperations operationConverter;
+
+  public JPAODataInternalRequestContext(@Nonnull final JPAODataRequestContext requestContext,
+<span class="nc" id="L70">      @Nonnull final JPAODataSessionContextAccess sessionContext) {</span>
+<span class="nc" id="L71">    this.header = new JPAHttpHeaderHashMap(Collections.emptyMap());</span>
+<span class="nc" id="L72">    copyRequestContext(requestContext, sessionContext);</span>
+<span class="nc" id="L73">    this.hookFactory = new JPAHookFactory(em, header, customParameter);</span>
+<span class="nc" id="L74">    initDebugger();</span>
+<span class="nc" id="L75">  }</span>
+
+  /**
+   * Copy constructor only using new uri info
+   * @param uriInfo
+   * @param context
+   * @throws ODataJPAProcessorException
+   */
+  public JPAODataInternalRequestContext(final UriInfoResource uriInfo, final JPAODataRequestContextAccess context)
+      throws ODataJPAProcessorException {
+<span class="nc" id="L85">    this(uriInfo, null, context, context.getHeader());</span>
+<span class="nc" id="L86">  }</span>
+
+  /**
+   * Copy constructor switching also the header
+   * @param uriInfo
+   * @param context
+   * @throws ODataJPAProcessorException
+   */
+  public JPAODataInternalRequestContext(final UriInfoResource uriInfo, final JPAODataRequestContextAccess context,
+      final Map&lt;String, List&lt;String&gt;&gt; header) throws ODataJPAProcessorException {
+<span class="nc" id="L96">    this(uriInfo, null, context, header);</span>
+<span class="nc" id="L97">  }</span>
+
+  JPAODataInternalRequestContext(final JPAODataPage page, final JPASerializer serializer,
+      final JPAODataRequestContextAccess context, final Map&lt;String, List&lt;String&gt;&gt; header)
+<span class="nc" id="L101">      throws ODataJPAIllegalAccessException, ODataJPAProcessorException {</span>
+
+<span class="nc" id="L103">    copyContextValues(context);</span>
+<span class="nc" id="L104">    this.serializer = serializer;</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">    this.cudRequestHandler = this.cudRequestHandler == null ? new JPADefaultCUDRequestHandler()</span>
+<span class="nc" id="L106">        : this.cudRequestHandler;</span>
+<span class="nc" id="L107">    this.header = new JPAHttpHeaderHashMap(header);</span>
+<span class="nc" id="L108">    this.customParameter = new JPARequestParameterHashMap(context.getRequestParameter());</span>
+<span class="nc" id="L109">    this.hookFactory = new JPAHookFactory(em, this.header, customParameter);</span>
+<span class="nc" id="L110">    setJPAODataPage(page);</span>
+<span class="nc" id="L111">  }</span>
+
+  JPAODataInternalRequestContext(final UriInfoResource uriInfo, @Nullable final JPASerializer serializer,
+      final JPAODataRequestContextAccess context, final Map&lt;String, List&lt;String&gt;&gt; header)
+<span class="nc" id="L115">      throws ODataJPAProcessorException {</span>
+
+<span class="nc" id="L117">    copyContextValues(context);</span>
+<span class="nc" id="L118">    this.serializer = serializer;</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">    this.cudRequestHandler = this.cudRequestHandler == null ? new JPADefaultCUDRequestHandler()</span>
+<span class="nc" id="L120">        : this.cudRequestHandler;</span>
+<span class="nc" id="L121">    this.uriInfo = uriInfo;</span>
+<span class="nc" id="L122">    this.header = new JPAHttpHeaderHashMap(header);</span>
+<span class="nc" id="L123">    this.customParameter = new JPARequestParameterHashMap(context.getRequestParameter());</span>
+<span class="nc" id="L124">    this.hookFactory = new JPAHookFactory(em, this.header, customParameter);</span>
+<span class="nc" id="L125">  }</span>
+
+  @Override
+  public Optional&lt;EdmTransientPropertyCalculator&lt;?&gt;&gt; getCalculator(@Nonnull final JPAAttribute transientProperty)
+      throws ODataJPAProcessorException {
+<span class="nc" id="L130">    return hookFactory.getTransientPropertyCalculator(transientProperty);</span>
+  }
+
+  @Override
+  public Optional&lt;EdmQueryExtensionProvider&gt; getQueryEnhancement(final JPAEntityType et)
+      throws ODataJPAProcessorException {
+<span class="nc" id="L136">    return hookFactory.getQueryExtensionProvider(et);</span>
+  }
+
+  @Override
+  public Optional&lt;JPAODataClaimProvider&gt; getClaimsProvider() {
+<span class="nc" id="L141">    return claims;</span>
+  }
+
+  @Override
+  public JPACUDRequestHandler getCUDRequestHandler() {
+<span class="nc" id="L146">    return cudRequestHandler;</span>
+  }
+
+  @Override
+  public JPAServiceDebugger getDebugger() {
+<span class="nc bnc" id="L151" title="All 2 branches missed.">    if (debugger == null)</span>
+<span class="nc" id="L152">      initDebugger();</span>
+<span class="nc" id="L153">    return debugger;</span>
+  }
+
+  public JPADebugSupportWrapper getDebugSupport() {
+<span class="nc bnc" id="L157" title="All 2 branches missed.">    if (debugger == null)</span>
+<span class="nc" id="L158">      initDebugger();</span>
+<span class="nc" id="L159">    return debugSupport;</span>
+  }
+
+  @Override
+  public EntityManager getEntityManager() {
+<span class="nc" id="L164">    return this.em;</span>
+  }
+
+  @Override
+  public Optional&lt;JPAODataGroupProvider&gt; getGroupsProvider() {
+<span class="nc" id="L169">    return groups;</span>
+  }
+
+  @Override
+  public JPAHttpHeaderMap getHeader() {
+<span class="nc" id="L174">    return header;</span>
+  }
+
+  @Override
+  public JPARequestParameterMap getRequestParameter() {
+<span class="nc" id="L179">    return customParameter;</span>
+  }
+
+  @Override
+  public JPAODataPage getPage() {
+<span class="nc" id="L184">    return page;</span>
+  }
+
+  @Override
+  public JPASerializer getSerializer() {
+<span class="nc" id="L189">    return serializer;</span>
+  }
+
+  @Override
+  public JPAODataTransactionFactory getTransactionFactory() {
+<span class="nc bnc" id="L194" title="All 4 branches missed.">    if (transactionFactory == null &amp;&amp; em != null)</span>
+<span class="nc" id="L195">      createDefaultTransactionFactory();</span>
+<span class="nc" id="L196">    return this.transactionFactory;</span>
+  }
+
+  @Override
+  public UriInfoResource getUriInfo() {
+<span class="nc" id="L201">    return this.uriInfo;</span>
+  }
+
+  @Override
+  public Locale getLocale() {
+<span class="nc bnc" id="L206" title="All 4 branches missed.">    if (locales == null || locales.isEmpty())</span>
+<span class="nc" id="L207">      return ExpressionUtil.determineFallbackLocale(header);</span>
+<span class="nc" id="L208">    return locales.get(0);</span>
+  }
+
+  @Override
+  public List&lt;Locale&gt; getProvidedLocale() {
+<span class="nc" id="L213">    return locales;</span>
+  }
+
+  public void setEntityManager(@Nonnull final EntityManager em) {
+<span class="nc" id="L217">    this.em = Objects.requireNonNull(em);</span>
+<span class="nc" id="L218">  }</span>
+
+  @Override
+  public void setJPAODataPage(@Nonnull final JPAODataPage page) throws ODataJPAIllegalAccessException {
+<span class="nc bnc" id="L222" title="All 2 branches missed.">    if (this.uriInfo != null)</span>
+<span class="nc" id="L223">      throw new ODataJPAIllegalAccessException();</span>
+<span class="nc" id="L224">    this.setUriInfo(page.getUriInfo());</span>
+<span class="nc" id="L225">    this.page = Objects.requireNonNull(page);</span>
+<span class="nc" id="L226">  }</span>
+
+  @Override
+  public void setJPASerializer(@Nonnull final JPASerializer serializer) {
+<span class="nc" id="L230">    this.serializer = Objects.requireNonNull(serializer);</span>
+<span class="nc" id="L231">  }</span>
+
+  @Override
+  public void setUriInfo(@Nonnull final UriInfo uriInfo) throws ODataJPAIllegalAccessException {
+<span class="nc bnc" id="L235" title="All 2 branches missed.">    if (this.page != null)</span>
+<span class="nc" id="L236">      throw new ODataJPAIllegalAccessException();</span>
+<span class="nc" id="L237">    this.uriInfo = Objects.requireNonNull(uriInfo);</span>
+<span class="nc" id="L238">  }</span>
+
+  @Override
+  public JPAODataDatabaseProcessor getDatabaseProcessor() {
+<span class="nc" id="L242">    return dbProcessor;</span>
+  }
+
+  @Override
+  public JPAEdmProvider getEdmProvider() throws ODataJPAProcessorException {
+<span class="nc" id="L247">    return edmProvider.orElseThrow(</span>
+<span class="nc" id="L248">        () -&gt; new ODataJPAProcessorException(NO_METADATA_PROVIDER, INTERNAL_SERVER_ERROR));</span>
+  }
+
+  @Override
+  public JPAODataDatabaseOperations getOperationConverter() {
+<span class="nc" id="L253">    return operationConverter;</span>
+  }
+
+  private void copyContextValues(final JPAODataRequestContextAccess context)
+      throws ODataJPAProcessorException {
+<span class="nc" id="L258">    this.em = context.getEntityManager();</span>
+<span class="nc" id="L259">    this.claims = context.getClaimsProvider();</span>
+<span class="nc" id="L260">    this.groups = context.getGroupsProvider();</span>
+<span class="nc" id="L261">    this.cudRequestHandler = context.getCUDRequestHandler();</span>
+<span class="nc" id="L262">    this.transactionFactory = context.getTransactionFactory();</span>
+<span class="nc" id="L263">    this.locales = context.getProvidedLocale();</span>
+<span class="nc bnc" id="L264" title="All 2 branches missed.">    this.debugSupport = context instanceof JPAODataInternalRequestContext ? ((JPAODataInternalRequestContext) context)</span>
+<span class="nc" id="L265">        .getDebugSupport() : null;</span>
+<span class="nc" id="L266">    this.dbProcessor = context.getDatabaseProcessor();</span>
+<span class="nc" id="L267">    this.edmProvider = Optional.ofNullable(context.getEdmProvider());</span>
+<span class="nc" id="L268">    this.operationConverter = context.getOperationConverter();</span>
+<span class="nc" id="L269">  }</span>
+
+  private void copyRequestContext(@Nonnull final JPAODataRequestContext requestContext,
+      @Nonnull final JPAODataSessionContextAccess sessionContext) {
+
+<span class="nc" id="L274">    em = requestContext.getEntityManager();</span>
+<span class="nc" id="L275">    claims = requestContext.getClaimsProvider();</span>
+<span class="nc" id="L276">    groups = requestContext.getGroupsProvider();</span>
+<span class="nc" id="L277">    cudRequestHandler = requestContext.getCUDRequestHandler();</span>
+<span class="nc bnc" id="L278" title="All 2 branches missed.">    debugSupport = requestContext.getDebuggerSupport() != null ? new JPADebugSupportWrapper(requestContext</span>
+<span class="nc" id="L279">        .getDebuggerSupport()) : null;</span>
+<span class="nc" id="L280">    transactionFactory = requestContext.getTransactionFactory();</span>
+<span class="nc" id="L281">    locales = requestContext.getLocales();</span>
+<span class="nc bnc" id="L282" title="All 2 branches missed.">    customParameter = requestContext.getRequestParameter() != null ? requestContext.getRequestParameter()</span>
+<span class="nc" id="L283">        : new JPARequestParameterHashMap();</span>
+<span class="nc" id="L284">    dbProcessor = sessionContext.getDatabaseProcessor();</span>
+<span class="nc" id="L285">    operationConverter = sessionContext.getOperationConverter();</span>
+<span class="nc" id="L286">    edmProvider = determineEdmProvider(sessionContext, em);</span>
+<span class="nc" id="L287">  }</span>
+
+  private Optional&lt;JPAEdmProvider&gt; determineEdmProvider(final JPAODataSessionContextAccess sessionContext,
+      final EntityManager em) {
+    try {
+<span class="nc bnc" id="L292" title="All 4 branches missed.">      return sessionContext.getEdmProvider() == null</span>
+<span class="nc" id="L293">          &amp;&amp; sessionContext instanceof JPAODataServiceContext</span>
+<span class="nc" id="L294">              ? Optional.ofNullable(((JPAODataServiceContext) sessionContext).getEdmProvider(em))</span>
+<span class="nc" id="L295">              : Optional.ofNullable(sessionContext.getEdmProvider());</span>
+<span class="nc" id="L296">    } catch (final ODataException e) {</span>
+<span class="nc" id="L297">      debugger.debug(this, Arrays.toString(e.getStackTrace()));</span>
+<span class="nc" id="L298">      return Optional.empty();</span>
+    }
+  }
+
+  private void createDefaultTransactionFactory() {
+<span class="nc" id="L303">    this.transactionFactory = new JPAODataDefaultTransactionFactory(em);</span>
+<span class="nc" id="L304">  }</span>
+
+  private void initDebugger() {
+    // see org.apache.olingo.server.core.debug.ServerCoreDebugger
+<span class="nc" id="L308">    debugger = new JPAEmptyDebugger();</span>
+<span class="nc bnc" id="L309" title="All 2 branches missed.">    if (debugSupport != null) {</span>
+<span class="nc" id="L310">      debugger = new JPACoreDebugger(debugSupport.isUserAuthorized());</span>
+<span class="nc" id="L311">      debugSupport.addDebugger(debugger);</span>
+    }
+<span class="nc" id="L313">  }</span>
+
+  private static class JPADefaultCUDRequestHandler extends JPAAbstractCUDRequestHandler {
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

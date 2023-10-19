@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPARowNumberFilterQuery.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPARowNumberFilterQuery.java</span></div><h1>JPARowNumberFilterQuery.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.NO_JOIN_TABLE_TYPE;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_ERROR;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_JOIN_TABLE_TYPE_MISSING;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.INTERNAL_SERVER_ERROR;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.Order;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Selection;
+import javax.persistence.criteria.Subquery;
+
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAOnConditionItem;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.cb.ProcessorCriteriaBuilder;
+import com.sap.olingo.jpa.processor.cb.ProcessorSubquery;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+import com.sap.olingo.jpa.processor.core.filter.JPAFilterComplier;
+
+final class JPARowNumberFilterQuery extends JPAExpandFilterQuery {
+
+  private final JPAFilterComplier filter;
+  private final Set&lt;JPAPath&gt; outerSelections;
+  private final boolean useInverse;
+
+  JPARowNumberFilterQuery(final OData odata, final JPAODataRequestContextAccess requestContext,
+      final JPANavigationPropertyInfo naviInfo, final JPAAbstractQuery parent,
+      final Optional&lt;JPAAssociationPath&gt; childAssociation, final List&lt;JPAPath&gt; selections) throws ODataException {
+
+<span class="nc" id="L53">    super(odata, requestContext, new JPANavigationPropertyInfo(naviInfo), parent, childAssociation</span>
+<span class="nc" id="L54">        .orElse(null));</span>
+
+<span class="nc" id="L56">    this.outerSelections = selections.stream().collect(toSet());</span>
+<span class="nc" id="L57">    this.useInverse = false;</span>
+<span class="nc" id="L58">    filter = navigationInfo.getFilterCompiler();</span>
+<span class="nc" id="L59">    filter.compile();</span>
+<span class="nc" id="L60">  }</span>
+
+  JPARowNumberFilterQuery(final OData odata, final JPAODataRequestContextAccess requestContext,
+      final JPANavigationPropertyInfo naviInfo, final JPAAbstractQuery parent, final JPAAssociationPath association,
+      final JPAAssociationPath childAssociation, final SelectionPathInfo&lt;JPAPath&gt; selectionPath) throws ODataException {
+
+<span class="nc" id="L66">    super(odata, requestContext, new JPANavigationPropertyInfo(naviInfo), parent, association,</span>
+        childAssociation);
+
+<span class="nc" id="L69">    this.outerSelections = selectionPath.joinedPersistent();</span>
+<span class="nc" id="L70">    this.useInverse = true;</span>
+<span class="nc" id="L71">    filter = navigationInfo.getFilterCompiler();</span>
+<span class="nc" id="L72">    filter.compile();</span>
+<span class="nc" id="L73">  }</span>
+
+  @Override
+  public From&lt;?, ?&gt; getRoot() {
+<span class="nc" id="L77">    return queryRoot;</span>
+  }
+
+  /**
+   *
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Nonnull
+  @Override
+  public &lt;T&gt; Subquery&lt;T&gt; getSubQuery(@Nullable final Subquery&lt;?&gt; childQuery) throws ODataApplicationException {
+
+<span class="nc" id="L88">    final int handle = debugger.startRuntimeMeasurement(this, &quot;createSubQuery&quot;);</span>
+<span class="nc" id="L89">    final ProcessorSubquery&lt;T&gt; nextQuery = (ProcessorSubquery&lt;T&gt;) this.subQuery;</span>
+<span class="nc" id="L90">    this.queryRoot = subQuery.from(this.jpaEntity.getTypeClass());</span>
+<span class="nc" id="L91">    this.navigationInfo.setFromClause(queryRoot);</span>
+<span class="nc" id="L92">    buildJoinTable(emptyList(), outerSelections, null);</span>
+<span class="nc" id="L93">    final List&lt;Selection&lt;?&gt;&gt; selections = createSelectForParent();</span>
+<span class="nc" id="L94">    selections.addAll(crateSelectionJoinTable());</span>
+<span class="nc" id="L95">    selections.add(createRowNumber(useInverse));</span>
+<span class="nc" id="L96">    nextQuery.where(createWhereSubQuery(childQuery, useInverse));</span>
+<span class="nc" id="L97">    nextQuery.multiselect(selections);</span>
+<span class="nc" id="L98">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L99">    return nextQuery;</span>
+
+  }
+
+  private List&lt;? extends Selection&lt;?&gt;&gt; crateSelectionJoinTable() throws ODataJPAQueryException {
+<span class="nc bnc" id="L104" title="All 2 branches missed.">    if (queryJoinTable != null) {</span>
+      try {
+<span class="nc" id="L106">        final List&lt;JPAOnConditionItem&gt; columns = association.getJoinTable().getJoinColumns();</span>
+<span class="nc" id="L107">        debugger.trace(this, &quot;Creating SELECT snipped for join table %s with join conditions %s&quot;, queryJoinTable</span>
+<span class="nc" id="L108">            .toString(), columns);</span>
+<span class="nc" id="L109">        return columns</span>
+<span class="nc" id="L110">            .stream()</span>
+<span class="nc" id="L111">            .map(key -&gt; mapOnToSelection(key.getRightPath(), queryJoinTable, null))</span>
+<span class="nc" id="L112">            .collect(toList());</span>
+<span class="nc" id="L113">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        if (e.getId().equals(NO_JOIN_TABLE_TYPE.getKey())) {</span>
+<span class="nc" id="L115">          throw new ODataJPAQueryException(QUERY_PREPARATION_JOIN_TABLE_TYPE_MISSING, INTERNAL_SERVER_ERROR,</span>
+<span class="nc" id="L116">              association.getJoinTable().getTableName());</span>
+        }
+<span class="nc" id="L118">        throw new ODataJPAQueryException(QUERY_PREPARATION_ERROR, INTERNAL_SERVER_ERROR, e);</span>
+      }
+    }
+<span class="nc" id="L121">    return emptyList();</span>
+  }
+
+  private List&lt;Selection&lt;?&gt;&gt; createSelectForParent() {
+
+<span class="nc" id="L126">    final int handle = debugger.startRuntimeMeasurement(this, &quot;createSelectClause&quot;);</span>
+<span class="nc" id="L127">    final List&lt;Selection&lt;?&gt;&gt; selections = new ArrayList&lt;&gt;();</span>
+
+    // Build select clause
+<span class="nc bnc" id="L130" title="All 2 branches missed.">    for (final JPAPath jpaPath : this.outerSelections) {</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">      if (jpaPath.isPartOfGroups(groups)) {</span>
+<span class="nc" id="L132">        final Path&lt;?&gt; p = ExpressionUtil.convertToCriteriaPath(joinTables, queryRoot, jpaPath.getPath());</span>
+<span class="nc" id="L133">        p.alias(jpaPath.getAlias());</span>
+<span class="nc" id="L134">        selections.add(p);</span>
+      }
+<span class="nc" id="L136">    }</span>
+<span class="nc" id="L137">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L138">    return selections;</span>
+  }
+
+  private Expression&lt;Long&gt; createRowNumber(final boolean inverse) throws ODataApplicationException {
+    try {
+<span class="nc" id="L143">      final List&lt;Path&lt;?&gt;&gt; pathList = createWhereKeyInPathList(</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">          inverse ? association : childAssociation</span>
+<span class="nc" id="L145">              .orElseThrow(() -&gt; new ODataJPAQueryException(QUERY_PREPARATION_ERROR, INTERNAL_SERVER_ERROR)),</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">          queryJoinTable == null ? queryRoot : queryJoinTable);</span>
+<span class="nc" id="L147">      final List&lt;Order&gt; orderBy = createOrderBy();</span>
+<span class="nc" id="L148">      return (Expression&lt;Long&gt;) ((ProcessorCriteriaBuilder) cb).rowNumber()</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">          .orderBy(orderBy.isEmpty() ? singletonList(cb.asc(queryRoot)) : orderBy)</span>
+<span class="nc" id="L150">          .partitionBy(pathList)</span>
+<span class="nc" id="L151">          .alias(ROW_NUMBER_COLUMN_NAME);</span>
+<span class="nc" id="L152">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L153">      throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+
+  }
+
+  @Override
+  protected Expression&lt;Boolean&gt; applyAdditionalFilter(final Expression&lt;Boolean&gt; where)
+      throws ODataApplicationException {
+
+<span class="nc bnc" id="L162" title="All 4 branches missed.">    if (filter != null &amp;&amp; aggregationType == null)</span>
+      try {
+<span class="nc" id="L164">        return addWhereClause(where, filter.compile());</span>
+<span class="nc" id="L165">      } catch (final ExpressionVisitException e) {</span>
+<span class="nc" id="L166">        throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+      }
+<span class="nc" id="L168">    return where;</span>
+  }
+
+  private List&lt;Order&gt; createOrderBy() throws ODataApplicationException {
+<span class="nc" id="L172">    final JPAOrderByBuilder orderBy = new JPAOrderByBuilder(jpaEntity, queryRoot, cb, groups);</span>
+<span class="nc" id="L173">    return orderBy.createOrderByList(emptyMap(), navigationInfo.getUriInfo().getOrderByOption());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

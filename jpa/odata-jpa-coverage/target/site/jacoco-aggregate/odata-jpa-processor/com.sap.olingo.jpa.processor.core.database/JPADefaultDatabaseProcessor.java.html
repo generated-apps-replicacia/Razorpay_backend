@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPADefaultDatabaseProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.database</a> &gt; <span class="el_source">JPADefaultDatabaseProcessor.java</span></div><h1>JPADefaultDatabaseProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.database;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_FUNC_WITH_NAVI;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.From;
+
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.queryoption.SearchOption;
+import org.apache.olingo.server.api.uri.queryoption.expression.BinaryOperatorKind;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPADataBaseFunction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPADBAdaptorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.filter.JPAAggregationOperation;
+import com.sap.olingo.jpa.processor.core.filter.JPAArithmeticOperator;
+import com.sap.olingo.jpa.processor.core.filter.JPABooleanOperator;
+import com.sap.olingo.jpa.processor.core.filter.JPAComparisonOperator;
+import com.sap.olingo.jpa.processor.core.filter.JPAEnumerationBasedOperator;
+import com.sap.olingo.jpa.processor.core.filter.JPAMethodCall;
+import com.sap.olingo.jpa.processor.core.filter.JPAUnaryBooleanOperator;
+
+<span class="nc" id="L34">public class JPADefaultDatabaseProcessor extends JPAAbstractDatabaseProcessor implements JPAODataDatabaseOperations {</span>
+  private static final String SELECT_BASE_PATTERN = &quot;SELECT * FROM $FUNCTIONNAME$($PARAMETER$)&quot;;
+  private static final String SELECT_COUNT_PATTERN = &quot;SELECT COUNT(*) FROM $FUNCTIONNAME$($PARAMETER$)&quot;;
+
+  private CriteriaBuilder cb;
+
+  @Override
+  public Expression&lt;Long&gt; convert(final JPAAggregationOperation jpaOperator) throws ODataApplicationException {
+<span class="nc" id="L42">    throw new ODataJPAFilterException(ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_OPERATOR,</span>
+<span class="nc" id="L43">        HttpStatusCode.NOT_IMPLEMENTED, jpaOperator.getName());</span>
+  }
+
+  @Override
+  public &lt;T extends Number&gt; Expression&lt;T&gt; convert(final JPAArithmeticOperator jpaOperator)
+      throws ODataApplicationException {
+<span class="nc" id="L49">    throw new ODataJPAFilterException(ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_OPERATOR,</span>
+<span class="nc" id="L50">        HttpStatusCode.NOT_IMPLEMENTED, jpaOperator.getName());</span>
+  }
+
+  @Override
+  public Expression&lt;Boolean&gt; convert(final JPABooleanOperator jpaOperator) throws ODataApplicationException {
+<span class="nc" id="L55">    throw new ODataJPAFilterException(ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_OPERATOR,</span>
+<span class="nc" id="L56">        HttpStatusCode.NOT_IMPLEMENTED, jpaOperator.getName());</span>
+  }
+
+  @Override
+  public Expression&lt;Boolean&gt; convert(@SuppressWarnings(&quot;rawtypes&quot;) final JPAComparisonOperator jpaOperator)
+      throws ODataApplicationException {
+<span class="nc bnc" id="L62" title="All 2 branches missed.">    if (jpaOperator.getOperator().equals(BinaryOperatorKind.HAS)) {</span>
+      /*
+       * HAS requires an bitwise AND. This is not part of SQL and so not part of the criterion builder. Different
+       * databases have different ways to support this. One group uses a function, which is called BITAND e.g. H2,
+       * HSQLDB, SAP HANA, DB2 or ORACLE, others have created an operator '&amp;' like PostgesSQL or MySQL.
+       * To provide a unique, but slightly slower, solution a workaround is used, see
+       * https://stackoverflow.com/questions/20570481/jpa-oracle-bit-operations-using-criteriabuilder#25508741
+       */
+<span class="nc" id="L70">      final Number n = ((JPAEnumerationBasedOperator) jpaOperator.getRight()).getValue();</span>
+      @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L72">      final Expression&lt;Integer&gt; div = cb.quot(jpaOperator.getLeft(), n);</span>
+<span class="nc" id="L73">      final Expression&lt;Integer&gt; mod = cb.mod(div, 2);</span>
+<span class="nc" id="L74">      return cb.equal(mod, 1);</span>
+
+    }
+<span class="nc" id="L77">    throw new ODataJPAFilterException(ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_OPERATOR,</span>
+<span class="nc" id="L78">        HttpStatusCode.NOT_IMPLEMENTED, jpaOperator.getName());</span>
+  }
+
+  @Override
+  public &lt;T&gt; Expression&lt;T&gt; convert(final JPAMethodCall jpaFunction) throws ODataApplicationException {
+<span class="nc" id="L83">    throw new ODataJPAFilterException(ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_OPERATOR,</span>
+<span class="nc" id="L84">        HttpStatusCode.NOT_IMPLEMENTED, jpaFunction.getName());</span>
+  }
+
+  @Override
+  public Expression&lt;Boolean&gt; convert(final JPAUnaryBooleanOperator jpaOperator) throws ODataApplicationException {
+<span class="nc" id="L89">    throw new ODataJPAFilterException(ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_OPERATOR,</span>
+<span class="nc" id="L90">        HttpStatusCode.NOT_IMPLEMENTED, jpaOperator.getName());</span>
+  }
+
+  @Override
+  public Expression&lt;Boolean&gt; createSearchWhereClause(final CriteriaBuilder cb, final CriteriaQuery&lt;?&gt; cq,
+      From&lt;?, ?&gt; root, final JPAEntityType entityType, final SearchOption searchOption)
+      throws ODataApplicationException {
+<span class="nc" id="L97">    throw new ODataJPADBAdaptorException(ODataJPADBAdaptorException.MessageKeys.NOT_SUPPORTED_SEARCH,</span>
+        HttpStatusCode.NOT_IMPLEMENTED);
+
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;T&gt; List&lt;T&gt; executeFunctionQuery(final List&lt;UriResource&gt; uriResourceParts,
+      final JPADataBaseFunction jpaFunction, final EntityManager em) throws ODataApplicationException {
+<span class="nc" id="L106">    final UriResource last = uriResourceParts.get(uriResourceParts.size() - 1);</span>
+
+<span class="nc bnc" id="L108" title="All 2 branches missed.">    if (last.getKind() == UriResourceKind.count) {</span>
+<span class="nc" id="L109">      final List&lt;Long&gt; countResult = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L110">      countResult.add(executeCountQuery(uriResourceParts, jpaFunction, em, SELECT_COUNT_PATTERN));</span>
+<span class="nc" id="L111">      return (List&lt;T&gt;) countResult;</span>
+    }
+<span class="nc bnc" id="L113" title="All 2 branches missed.">    if (last.getKind() == UriResourceKind.function)</span>
+<span class="nc" id="L114">      return executeQuery(uriResourceParts, jpaFunction, em, SELECT_BASE_PATTERN);</span>
+<span class="nc" id="L115">    throw new ODataJPAProcessorException(NOT_SUPPORTED_FUNC_WITH_NAVI, HttpStatusCode.NOT_IMPLEMENTED);</span>
+  }
+
+  @Override
+  public void setCriterialBuilder(final CriteriaBuilder cb) {
+<span class="nc" id="L120">    this.cb = cb;</span>
+<span class="nc" id="L121">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

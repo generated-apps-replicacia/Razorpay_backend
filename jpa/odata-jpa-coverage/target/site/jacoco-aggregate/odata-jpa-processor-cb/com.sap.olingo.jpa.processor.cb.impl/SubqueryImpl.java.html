@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>SubqueryImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">SubqueryImpl.java</span></div><h1>SubqueryImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.AbstractQuery;
+import javax.persistence.criteria.CollectionJoin;
+import javax.persistence.criteria.CommonAbstractCriteria;
+import javax.persistence.criteria.CompoundSelection;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.ListJoin;
+import javax.persistence.criteria.MapJoin;
+import javax.persistence.criteria.Order;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import javax.persistence.criteria.Selection;
+import javax.persistence.criteria.SetJoin;
+import javax.persistence.criteria.Subquery;
+import javax.persistence.metamodel.EntityType;
+
+import com.sap.olingo.jpa.processor.cb.ProcessorCriteriaQuery;
+import com.sap.olingo.jpa.processor.cb.ProcessorSubquery;
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+import com.sap.olingo.jpa.processor.cb.joiner.SqlConvertible;
+
+/**
+ * The &lt;code&gt;Subquery&lt;/code&gt; interface defines functionality that is
+ * specific to subqueries.
+ *
+ * A subquery has an expression as its selection item.
+ *
+ * @author Oliver Grande
+ *
+ * @param &lt;T&gt; the type of the selection item.
+ */
+class SubqueryImpl&lt;T&gt; implements ProcessorSubquery&lt;T&gt;, SqlConvertible {
+  private final Class&lt;T&gt; type;
+  private final CriteriaQuery&lt;?&gt; parent;
+  private final ProcessorCriteriaQuery&lt;T&gt; inner;
+  private Optional&lt;Integer&gt; maxResult;
+  private Optional&lt;Integer&gt; firstResult;
+
+  SubqueryImpl(@Nonnull final Class&lt;T&gt; type, @Nonnull final CriteriaQuery&lt;?&gt; parent, final AliasBuilder ab,
+      final CriteriaBuilder cb) {
+<span class="nc" id="L56">    super();</span>
+<span class="nc" id="L57">    this.type = Objects.requireNonNull(type);</span>
+<span class="nc" id="L58">    this.parent = Objects.requireNonNull(parent);</span>
+<span class="nc" id="L59">    this.inner = new CriteriaQueryImpl&lt;&gt;(type, ((CriteriaQueryImpl&lt;?&gt;) parent).getServiceDocument(), ab, cb);</span>
+<span class="nc" id="L60">    maxResult = Optional.empty();</span>
+<span class="nc" id="L61">    firstResult = Optional.empty();</span>
+<span class="nc" id="L62">  }</span>
+
+  @Override
+  public Subquery&lt;T&gt; select(@Nonnull final Expression&lt;T&gt; expression) {
+<span class="nc" id="L66">    inner.select(expression);</span>
+<span class="nc" id="L67">    return this;</span>
+  }
+
+  @Override
+  public Subquery&lt;T&gt; where(@Nonnull final Expression&lt;Boolean&gt; restriction) {
+<span class="nc" id="L72">    inner.where(restriction);</span>
+<span class="nc" id="L73">    return this;</span>
+  }
+
+  @Override
+  public Subquery&lt;T&gt; where(@Nonnull final Predicate... restrictions) {
+<span class="nc" id="L78">    inner.where(restrictions);</span>
+<span class="nc" id="L79">    return this;</span>
+  }
+
+  @Override
+  public Subquery&lt;T&gt; groupBy(@Nonnull final Expression&lt;?&gt;... grouping) {
+<span class="nc" id="L84">    inner.groupBy(grouping);</span>
+<span class="nc" id="L85">    return this;</span>
+  }
+
+  @Override
+  public Subquery&lt;T&gt; groupBy(@Nonnull final List&lt;Expression&lt;?&gt;&gt; grouping) {
+<span class="nc" id="L90">    inner.groupBy(grouping);</span>
+<span class="nc" id="L91">    return this;</span>
+  }
+
+  @Override
+  public Subquery&lt;T&gt; having(@Nonnull final Expression&lt;Boolean&gt; restriction) {
+<span class="nc" id="L96">    inner.having(restriction);</span>
+<span class="nc" id="L97">    return this;</span>
+  }
+
+  @Override
+  public Subquery&lt;T&gt; having(@Nonnull final Predicate... restrictions) {
+<span class="nc" id="L102">    inner.having(restrictions);</span>
+<span class="nc" id="L103">    return this;</span>
+  }
+
+  @Override
+  public Subquery&lt;T&gt; distinct(@Nonnull final boolean distinct) {
+<span class="nc" id="L108">    inner.distinct(distinct);</span>
+<span class="nc" id="L109">    return this;</span>
+  }
+
+  /**
+   * Create a subquery root correlated to a root of the
+   * enclosing query.
+   * @param parentRoot a root of the containing query
+   * @return subquery root
+   */
+  @Override
+  public &lt;Y&gt; Root&lt;Y&gt; correlate(@Nonnull final Root&lt;Y&gt; parentRoot) {
+<span class="nc" id="L120">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;X, Y&gt; Join&lt;X, Y&gt; correlate(@Nonnull final Join&lt;X, Y&gt; parentJoin) {
+<span class="nc" id="L125">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;X, Y&gt; CollectionJoin&lt;X, Y&gt; correlate(@Nonnull final CollectionJoin&lt;X, Y&gt; parentCollection) {
+<span class="nc" id="L130">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;X, Y&gt; SetJoin&lt;X, Y&gt; correlate(@Nonnull final SetJoin&lt;X, Y&gt; parentSet) {
+<span class="nc" id="L135">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;X, Y&gt; ListJoin&lt;X, Y&gt; correlate(@Nonnull final ListJoin&lt;X, Y&gt; parentList) {
+<span class="nc" id="L140">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;X, K, V&gt; MapJoin&lt;X, K, V&gt; correlate(@Nonnull final MapJoin&lt;X, K, V&gt; parentMap) {
+<span class="nc" id="L145">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public AbstractQuery&lt;?&gt; getParent() {
+<span class="nc" id="L150">    return parent;</span>
+  }
+
+  @Override
+  public CommonAbstractCriteria getContainingQuery() {
+<span class="nc" id="L155">    return getParent();</span>
+  }
+
+  /**
+   * Return the selection expression.
+   * @return the item to be returned in the subquery result
+   */
+  @SuppressWarnings({ &quot;unchecked&quot;, &quot;rawtypes&quot; })
+  @Override
+  public Expression&lt;T&gt; getSelection() {
+<span class="nc" id="L165">    return (Expression&lt;T&gt;) ((SelectionImpl) inner.getSelection()).selection;</span>
+  }
+
+  @Override
+  public Set&lt;Join&lt;?, ?&gt;&gt; getCorrelatedJoins() {
+<span class="nc" id="L170">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;X&gt; Root&lt;X&gt; from(@Nonnull final Class&lt;X&gt; entityClass) {
+<span class="nc" id="L175">    return inner.from(entityClass);</span>
+  }
+
+  @Override
+  public &lt;X&gt; Root&lt;X&gt; from(@Nonnull final EntityType&lt;X&gt; entity) {
+<span class="nc" id="L180">    return inner.from(entity);</span>
+  }
+
+  @Override
+  public Set&lt;Root&lt;?&gt;&gt; getRoots() {
+<span class="nc" id="L185">    return inner.getRoots();</span>
+  }
+
+  @Override
+  public List&lt;Expression&lt;?&gt;&gt; getGroupList() {
+<span class="nc" id="L190">    return inner.getGroupList();</span>
+  }
+
+  @Override
+  public Predicate getGroupRestriction() {
+<span class="nc" id="L195">    return inner.getGroupRestriction();</span>
+  }
+
+  @Override
+  public boolean isDistinct() {
+<span class="nc" id="L200">    return inner.isDistinct();</span>
+  }
+
+  @Override
+  public Class&lt;T&gt; getResultType() {
+<span class="nc" id="L205">    return type;</span>
+  }
+
+  @Override
+  public &lt;U&gt; ProcessorSubquery&lt;U&gt; subquery(@Nonnull final Class&lt;U&gt; type) {
+<span class="nc" id="L210">    return inner.subquery(type);</span>
+  }
+
+  /**
+   * Return the predicate that corresponds to the where clause
+   * restriction(s), or null if no restrictions have been
+   * specified.
+   * @return where clause predicate
+   */
+  @Override
+  public Predicate getRestriction() {
+<span class="nc" id="L221">    return inner.getRestriction();</span>
+  }
+
+  @Override
+  public Predicate isNull() {
+<span class="nc" id="L226">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate isNotNull() {
+<span class="nc" id="L231">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(@Nonnull final Object... values) {
+<span class="nc" id="L236">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(@Nonnull final Expression&lt;?&gt;... values) {
+<span class="nc" id="L241">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(@Nonnull final Collection&lt;?&gt; values) {
+<span class="nc" id="L246">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(@Nonnull final Expression&lt;Collection&lt;?&gt;&gt; values) {
+<span class="nc" id="L251">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;X&gt; Expression&lt;X&gt; as(@Nonnull final Class&lt;X&gt; type) {
+<span class="nc" id="L256">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Selection&lt;T&gt; alias(@Nonnull final String name) {
+<span class="nc" id="L261">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Whether the selection item is a compound selection.
+   * @return boolean indicating whether the selection is a compound
+   * selection
+   */
+  @Override
+  public boolean isCompoundSelection() {
+<span class="nc" id="L271">    return inner.getSelection() instanceof CompoundSelection;</span>
+  }
+
+  /**
+   * Return the selection items composing a compound selection.
+   * Modifications to the list do not affect the query.
+   * &lt;p&gt;
+   * Star selections are not resolved currently!
+   * @return list of selection items
+   * @throws IllegalStateException if selection is not a
+   * compound selection
+   */
+  @Override
+  public List&lt;Selection&lt;?&gt;&gt; getCompoundSelectionItems() {
+<span class="nc bnc" id="L285" title="All 2 branches missed.">    if (isCompoundSelection()) {</span>
+<span class="nc" id="L286">      return new ArrayList&lt;&gt;(((CompoundSelection&lt;?&gt;) inner.getSelection()).getCompoundSelectionItems());</span>
+<span class="nc bnc" id="L287" title="All 2 branches missed.">    } else if (inner.getSelection() != null) {</span>
+<span class="nc" id="L288">      final Selection&lt;T&gt; selection = inner.getSelection();</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">      if (selection.isCompoundSelection())</span>
+<span class="nc" id="L290">        return new ArrayList&lt;&gt;(selection.getCompoundSelectionItems());</span>
+      else
+<span class="nc" id="L292">        return singletonList(inner.getSelection());</span>
+    } else {
+<span class="nc" id="L294">      return emptyList();</span>
+    }
+  }
+
+  @Override
+  public Class&lt;? extends T&gt; getJavaType() {
+<span class="nc" id="L300">    return getResultType();</span>
+  }
+
+  @Override
+  public String getAlias() {
+<span class="nc" id="L305">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public ProcessorSubquery&lt;T&gt; setMaxResults(final Integer maxResult) {
+<span class="nc" id="L310">    this.maxResult = Optional.ofNullable(maxResult);</span>
+<span class="nc" id="L311">    return this;</span>
+  }
+
+  @Override
+  public ProcessorSubquery&lt;T&gt; setFirstResult(final Integer startPosition) {
+<span class="nc" id="L316">    this.firstResult = Optional.ofNullable(startPosition);</span>
+<span class="nc" id="L317">    return this;</span>
+  }
+
+  @Override
+  public StringBuilder asSQL(@Nonnull final StringBuilder statement) {
+<span class="nc" id="L322">    return ((SqlConvertible) inner).asSQL(statement)</span>
+<span class="nc" id="L323">        .append(maxResult.map(i -&gt; &quot; LIMIT &quot; + i).orElse(&quot;&quot;))</span>
+<span class="nc" id="L324">        .append(firstResult.map(i -&gt; &quot; OFFSET &quot; + i).orElse(&quot;&quot;));</span>
+  }
+
+  @Override
+  public ProcessorSubquery&lt;T&gt; multiselect(final Selection&lt;?&gt;... selections) {
+<span class="nc" id="L329">    inner.multiselect(selections);</span>
+<span class="nc" id="L330">    return this;</span>
+  }
+
+  @Override
+  public ProcessorSubquery&lt;T&gt; multiselect(final List&lt;Selection&lt;?&gt;&gt; selectionList) {
+<span class="nc" id="L335">    inner.multiselect(selectionList);</span>
+<span class="nc" id="L336">    return this;</span>
+  }
+
+  @Override
+  public ProcessorSubquery&lt;T&gt; orderBy(final List&lt;Order&gt; o) {
+<span class="nc" id="L341">    inner.orderBy(o);</span>
+<span class="nc" id="L342">    return this;</span>
+  }
+
+  @Override
+  public ProcessorSubquery&lt;T&gt; orderBy(final Order... o) {
+<span class="nc" id="L347">    inner.orderBy(o);</span>
+<span class="nc" id="L348">    return this;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;X&gt; Root&lt;X&gt; from(final ProcessorSubquery&lt;?&gt; subquery) {
+<span class="nc" id="L354">    return (Root&lt;X&gt;) inner.from(subquery);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

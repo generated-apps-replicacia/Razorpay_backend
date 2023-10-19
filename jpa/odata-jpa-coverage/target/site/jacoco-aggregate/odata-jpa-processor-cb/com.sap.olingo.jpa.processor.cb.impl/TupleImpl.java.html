@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>TupleImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">TupleImpl.java</span></div><h1>TupleImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import static com.sap.olingo.jpa.processor.cb.impl.TypeConverter.convert;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.persistence.Tuple;
+import javax.persistence.TupleElement;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+
+/**
+ *
+ * @author Oliver Grande
+ * @since 1.0.0
+ */
+class TupleImpl implements Tuple {
+  private final Object[] values;
+  private final List&lt;Entry&lt;String, JPAAttribute&gt;&gt; selection;
+  private final Map&lt;String, Integer&gt; selectionIndex;
+  private Optional&lt;List&lt;TupleElement&lt;?&gt;&gt;&gt; tupleElements;
+
+  TupleImpl(final Object value, final List&lt;Entry&lt;String, JPAAttribute&gt;&gt; selection,
+      final Map&lt;String, Integer&gt; selectionIndex) {
+<span class="nc" id="L30">    this(new Object[] { value }, selection, selectionIndex);</span>
+<span class="nc" id="L31">  }</span>
+
+  TupleImpl(final Object[] values, final List&lt;Entry&lt;String, JPAAttribute&gt;&gt; selPath,
+      final Map&lt;String, Integer&gt; selectionIndex) {
+<span class="nc" id="L35">    super();</span>
+<span class="nc" id="L36">    this.values = values;</span>
+<span class="nc" id="L37">    this.selection = selPath;</span>
+<span class="nc" id="L38">    this.selectionIndex = selectionIndex;</span>
+<span class="nc" id="L39">    this.tupleElements = Optional.empty();</span>
+<span class="nc" id="L40">  }</span>
+
+  /**
+   * Get the value of the element at the specified
+   * position in the result tuple. The first position is 0.&lt;p&gt;
+   * &lt;b&gt;Please note:&lt;/b&gt; As of now &lt;b&gt;no&lt;/b&gt; conversions are made.
+   * @param i position in result tuple
+   * @return value of the tuple element
+   * @throws IllegalArgumentException if i exceeds
+   * length of result tuple
+   */
+  @Override
+  public Object get(final int index) {
+<span class="nc bnc" id="L53" title="All 4 branches missed.">    if (index &gt;= values.length || index &lt; 0)</span>
+<span class="nc" id="L54">      throw new IllegalArgumentException(&quot;Index out of bound&quot;);</span>
+<span class="nc" id="L55">    return values[index];</span>
+  }
+
+  /**
+   * Get the value of the element at the specified
+   * position in the result tuple. The first position is 0.&lt;p&gt;
+   * &lt;b&gt;Please note:&lt;/b&gt; As of now &lt;b&gt;no&lt;/b&gt; conversions are made.
+   * @param i position in result tuple
+   * @param type type of the tuple element
+   * @return value of the tuple element
+   * @throws IllegalArgumentException if i exceeds
+   * length of result tuple or element cannot be
+   * assigned to the specified type
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;X&gt; X get(final int i, final Class&lt;X&gt; type) {
+<span class="nc" id="L72">    return (X) convert(get(i), type);</span>
+  }
+
+  /**
+   * Get the value of the tuple element to which the
+   * specified alias has been assigned.
+   * @param alias alias assigned to tuple element
+   * @return value of the tuple element
+   * @throws IllegalArgumentException if alias
+   * does not correspond to an element in the
+   * query result tuple
+   */
+  @Override
+  public Object get(final String alias) {
+
+<span class="nc bnc" id="L87" title="All 2 branches missed.">    if (selectionIndex.containsKey(alias)) {</span>
+<span class="nc" id="L88">      final int index = selectionIndex.get(alias);</span>
+<span class="nc" id="L89">      final JPAAttribute attribute = selection.get(index).getValue();</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">      if (values[index] == null)</span>
+<span class="nc" id="L91">        return null;</span>
+<span class="nc bnc" id="L92" title="All 4 branches missed.">      if (attribute.isEnum() &amp;&amp; attribute.getConverter() == null) {</span>
+<span class="nc" id="L93">        final int value = (Integer) convert(values[index], Integer.class);</span>
+<span class="nc" id="L94">        return attribute.getType().getEnumConstants()[value];</span>
+      }
+<span class="nc" id="L96">      final Object value = convert(values[index], attribute.getDbType());</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">      if (attribute.getRawConverter() != null)</span>
+<span class="nc" id="L98">        return attribute.getRawConverter().convertToEntityAttribute(value);</span>
+<span class="nc" id="L99">      return value;</span>
+    } else {
+<span class="nc" id="L101">      throw new IllegalArgumentException(&quot;Unknown alias: &quot; + alias);</span>
+    }
+  }
+
+  /**
+   * Get the value of the tuple element to which the
+   * specified alias has been assigned.
+   * @param alias alias assigned to tuple element
+   * @param type of the tuple element
+   * @return value of the tuple element
+   * @throws IllegalArgumentException if alias
+   * does not correspond to an element in the
+   * query result tuple or element cannot be
+   * assigned to the specified type
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;X&gt; X get(final String alias, final Class&lt;X&gt; type) {
+<span class="nc" id="L119">    return (X) convert(get(alias), type);</span>
+  }
+
+  /**
+   * Get the value of the specified tuple element.
+   * @param tupleElement tuple element
+   * @return value of tuple element
+   * @throws IllegalArgumentException if tuple element
+   * does not correspond to an element in the
+   * query result tuple
+   */
+  @Override
+  public &lt;X&gt; X get(final TupleElement&lt;X&gt; tupleElement) {
+<span class="nc" id="L132">    return get(tupleElement.getAlias(), tupleElement.getJavaType());</span>
+  }
+
+  /**
+   * Return the tuple elements.
+   * @return tuple elements
+   */
+  @Override
+  public List&lt;TupleElement&lt;?&gt;&gt; getElements() {
+<span class="nc" id="L141">    return tupleElements.orElseGet(this::asTupleElements);</span>
+  }
+
+  /**
+   * Return the values of the result tuple elements as an array.
+   * @return tuple element values
+   */
+  @Override
+  public Object[] toArray() {
+<span class="nc" id="L150">    return Arrays.copyOf(values, values.length);</span>
+  }
+
+  private List&lt;TupleElement&lt;?&gt;&gt; asTupleElements() {
+<span class="nc" id="L154">    tupleElements = Optional.of(</span>
+<span class="nc" id="L155">        selectionIndex.entrySet()</span>
+<span class="nc" id="L156">            .stream()</span>
+<span class="nc" id="L157">            .map(e -&gt; new TupleElementImpl&lt;&gt;(e.getValue()))</span>
+<span class="nc" id="L158">            .collect(Collectors.toList()));</span>
+<span class="nc" id="L159">    return tupleElements.orElseThrow(IllegalStateException::new);</span>
+  }
+
+  private class TupleElementImpl&lt;X&gt; implements TupleElement&lt;X&gt; {
+    private final int index;
+
+<span class="nc" id="L165">    private TupleElementImpl(final int index) {</span>
+<span class="nc" id="L166">      super();</span>
+<span class="nc" id="L167">      this.index = index;</span>
+<span class="nc" id="L168">    }</span>
+
+    @Override
+    public String getAlias() {
+<span class="nc" id="L172">      return selection.get(index).getKey();</span>
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Override
+    public Class&lt;? extends X&gt; getJavaType() {
+<span class="nc" id="L178">      return (Class&lt;? extends X&gt;) selection.get(index).getValue().getType();</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

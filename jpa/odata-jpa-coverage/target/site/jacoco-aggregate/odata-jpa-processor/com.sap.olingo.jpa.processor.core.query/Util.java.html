@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>Util.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">Util.java</span></div><h1>Util.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath.PATH_SEPARATOR;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException.MessageKeys.NOT_SUPPORTED_RESOURCE_TYPE;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAUtilException.MessageKeys.UNKNOWN_ENTITY_TYPE;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAUtilException.MessageKeys.UNKNOWN_NAVI_PROPERTY;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.BAD_REQUEST;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.NOT_IMPLEMENTED;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nonnull;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.olingo.commons.api.edm.EdmBindingTarget;
+import org.apache.olingo.commons.api.edm.EdmEntitySet;
+import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceComplexProperty;
+import org.apache.olingo.server.api.uri.UriResourceEntitySet;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.UriResourceLambdaVariable;
+import org.apache.olingo.server.api.uri.UriResourceNavigation;
+import org.apache.olingo.server.api.uri.UriResourcePartTyped;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+import org.apache.olingo.server.api.uri.UriResourceSingleton;
+import org.apache.olingo.server.api.uri.UriResourceValue;
+import org.apache.olingo.server.api.uri.queryoption.ExpandItem;
+import org.apache.olingo.server.api.uri.queryoption.ExpandOption;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAUtilException;
+
+public final class Util {
+
+  private static final String FOUND_CAST_FROM = &quot;Found cast from &quot;;
+  public static final String VALUE_RESOURCE = &quot;$VALUE&quot;;
+<span class="nc" id="L52">  private static final Log LOGGER = LogFactory.getLog(Util.class);</span>
+
+  public static JPAAssociationPath determineAssociation(final JPAServiceDocument sd, final EdmType naviStart,
+      final StringBuilder associationName) throws ODataApplicationException {
+
+    final JPAEntityType naviStartType;
+    try {
+<span class="nc" id="L59">      naviStartType = sd.getEntity(naviStart);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">      if (naviStartType == null)</span>
+<span class="nc" id="L61">        throw new ODataJPAUtilException(UNKNOWN_ENTITY_TYPE, BAD_REQUEST);</span>
+<span class="nc" id="L62">      return naviStartType.getAssociationPath(associationName.toString());</span>
+<span class="nc" id="L63">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L64">      throw new ODataJPAUtilException(UNKNOWN_NAVI_PROPERTY, BAD_REQUEST, e);</span>
+    }
+  }
+
+  public static JPAAssociationPath determineAssociationPath(final JPAServiceDocument sd,
+      final UriResourcePartTyped naviStart, final StringBuilder associationName) throws ODataApplicationException {
+
+<span class="nc" id="L71">    JPAEntityType naviStartType = null;</span>
+    try {
+<span class="nc bnc" id="L73" title="All 2 branches missed.">      if (naviStart instanceof UriResourceEntitySet) {</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (((UriResourceEntitySet) naviStart).getTypeFilterOnEntry() != null)</span>
+<span class="nc" id="L75">          naviStartType = sd.getEntity(((UriResourceEntitySet) naviStart).getTypeFilterOnEntry());</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        else if (((UriResourceEntitySet) naviStart).getTypeFilterOnCollection() != null)</span>
+<span class="nc" id="L77">          naviStartType = sd.getEntity(((UriResourceEntitySet) naviStart).getTypeFilterOnCollection());</span>
+        else
+<span class="nc" id="L79">          naviStartType = sd.getEntity(((UriResourceEntitySet) naviStart).getType());</span>
+      }
+<span class="nc bnc" id="L81" title="All 2 branches missed.">      if (naviStart instanceof UriResourceSingleton) {</span>
+<span class="nc" id="L82">        naviStartType = sd.getEntity(((UriResourceSingleton) naviStart).getType());</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">      } else if (naviStart instanceof UriResourceNavigation) {</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (((UriResourceNavigation) naviStart).getTypeFilterOnEntry() != null)</span>
+<span class="nc" id="L85">          naviStartType = sd.getEntity(((UriResourceNavigation) naviStart).getTypeFilterOnEntry());</span>
+        else
+<span class="nc" id="L87">          naviStartType = sd.getEntity(((UriResourceNavigation) naviStart).getProperty().getType());</span>
+      }
+<span class="nc bnc" id="L89" title="All 2 branches missed.">      JPAAssociationPath path = naviStartType == null ? null : naviStartType.getAssociationPath(associationName</span>
+<span class="nc" id="L90">          .toString());</span>
+<span class="nc bnc" id="L91" title="All 4 branches missed.">      if (path == null &amp;&amp; naviStartType != null) {</span>
+<span class="nc" id="L92">        final JPACollectionAttribute collection = naviStartType.getCollectionAttribute(associationName.toString());</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        if (collection != null)</span>
+<span class="nc" id="L94">          path = collection.asAssociation();</span>
+      }
+<span class="nc" id="L96">      return path;</span>
+<span class="nc" id="L97">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L98">      throw new ODataJPAUtilException(UNKNOWN_NAVI_PROPERTY, BAD_REQUEST, e);</span>
+    }
+  }
+
+  public static Map&lt;JPAExpandItem, JPAAssociationPath&gt; determineAssociations(final JPAServiceDocument sd,
+      final List&lt;UriResource&gt; startResourceList, final ExpandOption expandOption) throws ODataApplicationException {
+
+<span class="nc" id="L105">    final Map&lt;JPAExpandItem, JPAAssociationPath&gt; pathList = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L106">    final StringBuilder associationNamePrefix = new StringBuilder();</span>
+
+<span class="nc" id="L108">    UriResource startResourceItem = null;</span>
+<span class="nc bnc" id="L109" title="All 4 branches missed.">    if (startResourceList != null &amp;&amp; expandOption != null) {</span>
+      // Example1 : /Organizations('3')/AdministrativeInformation?$expand=Created/User
+      // Example2 : /Organizations('3')/AdministrativeInformation?$expand=*
+      // Association name needs AdministrativeInformation as prefix
+<span class="nc bnc" id="L113" title="All 2 branches missed.">      for (int i = startResourceList.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc" id="L114">        startResourceItem = startResourceList.get(i);</span>
+<span class="nc bnc" id="L115" title="All 4 branches missed.">        if (startResourceItem instanceof UriResourceEntitySet || startResourceItem instanceof UriResourceNavigation) {</span>
+<span class="nc" id="L116">          break;</span>
+        }
+<span class="nc" id="L118">        associationNamePrefix.insert(0, PATH_SEPARATOR);</span>
+<span class="nc" id="L119">        associationNamePrefix.insert(0, ((UriResourceProperty) startResourceItem).getProperty().getName());</span>
+      }
+      // Example1 : ?$expand=Created/User (Property/NavigationProperty)
+      // Example2 : ?$expand=Parent/CodeID (NavigationProperty/Property)
+      // Example3 : ?$expand=Parent,Children (NavigationProperty, NavigationProperty)
+      // Example4 : ?$expand=*
+      // Example5 : ?$expand=*/$ref,Parent
+      // Example6 : ?$expand=Parent($levels=2)
+      // Example7 : ?$expand=BusinessPartner/com.sap.olingo.jpa.Person
+      StringBuilder associationName;
+<span class="nc bnc" id="L129" title="All 2 branches missed.">      for (final ExpandItem item : expandOption.getExpandItems()) {</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (item.isStar()) {</span>
+<span class="nc" id="L131">          final EdmBindingTarget edmBindingTarget = determineBindingTarget(startResourceList);</span>
+          try {
+<span class="nc" id="L133">            final JPAEntityType jpaEntityType = sd.getEntity(edmBindingTarget.getName());</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">            if (jpaEntityType == null)</span>
+<span class="nc" id="L135">              throw new ODataJPAUtilException(UNKNOWN_ENTITY_TYPE, BAD_REQUEST);</span>
+<span class="nc" id="L136">            final List&lt;JPAAssociationPath&gt; associationPaths = jpaEntityType.getAssociationPathList();</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">            for (final JPAAssociationPath path : associationPaths) {</span>
+<span class="nc" id="L138">              pathList.put(new JPAExpandItemWrapper(item, (JPAEntityType) path.getTargetType()), path);</span>
+<span class="nc" id="L139">            }</span>
+<span class="nc" id="L140">          } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L141">            throw new ODataJPAUtilException(UNKNOWN_ENTITY_TYPE, BAD_REQUEST, e);</span>
+<span class="nc" id="L142">          }</span>
+<span class="nc" id="L143">        } else {</span>
+<span class="nc" id="L144">          final List&lt;UriResource&gt; targetResourceList = item.getResourcePath().getUriResourceParts(); // Has Cast</span>
+<span class="nc" id="L145">          associationName = new StringBuilder();</span>
+<span class="nc" id="L146">          associationName.append(associationNamePrefix);</span>
+<span class="nc" id="L147">          UriResource targetResourceItem = null;</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">          for (int i = 0; i &lt; targetResourceList.size(); i++) {</span>
+<span class="nc" id="L149">            targetResourceItem = targetResourceList.get(i);</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">            if (targetResourceItem.getKind() != UriResourceKind.navigationProperty) {</span>
+<span class="nc" id="L151">              associationName.append(((UriResourceProperty) targetResourceItem).getProperty().getName());</span>
+<span class="nc" id="L152">              associationName.append(PATH_SEPARATOR);</span>
+            } else {
+<span class="nc" id="L154">              associationName.append(((UriResourceNavigation) targetResourceItem).getProperty().getName());</span>
+<span class="nc" id="L155">              break;</span>
+            }
+          }
+<span class="nc bnc" id="L158" title="All 2 branches missed.">          if (item.getLevelsOption() != null)</span>
+<span class="nc" id="L159">            pathList.put(new JPAExpandLevelWrapper(sd, expandOption), Util.determineAssociation(sd,</span>
+<span class="nc" id="L160">                ((UriResourcePartTyped) startResourceItem).getType(), associationName));</span>
+          else
+<span class="nc" id="L162">            pathList.put(new JPAExpandItemWrapper(sd, item), Util.determineAssociation(sd,</span>
+<span class="nc" id="L163">                ((UriResourcePartTyped) startResourceItem).getType(), associationName));</span>
+        }
+<span class="nc" id="L165">      }</span>
+    }
+<span class="nc" id="L167">    return pathList;</span>
+  }
+
+  public static EdmBindingTarget determineBindingTarget(final List&lt;UriResource&gt; resources) {
+<span class="nc" id="L171">    return determineBindingTargetAndKeys(resources).getEdmBindingTarget();</span>
+  }
+
+  public static EdmBindingTargetInfo determineBindingTargetAndKeys(final List&lt;UriResource&gt; resources) {
+<span class="nc" id="L175">    EdmBindingTarget targetEdmBindingTarget = null;</span>
+<span class="nc" id="L176">    List&lt;UriParameter&gt; targetKeyPredicates = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L177">    StringBuilder naviPropertyName = new StringBuilder();</span>
+
+<span class="nc bnc" id="L179" title="All 2 branches missed.">    for (final UriResource resourceItem : resources) {</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">      if (resourceItem.getKind() == UriResourceKind.entitySet) {</span>
+<span class="nc" id="L181">        targetEdmBindingTarget = determineBindingTargetOfEntitySet((UriResourceEntitySet) resourceItem);</span>
+<span class="nc" id="L182">        targetKeyPredicates = ((UriResourceEntitySet) resourceItem).getKeyPredicates();</span>
+      }
+<span class="nc bnc" id="L184" title="All 2 branches missed.">      if (resourceItem.getKind() == UriResourceKind.singleton) {</span>
+<span class="nc" id="L185">        targetEdmBindingTarget = determineBindingTragetOfSingleton((UriResourceSingleton) resourceItem);</span>
+<span class="nc" id="L186">        targetKeyPredicates = Collections.emptyList();</span>
+      }
+<span class="nc bnc" id="L188" title="All 2 branches missed.">      if (resourceItem.getKind() == UriResourceKind.complexProperty) {</span>
+<span class="nc" id="L189">        naviPropertyName.append(((UriResourceComplexProperty) resourceItem).getProperty().getName());</span>
+<span class="nc" id="L190">        naviPropertyName.append(PATH_SEPARATOR);</span>
+      }
+<span class="nc bnc" id="L192" title="All 2 branches missed.">      if (resourceItem.getKind() == UriResourceKind.navigationProperty) {</span>
+<span class="nc" id="L193">        naviPropertyName.append(((UriResourceNavigation) resourceItem).getProperty().getName());</span>
+<span class="nc" id="L194">        targetKeyPredicates = ((UriResourceNavigation) resourceItem).getKeyPredicates();</span>
+<span class="nc" id="L195">        final EdmBindingTarget edmBindingTarget = determineBindingTargetOfNavigation(targetEdmBindingTarget,</span>
+            (UriResourceNavigation) resourceItem, naviPropertyName);
+<span class="nc bnc" id="L197" title="All 4 branches missed.">        if (edmBindingTarget instanceof EdmEntitySet || edmBindingTarget instanceof EdmBoundCast)</span>
+<span class="nc" id="L198">          targetEdmBindingTarget = edmBindingTarget;</span>
+<span class="nc" id="L199">        naviPropertyName = new StringBuilder();</span>
+      }
+<span class="nc" id="L201">    }</span>
+<span class="nc" id="L202">    return new EdmBindingTargetResult(targetEdmBindingTarget, targetKeyPredicates, naviPropertyName.toString());</span>
+  }
+
+  private static EdmBindingTarget determineBindingTargetOfNavigation(final EdmBindingTarget targetEdmBindingTarget,
+      final UriResourceNavigation resourceItem, final StringBuilder naviPropertyName) {
+
+<span class="nc" id="L208">    final EdmBindingTarget target = targetEdmBindingTarget.getRelatedBindingTarget(naviPropertyName</span>
+<span class="nc" id="L209">        .toString());</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">    if (target instanceof EdmBindingTarget) {</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">      if (resourceItem.getTypeFilterOnEntry() != null)</span>
+<span class="nc" id="L212">        return new EdmBoundCast((EdmEntityType) resourceItem.getTypeFilterOnEntry(), target);</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">      else if (resourceItem.getTypeFilterOnCollection() != null)</span>
+<span class="nc" id="L214">        return new EdmBoundCast((EdmEntityType) resourceItem.getTypeFilterOnCollection(), target);</span>
+    }
+<span class="nc" id="L216">    return target;</span>
+  }
+
+  public static List&lt;UriParameter&gt; determineKeyPredicates(final UriResource uriResourceItem)
+      throws ODataApplicationException {
+
+<span class="nc bnc" id="L222" title="All 2 branches missed.">    if (uriResourceItem instanceof UriResourceEntitySet)</span>
+<span class="nc" id="L223">      return ((UriResourceEntitySet) uriResourceItem).getKeyPredicates();</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">    else if (uriResourceItem instanceof UriResourceNavigation)</span>
+<span class="nc" id="L225">      return ((UriResourceNavigation) uriResourceItem).getKeyPredicates();</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">    else if (uriResourceItem instanceof UriResourceSingleton)</span>
+<span class="nc" id="L227">      return Collections.emptyList();</span>
+    else
+<span class="nc" id="L229">      throw new ODataJPAQueryException(NOT_SUPPORTED_RESOURCE_TYPE, BAD_REQUEST, uriResourceItem.getKind().name());</span>
+  }
+
+  public static EdmBindingTargetInfo determineModifyEntitySetAndKeys(@Nonnull final List&lt;UriResource&gt; resources) {
+<span class="nc" id="L233">    EdmBindingTarget targetBinding = null;</span>
+<span class="nc" id="L234">    List&lt;UriParameter&gt; targetKeyPredicates = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L235">    StringBuilder naviPropertyName = new StringBuilder();</span>
+
+<span class="nc bnc" id="L237" title="All 2 branches missed.">    for (final UriResource resourceItem : resources) {</span>
+<span class="nc bnc" id="L238" title="All 2 branches missed.">      if (resourceItem.getKind() == UriResourceKind.entitySet) {</span>
+<span class="nc" id="L239">        targetBinding = ((UriResourceEntitySet) resourceItem).getEntitySet();</span>
+<span class="nc" id="L240">        targetKeyPredicates = ((UriResourceEntitySet) resourceItem).getKeyPredicates();</span>
+      }
+<span class="nc bnc" id="L242" title="All 2 branches missed.">      if (resourceItem.getKind() == UriResourceKind.complexProperty) {</span>
+<span class="nc" id="L243">        naviPropertyName.append(((UriResourceComplexProperty) resourceItem).getProperty().getName());</span>
+<span class="nc" id="L244">        naviPropertyName.append(PATH_SEPARATOR);</span>
+      }
+<span class="nc bnc" id="L246" title="All 2 branches missed.">      if (resourceItem.getKind() == UriResourceKind.navigationProperty) {</span>
+<span class="nc" id="L247">        naviPropertyName.append(((UriResourceNavigation) resourceItem).getProperty().getName());</span>
+<span class="nc" id="L248">        final List&lt;UriParameter&gt; keyPredicates = ((UriResourceNavigation) resourceItem).getKeyPredicates();</span>
+<span class="nc bnc" id="L249" title="All 2 branches missed.">        if (!keyPredicates.isEmpty()) {</span>
+<span class="nc" id="L250">          targetKeyPredicates = keyPredicates;</span>
+<span class="nc" id="L251">          final EdmBindingTarget edmBindingTarget = targetBinding.getRelatedBindingTarget(naviPropertyName</span>
+<span class="nc" id="L252">              .toString());</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">          if (edmBindingTarget instanceof EdmEntitySet)</span>
+<span class="nc" id="L254">            targetBinding = (EdmEntitySet) edmBindingTarget;</span>
+<span class="nc" id="L255">          naviPropertyName = new StringBuilder();</span>
+        }
+      }
+<span class="nc bnc" id="L258" title="All 2 branches missed.">      if(resourceItem.getKind() == UriResourceKind.singleton) {</span>
+<span class="nc" id="L259">        targetBinding = ((UriResourceSingleton) resourceItem).getSingleton();</span>
+      }
+<span class="nc" id="L261">    }</span>
+<span class="nc" id="L262">    return new EdmBindingTargetResult(targetBinding, targetKeyPredicates, naviPropertyName.toString());</span>
+  }
+
+  /**
+   * Converts the OData navigation list into a intermediate one. Direction is top - down usage e.g. join query.&lt;p&gt;
+   * The method only supports queries that start with an entity set or singleton.
+   * @param sd
+   * @param resourceParts
+   * @param filterOption
+   * @return
+   * @throws ODataApplicationException
+   */
+  public static List&lt;JPANavigationPropertyInfo&gt; determineNavigationPath(final JPAServiceDocument sd,
+      final List&lt;UriResource&gt; resourceParts, final UriInfoResource uriInfo) throws ODataApplicationException {
+
+<span class="nc" id="L277">    final List&lt;JPANavigationPropertyInfo&gt; pathList = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L279">    StringBuilder associationName = null;</span>
+<span class="nc" id="L280">    UriResourcePartTyped source = null;</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">    for (final UriResource resourcePart : resourceParts) {</span>
+<span class="nc bnc" id="L282" title="All 6 branches missed.">      if (resourcePart instanceof UriResourceNavigation</span>
+          || resourcePart instanceof UriResourceEntitySet
+          || resourcePart instanceof UriResourceSingleton) {
+<span class="nc bnc" id="L285" title="All 2 branches missed.">        if (source != null) {</span>
+<span class="nc bnc" id="L286" title="All 2 branches missed.">          if (resourcePart instanceof UriResourceNavigation)</span>
+<span class="nc" id="L287">            extendNavigationPath(associationName, ((UriResourceNavigation) resourcePart).getProperty().getName());</span>
+<span class="nc" id="L288">          pathList.add(new JPANavigationPropertyInfo(sd, source, determineAssociationPath(sd, source, associationName),</span>
+              null));
+        }
+<span class="nc" id="L291">        source = (UriResourcePartTyped) resourcePart;</span>
+<span class="nc" id="L292">        associationName = new StringBuilder();</span>
+      } else {
+<span class="nc bnc" id="L294" title="All 4 branches missed.">        if ((resourcePart instanceof UriResourceComplexProperty</span>
+<span class="nc bnc" id="L295" title="All 4 branches missed.">            || resourcePart instanceof UriResourceProperty &amp;&amp; ((UriResourceProperty) resourcePart).isCollection())</span>
+            &amp;&amp; associationName != null) {
+<span class="nc" id="L297">          extendNavigationPath(associationName, ((UriResourceProperty) resourcePart).getProperty().getName());</span>
+        }
+      }
+<span class="nc" id="L300">    }</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">    if (source != null)</span>
+<span class="nc" id="L302">      pathList.add(new JPANavigationPropertyInfo(sd, source,</span>
+<span class="nc" id="L303">          determineAssociationPath(sd, source, associationName), uriInfo));</span>
+<span class="nc" id="L304">    return pathList;</span>
+  }
+
+  public static String determinePropertyNavigationPath(final List&lt;UriResource&gt; resources) {
+<span class="nc" id="L308">    final StringBuilder pathName = new StringBuilder();</span>
+<span class="nc bnc" id="L309" title="All 2 branches missed.">    if (resources != null) {</span>
+<span class="nc bnc" id="L310" title="All 2 branches missed.">      for (int i = resources.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc" id="L311">        final UriResource resourceItem = resources.get(i);</span>
+<span class="nc bnc" id="L312" title="All 6 branches missed.">        if (resourceItem instanceof UriResourceEntitySet || resourceItem instanceof UriResourceNavigation</span>
+            || resourceItem instanceof UriResourceLambdaVariable)
+<span class="nc" id="L314">          break;</span>
+<span class="nc bnc" id="L315" title="All 2 branches missed.">        if (resourceItem instanceof UriResourceValue) {</span>
+<span class="nc" id="L316">          pathName.insert(0, VALUE_RESOURCE);</span>
+<span class="nc" id="L317">          pathName.insert(0, PATH_SEPARATOR);</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">        } else if (resourceItem instanceof UriResourceProperty) {</span>
+<span class="nc" id="L319">          final UriResourceProperty property = (UriResourceProperty) resourceItem;</span>
+<span class="nc" id="L320">          pathName.insert(0, property.getProperty().getName());</span>
+<span class="nc" id="L321">          pathName.insert(0, PATH_SEPARATOR);</span>
+        }
+      }
+<span class="nc bnc" id="L324" title="All 2 branches missed.">      if (pathName.length() &gt; 0)</span>
+<span class="nc" id="L325">        pathName.deleteCharAt(0);</span>
+    }
+<span class="nc" id="L327">    return pathName.toString();</span>
+  }
+
+  public static String determinePropertyNavigationPrefix(final List&lt;UriResource&gt; resources) {
+<span class="nc" id="L331">    return Util.determinePropertyNavigationPath(resources).split(&quot;/\\&quot; + Util.VALUE_RESOURCE)[0];</span>
+  }
+
+  /**
+   * Finds the index of the first property after the last entity set or navigation resource. This is the resource that
+   * will be returned in case a complex or primitive type is requested.&lt;p&gt;
+   * Example1 : /Organizations -&gt; -1&lt;br&gt;
+   * Example2 : /Organizations('3')/AdministrativeInformation -&gt; 1&lt;br&gt;
+   * Example3 : /Organizations('3')/Roles -&gt; -1&lt;br&gt;
+   * Example4 : /Organizations('3')/Roles/RoleCategory -&gt; 2&lt;br&gt;
+   * Example4 : /Organizations('3')/AdministrativeInformation/Created/User/LastName -&gt; 4
+   */
+  public static int determineStartNavigationIndex(final List&lt;UriResource&gt; resources) {
+
+<span class="nc bnc" id="L345" title="All 2 branches missed.">    if (resources != null) {</span>
+<span class="nc bnc" id="L346" title="All 2 branches missed.">      for (int i = resources.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc" id="L347">        final UriResource resourceItem = resources.get(i);</span>
+<span class="nc bnc" id="L348" title="All 6 branches missed.">        if (resourceItem instanceof UriResourceEntitySet</span>
+                || resourceItem instanceof UriResourceNavigation
+                || resourceItem instanceof  UriResourceSingleton)
+<span class="nc bnc" id="L351" title="All 2 branches missed.">          return i == resources.size() ? -1 : i + 1;</span>
+      }
+    }
+<span class="nc" id="L354">    return -1;</span>
+  }
+
+  /**
+   * Used for Serializer
+   */
+  public static UriResourceProperty determineStartNavigationPath(final List&lt;UriResource&gt; resources) {
+
+<span class="nc" id="L362">    final int index = determineStartNavigationIndex(resources);</span>
+<span class="nc bnc" id="L363" title="All 4 branches missed.">    if (index &gt;= 0 &amp;&amp; resources != null)</span>
+<span class="nc" id="L364">      return (UriResourceProperty) resources.get(index);</span>
+<span class="nc" id="L365">    return null;</span>
+  }
+
+  /**
+   * Finds an entity type from a navigation property
+   */
+  public static EdmEntityType determineTargetEntityType(final List&lt;UriResource&gt; resources) {
+<span class="nc" id="L372">    EdmEntityType targetEdmEntity = null;</span>
+
+<span class="nc bnc" id="L374" title="All 2 branches missed.">    for (final UriResource resourceItem : resources) {</span>
+<span class="nc bnc" id="L375" title="All 2 branches missed.">      if (resourceItem.getKind() == UriResourceKind.navigationProperty) {</span>
+        // first try the simple way like in the example
+<span class="nc" id="L377">        targetEdmEntity = (EdmEntityType) ((UriResourceNavigation) resourceItem).getType();</span>
+<span class="nc bnc" id="L378" title="All 2 branches missed.">        if (((UriResourceNavigation) resourceItem).getTypeFilterOnEntry() != null) {</span>
+<span class="nc" id="L379">          targetEdmEntity = (EdmEntityType) ((UriResourceNavigation) resourceItem).getTypeFilterOnEntry();</span>
+<span class="nc" id="L380">          LOGGER.trace(FOUND_CAST_FROM + ((UriResourceNavigation) resourceItem).getType().getName() + &quot; to &quot;</span>
+<span class="nc" id="L381">              + targetEdmEntity.getName());</span>
+        }
+<span class="nc bnc" id="L383" title="All 2 branches missed.">        if (((UriResourceNavigation) resourceItem).getTypeFilterOnCollection() != null) {</span>
+<span class="nc" id="L384">          targetEdmEntity = (EdmEntityType) ((UriResourceNavigation) resourceItem).getTypeFilterOnCollection();</span>
+<span class="nc" id="L385">          LOGGER.trace(FOUND_CAST_FROM + ((UriResourceNavigation) resourceItem).getType().getName() + &quot; to &quot;</span>
+<span class="nc" id="L386">              + targetEdmEntity.getName());</span>
+        }
+      }
+<span class="nc" id="L389">    }</span>
+<span class="nc" id="L390">    return targetEdmEntity;</span>
+  }
+
+  public static boolean hasNavigation(final List&lt;UriResource&gt; uriResourceParts) {
+<span class="nc bnc" id="L394" title="All 2 branches missed.">    if (uriResourceParts != null) {</span>
+<span class="nc bnc" id="L395" title="All 2 branches missed.">      for (int i = uriResourceParts.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc bnc" id="L396" title="All 2 branches missed.">        if (uriResourceParts.get(i) instanceof UriResourceNavigation)</span>
+<span class="nc" id="L397">          return true;</span>
+      }
+    }
+<span class="nc" id="L400">    return false;</span>
+  }
+
+  private static EdmBindingTarget determineBindingTargetOfEntitySet(final UriResourceEntitySet resourceItem) {
+    EdmBindingTarget targetEdmBindingTarget;
+<span class="nc bnc" id="L405" title="All 2 branches missed.">    if (resourceItem.getTypeFilterOnCollection() != null) {</span>
+<span class="nc" id="L406">      targetEdmBindingTarget = new EdmBoundCast((EdmEntityType) resourceItem.getTypeFilterOnCollection(), resourceItem</span>
+<span class="nc" id="L407">          .getEntitySet());</span>
+<span class="nc" id="L408">      LOGGER.trace(FOUND_CAST_FROM + resourceItem.getEntitySet().getName() + &quot; to &quot;</span>
+<span class="nc" id="L409">          + targetEdmBindingTarget.getName());</span>
+<span class="nc bnc" id="L410" title="All 2 branches missed.">    } else if (resourceItem.getTypeFilterOnEntry() != null) {</span>
+<span class="nc" id="L411">      targetEdmBindingTarget = new EdmBoundCast((EdmEntityType) resourceItem.getTypeFilterOnEntry(), resourceItem</span>
+<span class="nc" id="L412">          .getEntitySet());</span>
+<span class="nc" id="L413">      LOGGER.trace(FOUND_CAST_FROM + resourceItem.getEntitySet().getName() + &quot; to &quot;</span>
+<span class="nc" id="L414">          + targetEdmBindingTarget.getName());</span>
+    } else {
+<span class="nc" id="L416">      targetEdmBindingTarget = resourceItem.getEntitySet();</span>
+    }
+<span class="nc" id="L418">    return targetEdmBindingTarget;</span>
+  }
+
+  private static EdmBindingTarget determineBindingTragetOfSingleton(final UriResourceSingleton resourceItem) {
+    EdmBindingTarget targetEdmBindingTarget;
+<span class="nc bnc" id="L423" title="All 2 branches missed.">    if (resourceItem.getEntityTypeFilter() != null) {</span>
+<span class="nc" id="L424">      targetEdmBindingTarget = new EdmBoundCast(resourceItem.getEntityTypeFilter(), resourceItem.getSingleton());</span>
+    } else {
+<span class="nc" id="L426">      targetEdmBindingTarget = resourceItem.getSingleton();</span>
+    }
+<span class="nc" id="L428">    return targetEdmBindingTarget;</span>
+  }
+
+  private static void extendNavigationPath(final StringBuilder associationName, final String pathSegment)
+      throws ODataJPAQueryException {
+<span class="nc bnc" id="L433" title="All 2 branches missed.">    if (associationName == null)</span>
+<span class="nc" id="L434">      throw new ODataJPAQueryException(NOT_SUPPORTED_RESOURCE_TYPE, NOT_IMPLEMENTED, &quot;&quot;);</span>
+<span class="nc bnc" id="L435" title="All 2 branches missed.">    if (associationName.length() &gt; 0)</span>
+<span class="nc" id="L436">      associationName.append(PATH_SEPARATOR);</span>
+<span class="nc" id="L437">    associationName.append(pathSegment);</span>
+<span class="nc" id="L438">  }</span>
+
+  private Util() {
+    // suppress instance creation
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

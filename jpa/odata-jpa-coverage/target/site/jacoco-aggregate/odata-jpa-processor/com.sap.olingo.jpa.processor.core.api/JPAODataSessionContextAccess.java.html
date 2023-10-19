@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataSessionContextAccess.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAODataSessionContextAccess.java</span></div><h1>JPAODataSessionContextAccess.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import java.util.List;
+import java.util.Optional;
+
+import javax.persistence.EntityManagerFactory;
+
+import org.apache.olingo.commons.api.edmx.EdmxReference;
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.server.api.processor.ErrorProcessor;
+
+import com.sap.olingo.jpa.metadata.api.JPAEdmProvider;
+import com.sap.olingo.jpa.processor.core.database.JPAODataDatabaseOperations;
+
+/**
+ *
+ * @author Oliver Grande
+ *
+ */
+public interface JPAODataSessionContextAccess {
+
+  public JPAODataDatabaseProcessor getDatabaseProcessor();
+
+  public JPAEdmProvider getEdmProvider() throws ODataException;
+
+  public JPAODataDatabaseOperations getOperationConverter();
+
+  public List&lt;EdmxReference&gt; getReferences();
+
+  /**
+   * Returns a list of packages that may contain Enumerations of Java implemented OData operations
+   * @return
+   */
+  public List&lt;String&gt; getPackageName();
+
+  /**
+   * If server side paging shall be supported &lt;code&gt;getPagingProvider&lt;/code&gt; returns an implementation of a paging
+   * provider. Details about the OData specification can be found under &lt;a
+   * href=&quot;https://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part1-protocol/odata-v4.0-errata03-os-part1-protocol-complete.html#_Server-Driven_Paging&quot;&gt;OData
+   * Version 4.0 Part 1 - 11.2.5.7 Server-Driven Paging&lt;/a&gt;
+   * @return
+   */
+  public JPAODataPagingProvider getPagingProvider();
+
+  public default Optional&lt;? extends EntityManagerFactory&gt; getEntityManagerFactory() {
+<span class="nc" id="L46">    return Optional.empty();</span>
+  }
+
+  public default ErrorProcessor getErrorProcessor() {
+<span class="nc" id="L50">    return null;</span>
+  }
+
+  public default String getMappingPath() {
+<span class="nc" id="L54">    return &quot;&quot;;</span>
+  }
+
+  public default &lt;T extends JPAODataBatchProcessor&gt; JPAODataBatchProcessorFactory&lt;T&gt; getBatchProcessorFactory() {
+<span class="nc" id="L58">    return null;</span>
+  }
+
+  public default boolean useAbsoluteContextURL() {
+<span class="nc" id="L62">    return false;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

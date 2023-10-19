@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPANameBuilder.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">JPANameBuilder.java</span></div><h1>JPANameBuilder.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import javax.persistence.metamodel.Attribute;
+
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmAction;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+
+/**
+ * Build the internal name for Intermediate Model Elements
+ *
+ * @author Oliver Grande
+ *
+ */
+<span class="nc" id="L18">final class JPANameBuilder {</span>
+  public String buildStructuredTypeName(final Class&lt;?&gt; clazz) {
+<span class="nc" id="L20">    return clazz.getCanonicalName();</span>
+  }
+
+  public String buildAttributeName(final Attribute&lt;?, ?&gt; jpaAttribute) {
+<span class="nc" id="L24">    return jpaAttribute.getName();</span>
+  }
+
+  public String buildAssociationName(final Attribute&lt;?, ?&gt; jpaAttribute) {
+<span class="nc" id="L28">    return jpaAttribute.getName();</span>
+  }
+
+  public String buildFunctionName(final EdmFunction jpaFunction) {
+<span class="nc" id="L32">    return jpaFunction.name();</span>
+  }
+
+  public String buildActionName(final EdmAction jpaAction) {
+<span class="nc" id="L36">    return jpaAction.name();</span>
+  }
+
+  public String buildEntitySetName(final JPAEdmNameBuilder nameBuilder, final JPAStructuredType entityType) {
+<span class="nc" id="L40">    return buildFQN(entityType.getInternalName(), nameBuilder).getFullQualifiedNameAsString();</span>
+  }
+
+  public String buildSingletonName(final JPAEdmNameBuilder nameBuilder, final JPAStructuredType entityType) {
+<span class="nc" id="L44">    return buildFQN(entityType.getInternalName(), nameBuilder).getFullQualifiedNameAsString();</span>
+  }
+
+  protected final FullQualifiedName buildFQN(final String name, final JPAEdmNameBuilder nameBuilder) {
+<span class="nc" id="L48">    return new FullQualifiedName(nameBuilder.getNamespace(), name);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

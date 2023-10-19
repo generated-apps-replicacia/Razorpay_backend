@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAMethodExpression.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAMethodExpression.java</span></div><h1>JPAMethodExpression.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitor;
+import org.apache.olingo.server.api.uri.queryoption.expression.Literal;
+import org.apache.olingo.server.api.uri.queryoption.expression.Member;
+import org.apache.olingo.server.api.uri.queryoption.expression.MethodKind;
+
+public final class JPAMethodExpression implements JPAVisitableExpression {
+  private final MethodKind methodCall;
+  private final Member member;
+  private final Literal literal;
+
+  public JPAMethodExpression(final Member member, final JPALiteralOperator operand, final MethodKind methodCall) {
+<span class="nc" id="L20">    super();</span>
+<span class="nc" id="L21">    this.methodCall = methodCall;</span>
+<span class="nc" id="L22">    this.member = member;</span>
+<span class="nc bnc" id="L23" title="All 2 branches missed.">    this.literal = operand != null ? operand.getLiteral() : null;</span>
+<span class="nc" id="L24">  }</span>
+
+  @Override
+  public &lt;T&gt; T accept(final ExpressionVisitor&lt;T&gt; visitor) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L28">    final List&lt;T&gt; parameters = new ArrayList&lt;&gt;(2);</span>
+<span class="nc" id="L29">    parameters.add(visitor.visitMember(member));</span>
+<span class="nc bnc" id="L30" title="All 2 branches missed.">    if (literal != null)</span>
+<span class="nc" id="L31">      parameters.add(visitor.visitLiteral(literal));</span>
+<span class="nc" id="L32">    return visitor.visitMethodCall(methodCall, parameters);</span>
+  }
+
+  @Override
+  public UriInfoResource getMember() {
+<span class="nc" id="L37">    return member.getResourcePath();</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

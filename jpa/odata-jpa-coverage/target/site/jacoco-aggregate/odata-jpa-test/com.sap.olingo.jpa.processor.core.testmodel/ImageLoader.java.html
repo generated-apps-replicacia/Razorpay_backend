@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ImageLoader.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.testmodel</a> &gt; <span class="el_source">ImageLoader.java</span></div><h1>ImageLoader.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.testmodel;
+
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.Query;
+
+<span class="nc" id="L19">public class ImageLoader {</span>
+  /**
+   * 
+   */
+  private static final String SELECT_PERSON_IMAGE =
+      &quot;SELECT * FROM \&quot;OLINGO\&quot;.\&quot;PersonImage\&quot; WHERE ID = '$&amp;1'&quot;;
+  private static final String SELECT_ORGANIZATION_IMAGE =
+      &quot;SELECT * FROM \&quot;OLINGO\&quot;.\&quot;OrganizationImage\&quot; WHERE ID = '$&amp;1'&quot;;
+  private static final String PATH = &quot;images/&quot;;
+  private static final String ENTITY_MANAGER_DATA_SOURCE = &quot;javax.persistence.nonJtaDataSource&quot;;
+  private static final String PUNIT_NAME = &quot;com.sap.olingo.jpa&quot;;
+
+  public static void main(String[] args) throws IOException {
+
+<span class="nc" id="L33">    final ImageLoader i = new ImageLoader();</span>
+<span class="nc" id="L34">    final EntityManager em = createEntityManager();</span>
+<span class="nc" id="L35">    i.loadPerson(em, &quot;OlingoOrangeTM.png&quot;, &quot;99&quot;);</span>
+<span class="nc" id="L36">  }</span>
+
+  public void loadPerson(EntityManager em, String imageName, String businessPartnerID) throws IOException {
+
+<span class="nc" id="L40">    final byte[] image = loadImage(imageName);</span>
+<span class="nc" id="L41">    storePersonImageDB(em, image, businessPartnerID, SELECT_PERSON_IMAGE);</span>
+<span class="nc" id="L42">  }</span>
+
+  public void loadPerson(String imageName, String businessPartnerID) throws IOException {
+
+<span class="nc" id="L46">    final byte[] image = loadImage(imageName);</span>
+<span class="nc" id="L47">    storePersonImageDB(createEntityManager(), image, businessPartnerID, SELECT_PERSON_IMAGE);</span>
+<span class="nc" id="L48">  }</span>
+
+  public void loadOrg(EntityManager em, String imageName, String businessPartnerID) throws IOException {
+
+<span class="nc" id="L52">    final byte[] image = loadImage(imageName);</span>
+<span class="nc" id="L53">    storeOrgImageDB(em, image, businessPartnerID, SELECT_ORGANIZATION_IMAGE);</span>
+<span class="nc" id="L54">  }</span>
+
+  public void loadOrg(String imageName, String businessPartnerID) throws IOException {
+
+<span class="nc" id="L58">    final byte[] image = loadImage(imageName);</span>
+<span class="nc" id="L59">    storeOrgImageDB(createEntityManager(), image, businessPartnerID, SELECT_ORGANIZATION_IMAGE);</span>
+<span class="nc" id="L60">  }</span>
+
+  private void storePersonImageDB(EntityManager em, byte[] image, String businessPartnerID, String query) {
+
+<span class="nc" id="L64">    final String s = query.replace(&quot;$&amp;1&quot;, businessPartnerID);</span>
+<span class="nc" id="L65">    final Query q = em.createNativeQuery(s, PersonImage.class);</span>
+    @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L67">    final List&lt;PersonImage&gt; result = q.getResultList();</span>
+<span class="nc" id="L68">    result.get(0).setImage(image);</span>
+<span class="nc" id="L69">    updateDB(em, result);</span>
+
+<span class="nc" id="L71">    final Query storedImageQ = em.createNativeQuery(s, PersonImage.class);</span>
+    @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L73">    final List&lt;PersonImage&gt; result2 = storedImageQ.getResultList();</span>
+<span class="nc" id="L74">    final byte[] storedImage = result2.get(0).getImage();</span>
+<span class="nc" id="L75">    compareImage(image, storedImage);</span>
+<span class="nc" id="L76">  }</span>
+
+  private void storeOrgImageDB(EntityManager em, byte[] image, String businessPartnerID, String query) {
+
+<span class="nc" id="L80">    final String s = query.replace(&quot;$&amp;1&quot;, businessPartnerID);</span>
+<span class="nc" id="L81">    final Query q = em.createNativeQuery(s, OrganizationImage.class);</span>
+    @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L83">    final List&lt;OrganizationImage&gt; result = q.getResultList();</span>
+<span class="nc" id="L84">    result.get(0).setImage(image);</span>
+<span class="nc" id="L85">    updateDB(em, result);</span>
+
+<span class="nc" id="L87">    final Query storedImageQ = em.createNativeQuery(s, OrganizationImage.class);</span>
+    @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L89">    final List&lt;OrganizationImage&gt; result2 = storedImageQ.getResultList();</span>
+<span class="nc" id="L90">    final byte[] storedImage = result2.get(0).getImage();</span>
+<span class="nc" id="L91">    compareImage(image, storedImage);</span>
+<span class="nc" id="L92">  }</span>
+
+  private void updateDB(EntityManager em, List&lt;?&gt; result) {
+<span class="nc" id="L95">    em.getTransaction().begin();</span>
+<span class="nc" id="L96">    em.persist(result.get(0));</span>
+<span class="nc" id="L97">    em.getTransaction().commit();</span>
+<span class="nc" id="L98">  }</span>
+
+  private static EntityManager createEntityManager() {
+<span class="nc" id="L101">    final Map&lt;String, Object&gt; properties = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L102">    properties.put(ENTITY_MANAGER_DATA_SOURCE, DataSourceHelper.createDataSource(DataSourceHelper.DB_H2));</span>
+<span class="nc" id="L103">    final EntityManagerFactory emf = Persistence.createEntityManagerFactory(PUNIT_NAME, properties);</span>
+<span class="nc" id="L104">    return emf.createEntityManager();</span>
+  }
+
+  private void compareImage(byte[] image, byte[] storedImage) {
+<span class="nc bnc" id="L108" title="All 2 branches missed.">    if (image.length != storedImage.length)</span>
+<span class="nc" id="L109">      fail(&quot;[Image]: length miss match&quot;);</span>
+    else {
+<span class="nc bnc" id="L111" title="All 2 branches missed.">      for (int i = 0; i &lt; image.length; i++) {</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        if (image[i] != storedImage[i]) {</span>
+<span class="nc" id="L113">          fail(&quot;[Image]: mismatch at&quot; + Integer.toString(i));</span>
+<span class="nc" id="L114">          break;</span>
+        }
+      }
+    }
+<span class="nc" id="L118">  }</span>
+
+  public void storeImageLocal(final byte[] storedImage, final String fileName) throws IOException {
+
+<span class="nc" id="L122">    final String home = System.getProperty(&quot;user.home&quot;);</span>
+<span class="nc" id="L123">    final String filePath = home + &quot;\\Downloads\\&quot; + fileName;</span>
+
+<span class="nc" id="L125">    try (final OutputStream o = new FileOutputStream(filePath)) {</span>
+<span class="nc" id="L126">      o.write(storedImage);</span>
+<span class="nc" id="L127">      o.flush();</span>
+    }
+<span class="nc" id="L129">  }</span>
+
+  private byte[] loadImage(final String imageName) throws IOException {
+
+<span class="nc" id="L133">    final String path = PATH + imageName;</span>
+<span class="nc" id="L134">    byte[] image = null;</span>
+<span class="nc" id="L135">    final URL u = this.getClass().getClassLoader().getResource(path);</span>
+<span class="nc" id="L136">    try (final InputStream i = u.openStream()) {</span>
+<span class="nc" id="L137">      image = new byte[i.available()];</span>
+<span class="nc" id="L138">      final int noBytes = i.read(image);</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">      if (noBytes == -1)</span>
+<span class="nc" id="L140">        return new byte[] {};</span>
+<span class="nc" id="L141">      return image;</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">    }</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

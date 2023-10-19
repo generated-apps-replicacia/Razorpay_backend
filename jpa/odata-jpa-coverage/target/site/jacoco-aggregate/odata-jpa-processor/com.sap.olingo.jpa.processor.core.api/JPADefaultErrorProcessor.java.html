@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPADefaultErrorProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPADefaultErrorProcessor.java</span></div><h1>JPADefaultErrorProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.olingo.commons.api.edm.EdmEntitySet;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.ODataServerError;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.processor.DefaultProcessor;
+import org.apache.olingo.server.api.processor.ErrorProcessor;
+
+public final class JPADefaultErrorProcessor implements ErrorProcessor {
+	private final ErrorProcessor defaultProcessor;
+
+	private ServiceMetadata serviceMetadata;
+	private static final String Invalid_Key_Error_Message = &quot;The key value is not valid.&quot;;
+	private static final String Updated_Invalid_key_Error_Message= &quot;For the given EntityType %s, the key should be of type %s&quot;;
+	
+	JPADefaultErrorProcessor() {
+<span class="nc" id="L24">		super();</span>
+<span class="nc" id="L25">		defaultProcessor = new DefaultProcessor();</span>
+
+<span class="nc" id="L27">	}</span>
+
+	@Override
+	public void init(OData odata, ServiceMetadata serviceMetadata) {
+<span class="nc" id="L31">		defaultProcessor.init(odata, serviceMetadata);</span>
+<span class="nc" id="L32">		this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L33">	}</span>
+
+	@Override
+	public void processError(ODataRequest request, ODataResponse response, ODataServerError serverError,
+			ContentType responseFormat) {
+<span class="nc" id="L38">		String errorMessage = serverError.getException().getMessage();</span>
+<span class="nc bnc" id="L39" title="All 4 branches missed.">		if (errorMessage.equals(Invalid_Key_Error_Message) &amp;&amp; serverError.getStatusCode() == 400) {</span>
+<span class="nc" id="L40">			Optional&lt;String&gt; message = getUpdatedMessageForInvalidKeyMessage(request);</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">			if (message.isPresent())</span>
+<span class="nc" id="L42">				serverError.setMessage(message.get());</span>
+		}
+<span class="nc" id="L44">		defaultProcessor.processError(request, response, serverError, responseFormat);</span>
+<span class="nc" id="L45">	}</span>
+
+	private Optional&lt;String&gt; getUpdatedMessageForInvalidKeyMessage(ODataRequest request) {
+<span class="nc" id="L48">		String message = null;</span>
+<span class="nc" id="L49">		List&lt;EdmEntitySet&gt; entityList = this.serviceMetadata.getEdm().getEntityContainer().getEntitySets();</span>
+<span class="nc" id="L50">		String[] urlSegments = request.getRawODataPath().split(&quot;/&quot;);</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">		if (urlSegments.length &gt; 1) {</span>
+<span class="nc" id="L52">			String apiPathSegment = urlSegments[1];</span>
+<span class="nc" id="L53">			String entityName = apiPathSegment.substring(0, apiPathSegment.indexOf(&quot;(&quot;));</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">			for (EdmEntitySet edmEntitySet : entityList) {</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">				if (edmEntitySet.getName().equalsIgnoreCase(entityName)) {</span>
+<span class="nc" id="L56">					message = String.format(Updated_Invalid_key_Error_Message, entityName, getDataTypeOfEntityIdField(edmEntitySet));</span>
+				}
+<span class="nc" id="L58">			}</span>
+		}
+<span class="nc" id="L60">		return Optional.ofNullable(message);</span>
+	}
+
+	private String getDataTypeOfEntityIdField(EdmEntitySet edmEntitySet) {
+<span class="nc" id="L64">		return edmEntitySet.getEntityType().getKeyPropertyRefs().get(0).getProperty().getType().getName();</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

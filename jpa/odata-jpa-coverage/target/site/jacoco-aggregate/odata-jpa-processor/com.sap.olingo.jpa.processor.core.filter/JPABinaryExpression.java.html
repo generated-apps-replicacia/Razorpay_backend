@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPABinaryExpression.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPABinaryExpression.java</span></div><h1>JPABinaryExpression.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.queryoption.expression.BinaryOperatorKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitor;
+import org.apache.olingo.server.api.uri.queryoption.expression.Literal;
+import org.apache.olingo.server.api.uri.queryoption.expression.VisitableExpression;
+
+public class JPABinaryExpression implements VisitableExpression {
+
+  private final BinaryOperatorKind operator;
+  private final VisitableExpression expression;
+  private final Literal literal;
+
+  public JPABinaryExpression(final VisitableExpression expression, final Literal literal,
+<span class="nc" id="L17">      final BinaryOperatorKind operator) {</span>
+<span class="nc" id="L18">    this.operator = operator;</span>
+<span class="nc" id="L19">    this.expression = expression;</span>
+<span class="nc" id="L20">    this.literal = literal;</span>
+<span class="nc" id="L21">  }</span>
+
+  @Override
+  public &lt;T&gt; T accept(ExpressionVisitor&lt;T&gt; visitor) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L25">    T localLeft = this.expression.accept(visitor);</span>
+<span class="nc" id="L26">    T localRight = this.literal.accept(visitor);</span>
+<span class="nc" id="L27">    return visitor.visitBinaryOperator(operator, localLeft, localRight);</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

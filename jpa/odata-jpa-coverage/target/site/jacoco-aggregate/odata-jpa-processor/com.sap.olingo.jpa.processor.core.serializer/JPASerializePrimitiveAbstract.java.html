@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPASerializePrimitiveAbstract.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.serializer</a> &gt; <span class="el_source">JPASerializePrimitiveAbstract.java</span></div><h1>JPASerializePrimitiveAbstract.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.serializer;
+
+import java.util.List;
+
+import org.apache.olingo.commons.api.data.ComplexValue;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+
+public abstract class JPASerializePrimitiveAbstract implements JPAOperationSerializer {
+  protected static final char PATH_SEPARATOR = '/';
+  protected final ServiceMetadata serviceMetadata;
+  protected final UriInfo uriInfo;
+
+  protected JPASerializePrimitiveAbstract(final ServiceMetadata serviceMetadata, final UriInfo uriInfo) {
+<span class="nc" id="L19">    super();</span>
+<span class="nc" id="L20">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L21">    this.uriInfo = uriInfo;</span>
+<span class="nc" id="L22">  }</span>
+
+  protected final JPAPrimitivePropertyInfo determinePrimitiveProperty(final EntityCollection result,
+      final List&lt;UriResource&gt; uriResources) {
+<span class="nc" id="L26">    Property property = null;</span>
+<span class="nc" id="L27">    Object value = null;</span>
+
+<span class="nc" id="L29">    final StringBuilder path = new StringBuilder();</span>
+
+<span class="nc bnc" id="L31" title="All 2 branches missed.">    for (final Property item : result.getEntities().get(0).getProperties())</span>
+<span class="nc bnc" id="L32" title="All 2 branches missed.">      if (partOfPath(item, uriResources)) {</span>
+<span class="nc" id="L33">        property = item;</span>
+<span class="nc" id="L34">        boolean found = false;</span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">        while (!found) {</span>
+<span class="nc" id="L36">          path.append(property.getName());</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">          if (property.getValue() instanceof ComplexValue) {</span>
+<span class="nc" id="L38">            value = property.getValue();</span>
+<span class="nc" id="L39">            property = ((ComplexValue) value).getValue().get(0);</span>
+<span class="nc" id="L40">            path.append(PATH_SEPARATOR);</span>
+          } else {
+<span class="nc" id="L42">            found = true;</span>
+          }
+        }
+        break;
+      }
+<span class="nc" id="L47">    return new JPAPrimitivePropertyInfo(path.toString(), property);</span>
+  }
+
+  private boolean partOfPath(final Property item, final List&lt;UriResource&gt; uriResources) {
+<span class="nc bnc" id="L51" title="All 2 branches missed.">    for (final UriResource resource : uriResources)</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">      if (resource instanceof UriResourceProperty</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">          &amp;&amp; ((UriResourceProperty) resource).getProperty().getName().equals(item.getName()))</span>
+<span class="nc" id="L54">        return true;</span>
+<span class="nc" id="L55">    return false;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

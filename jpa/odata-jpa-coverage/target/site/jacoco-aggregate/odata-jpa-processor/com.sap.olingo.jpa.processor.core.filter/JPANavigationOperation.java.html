@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPANavigationOperation.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPANavigationOperation.java</span></div><h1>JPANavigationOperation.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.Subquery;
+
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+import org.apache.olingo.server.api.uri.queryoption.ApplyOption;
+import org.apache.olingo.server.api.uri.queryoption.CountOption;
+import org.apache.olingo.server.api.uri.queryoption.CustomQueryOption;
+import org.apache.olingo.server.api.uri.queryoption.DeltaTokenOption;
+import org.apache.olingo.server.api.uri.queryoption.ExpandOption;
+import org.apache.olingo.server.api.uri.queryoption.FilterOption;
+import org.apache.olingo.server.api.uri.queryoption.FormatOption;
+import org.apache.olingo.server.api.uri.queryoption.IdOption;
+import org.apache.olingo.server.api.uri.queryoption.OrderByOption;
+import org.apache.olingo.server.api.uri.queryoption.SearchOption;
+import org.apache.olingo.server.api.uri.queryoption.SelectOption;
+import org.apache.olingo.server.api.uri.queryoption.SkipOption;
+import org.apache.olingo.server.api.uri.queryoption.SkipTokenOption;
+import org.apache.olingo.server.api.uri.queryoption.TopOption;
+import org.apache.olingo.server.api.uri.queryoption.expression.BinaryOperatorKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitor;
+import org.apache.olingo.server.api.uri.queryoption.expression.Member;
+import org.apache.olingo.server.api.uri.queryoption.expression.MethodKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.VisitableExpression;
+
+import com.sap.olingo.jpa.processor.core.query.JPAAbstractQuery;
+import com.sap.olingo.jpa.processor.core.query.JPAAbstractSubQuery;
+import com.sap.olingo.jpa.processor.core.query.JPACollectionFilterQuery;
+import com.sap.olingo.jpa.processor.core.query.JPANavigationFilterQuery;
+import com.sap.olingo.jpa.processor.core.query.JPANavigationPropertyInfo;
+
+/**
+ * In case the query result shall be filtered on an attribute of navigation target a sub-select will be generated.&lt;p&gt;
+ * E.g.&lt;br&gt;
+ * - Organizations?$select=ID&amp;$filter=Roles/$count eq 2&lt;br&gt;
+ * - CollectionDeeps?$filter=FirstLevel/SecondLevel/Comment/$count eq 2&amp;$select=ID&lt;br&gt;
+ * - Organizations?$filter=AdministrativeInformation/Created/User/LastName eq 'Mustermann'&lt;br&gt;
+ * - AdministrativeDivisions?$filter=Parent/Parent/CodeID eq 'NUTS1' and DivisionCode eq 'BE212'
+ * @author Oliver Grande
+ *
+ */
+final class JPANavigationOperation extends JPAExistsOperation implements JPAExpressionOperator {
+
+  final BinaryOperatorKind operator;
+  final JPAMemberOperator jpaMember;
+  final JPALiteralOperator operand;
+  final MethodKind methodCall;
+
+  public JPANavigationOperation(final BinaryOperatorKind operator,
+      final JPANavigationOperation jpaNavigationOperation, final JPALiteralOperator operand,
+      final JPAFilterComplierAccess jpaComplier) {
+<span class="nc" id="L62">    super(jpaComplier);</span>
+<span class="nc" id="L63">    this.operator = operator;</span>
+<span class="nc" id="L64">    this.methodCall = jpaNavigationOperation.methodCall;</span>
+<span class="nc" id="L65">    this.jpaMember = jpaNavigationOperation.jpaMember;</span>
+<span class="nc" id="L66">    this.operand = operand;</span>
+<span class="nc" id="L67">  }</span>
+
+  JPANavigationOperation(final JPAFilterComplierAccess jpaComplier, final BinaryOperatorKind operator,
+      final JPAOperator left, final JPAOperator right) {
+
+<span class="nc" id="L72">    super(jpaComplier);</span>
+<span class="nc" id="L73">    this.operator = operator;</span>
+<span class="nc" id="L74">    this.methodCall = null;</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">    if (left instanceof JPAMemberOperator) {</span>
+<span class="nc" id="L76">      jpaMember = (JPAMemberOperator) left;</span>
+<span class="nc" id="L77">      operand = (JPALiteralOperator) right;</span>
+    } else {
+<span class="nc" id="L79">      jpaMember = (JPAMemberOperator) right;</span>
+<span class="nc" id="L80">      operand = (JPALiteralOperator) left;</span>
+    }
+<span class="nc" id="L82">  }</span>
+
+  public JPANavigationOperation(final JPAFilterComplierAccess jpaComplier, final MethodKind methodCall,
+      final List&lt;JPAOperator&gt; parameters) {
+<span class="nc" id="L86">    super(jpaComplier);</span>
+<span class="nc" id="L87">    this.operator = null;</span>
+<span class="nc" id="L88">    this.methodCall = methodCall;</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">    if (parameters.get(0) instanceof JPAMemberOperator) {</span>
+<span class="nc" id="L90">      jpaMember = (JPAMemberOperator) parameters.get(0);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">      operand = parameters.size() &gt; 1 ? (JPALiteralOperator) parameters.get(1) : null;</span>
+    } else {
+<span class="nc" id="L93">      jpaMember = (JPAMemberOperator) parameters.get(1);</span>
+<span class="nc" id="L94">      operand = (JPALiteralOperator) parameters.get(0);</span>
+    }
+<span class="nc" id="L96">  }</span>
+
+  @Override
+  public Expression&lt;Boolean&gt; get() throws ODataApplicationException {
+    // return converter.cb.greaterThan(getExistsQuery().as(&quot;a&quot;), converter.cb.literal('5')); //NOSONAR
+<span class="nc" id="L101">    return converter.cb.exists(getExistsQuery());</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public Enum&lt;?&gt; getOperator() {
+<span class="nc" id="L107">    return null;</span>
+  }
+
+  @Override
+  public String getName() {
+<span class="nc bnc" id="L112" title="All 2 branches missed.">    return operator != null ? operator.name() : methodCall.name();</span>
+  }
+
+  @Override
+  Subquery&lt;?&gt; getExistsQuery() throws ODataApplicationException {
+<span class="nc" id="L117">    final List&lt;UriResource&gt; allUriResourceParts = new ArrayList&lt;&gt;(uriResourceParts);</span>
+<span class="nc" id="L118">    allUriResourceParts.addAll(jpaMember.getMember().getResourcePath().getUriResourceParts());</span>
+
+    // 1. Determine all relevant associations
+<span class="nc" id="L121">    final List&lt;JPANavigationPropertyInfo&gt; naviPathList = determineAssociations(sd, allUriResourceParts);</span>
+<span class="nc" id="L122">    JPAAbstractQuery parent = root;</span>
+<span class="nc" id="L123">    final List&lt;JPAAbstractSubQuery&gt; queryList = new ArrayList&lt;&gt;();</span>
+
+    // 2. Create the queries and roots
+<span class="nc bnc" id="L126" title="All 2 branches missed.">    for (int i = naviPathList.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc" id="L127">      final JPANavigationPropertyInfo naviInfo = naviPathList.get(i);</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">      if (i == 0) {</span>
+<span class="nc" id="L129">        final VisitableExpression expression = createExpression();</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (naviInfo.getUriResource() instanceof UriResourceProperty) {</span>
+<span class="nc" id="L131">          queryList.add(new JPACollectionFilterQuery(odata, sd, em, parent, naviInfo.getAssociationPath(), expression,</span>
+<span class="nc" id="L132">              determineFrom(i, naviPathList.size(), parent), groups));</span>
+        } else {
+<span class="nc" id="L134">          queryList.add(new JPANavigationFilterQuery(odata, sd, naviInfo.getUriResource(), parent, em, naviInfo</span>
+<span class="nc" id="L135">              .getAssociationPath(), expression, determineFrom(i, naviPathList.size(), parent), claimsProvider,</span>
+              groups));
+        }
+<span class="nc" id="L138">      } else {</span>
+<span class="nc" id="L139">        queryList.add(new JPANavigationFilterQuery(odata, sd, naviInfo.getUriResource(), parent, em, naviInfo</span>
+<span class="nc" id="L140">            .getAssociationPath(), determineFrom(i, naviPathList.size(), parent), claimsProvider));</span>
+      }
+<span class="nc" id="L142">      parent = queryList.get(queryList.size() - 1);</span>
+    }
+    // 3. Create select statements
+<span class="nc" id="L145">    Subquery&lt;?&gt; childQuery = null;</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">    for (int i = queryList.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc" id="L147">      childQuery = queryList.get(i).getSubQuery(childQuery);</span>
+    }
+<span class="nc" id="L149">    return childQuery;</span>
+  }
+
+  Member getMember() {
+<span class="nc" id="L153">    return new SubMember(jpaMember);</span>
+  }
+
+  private VisitableExpression createExpression() {
+<span class="nc bnc" id="L157" title="All 4 branches missed.">    if (operator != null &amp;&amp; methodCall == null) {</span>
+<span class="nc" id="L158">      return new JPAFilterExpression(new SubMember(jpaMember), operand.getLiteral(),</span>
+          operator);
+    }
+<span class="nc bnc" id="L161" title="All 4 branches missed.">    if (operator == null &amp;&amp; methodCall != null) {</span>
+<span class="nc" id="L162">      return new JPAMethodExpression(new SubMember(jpaMember), operand, this.methodCall);</span>
+    } else {
+<span class="nc" id="L164">      final JPAVisitableExpression expression = new JPAMethodExpression(new SubMember(jpaMember),</span>
+          operand, this.methodCall);
+<span class="nc" id="L166">      return new JPABinaryExpression(expression, operand.getLiteral(), operator);</span>
+    }
+  }
+
+  private From&lt;?, ?&gt; determineFrom(final int i, final int size, final JPAAbstractQuery parent) {
+<span class="nc bnc" id="L171" title="All 2 branches missed.">    return i == size - 1 ? from : parent.getRoot();</span>
+  }
+
+  private static class SubMember implements Member {
+    private final JPAMemberOperator parentMember;
+
+    SubMember(final JPAMemberOperator parentMember) {
+<span class="nc" id="L178">      super();</span>
+<span class="nc" id="L179">      this.parentMember = parentMember;</span>
+<span class="nc" id="L180">    }</span>
+
+    @Override
+    public &lt;T&gt; T accept(final ExpressionVisitor&lt;T&gt; visitor) throws ODataApplicationException {
+<span class="nc" id="L184">      return null;</span>
+    }
+
+    @Override
+    public UriInfoResource getResourcePath() {
+<span class="nc" id="L189">      return new SubResource(parentMember);</span>
+    }
+
+    @Override
+    public EdmType getStartTypeFilter() {
+<span class="nc" id="L194">      return null;</span>
+    }
+
+    @Override
+    public EdmType getType() {
+<span class="nc" id="L199">      return null;</span>
+    }
+
+    @Override
+    public boolean isCollection() {
+<span class="nc" id="L204">      return false;</span>
+    }
+
+  }
+
+  private static class SubResource implements UriInfoResource {
+    private final JPAMemberOperator parentMember;
+
+    public SubResource(final JPAMemberOperator member) {
+<span class="nc" id="L213">      super();</span>
+<span class="nc" id="L214">      this.parentMember = member;</span>
+<span class="nc" id="L215">    }</span>
+
+    @Override
+    public ApplyOption getApplyOption() {
+<span class="nc" id="L219">      return null;</span>
+    }
+
+    @Override
+    public CountOption getCountOption() {
+<span class="nc" id="L224">      return null;</span>
+    }
+
+    @Override
+    public List&lt;CustomQueryOption&gt; getCustomQueryOptions() {
+<span class="nc" id="L229">      return new ArrayList&lt;&gt;(0);</span>
+    }
+
+    @Override
+    public DeltaTokenOption getDeltaTokenOption() {
+<span class="nc" id="L234">      return null;</span>
+    }
+
+    @Override
+    public ExpandOption getExpandOption() {
+<span class="nc" id="L239">      return null;</span>
+    }
+
+    @Override
+    public FilterOption getFilterOption() {
+<span class="nc" id="L244">      return null;</span>
+    }
+
+    @Override
+    public FormatOption getFormatOption() {
+<span class="nc" id="L249">      return null;</span>
+    }
+
+    @Override
+    public IdOption getIdOption() {
+<span class="nc" id="L254">      return null;</span>
+    }
+
+    @Override
+    public OrderByOption getOrderByOption() {
+<span class="nc" id="L259">      return null;</span>
+    }
+
+    @Override
+    public SearchOption getSearchOption() {
+<span class="nc" id="L264">      return null;</span>
+    }
+
+    @Override
+    public SelectOption getSelectOption() {
+<span class="nc" id="L269">      return null;</span>
+    }
+
+    @Override
+    public SkipOption getSkipOption() {
+<span class="nc" id="L274">      return null;</span>
+    }
+
+    @Override
+    public SkipTokenOption getSkipTokenOption() {
+<span class="nc" id="L279">      return null;</span>
+    }
+
+    @Override
+    public TopOption getTopOption() {
+<span class="nc" id="L284">      return null;</span>
+    }
+
+    @Override
+    public List&lt;UriResource&gt; getUriResourceParts() {
+<span class="nc" id="L289">      final List&lt;UriResource&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L290">      final List&lt;UriResource&gt; source = parentMember.getMember().getResourcePath().getUriResourceParts();</span>
+<span class="nc bnc" id="L291" title="All 2 branches missed.">      for (int i = source.size() - 1; i &gt; 0; i--) {</span>
+<span class="nc bnc" id="L292" title="All 2 branches missed.">        if (source.get(i).getKind() == UriResourceKind.navigationProperty</span>
+<span class="nc bnc" id="L293" title="All 2 branches missed.">            || source.get(i).getKind() == UriResourceKind.entitySet</span>
+<span class="nc bnc" id="L294" title="All 4 branches missed.">            || (source.get(i) instanceof UriResourceProperty &amp;&amp; ((UriResourceProperty) source.get(i)).isCollection())) {</span>
+<span class="nc" id="L295">          break;</span>
+        }
+<span class="nc" id="L297">        result.add(0, source.get(i));</span>
+      }
+<span class="nc" id="L299">      return result;</span>
+    }
+
+    @Override
+    public String getValueForAlias(final String alias) {
+<span class="nc" id="L304">      return null;</span>
+    }
+
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L311">    return &quot;JPANavigationOperation [operator=&quot; + operator + &quot;, jpaMember=&quot; + jpaMember + &quot;, operand=&quot; + operand</span>
+        + &quot;, methodCall=&quot; + methodCall + &quot;]&quot;;
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

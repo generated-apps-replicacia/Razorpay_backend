@@ -1,0 +1,604 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>FromImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">FromImpl.java</span></div><h1>FromImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.InheritanceType;
+import javax.persistence.criteria.CollectionJoin;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Fetch;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.ListJoin;
+import javax.persistence.criteria.MapJoin;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.SetJoin;
+import javax.persistence.metamodel.CollectionAttribute;
+import javax.persistence.metamodel.ListAttribute;
+import javax.persistence.metamodel.MapAttribute;
+import javax.persistence.metamodel.PluralAttribute;
+import javax.persistence.metamodel.SetAttribute;
+import javax.persistence.metamodel.SingularAttribute;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPADescriptionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+import com.sap.olingo.jpa.processor.cb.joiner.StringBuilderCollector;
+
+/**
+ * Represents a bound type, usually an entity that appears in
+ * the from clause, but may also be an embeddable belonging to
+ * an entity in the from clause.
+ * &lt;p&gt; Serves as a factory for Joins of associations, embeddables, and
+ * collections belonging to the type, and for Paths of attributes
+ * belonging to the type.
+ *
+ * @param &lt;Z&gt; the source type
+ * @param &lt;X&gt; the target type
+ *
+ * @since Java Persistence 2.0
+ */
+@SuppressWarnings(&quot;hiding&quot;)
+class FromImpl&lt;Z, X&gt; extends PathImpl&lt;X&gt; implements From&lt;Z, X&gt; {
+<span class="nc" id="L60">  private static final Log LOGGER = LogFactory.getLog(FromImpl.class);</span>
+  private final Set&lt;Join&lt;X, ?&gt;&gt; joins;
+  private final Set&lt;Fetch&lt;X, ?&gt;&gt; fetches;
+  private final AliasBuilder aliasBuilder;
+  private InheritanceInfo inInfo;
+  private final CriteriaBuilder cb;
+
+  FromImpl(final JPAEntityType type, final AliasBuilder ab, final CriteriaBuilder cb) {
+<span class="nc" id="L68">    this(type, null, ab, cb);</span>
+<span class="nc" id="L69">  }</span>
+
+  FromImpl(final JPAEntityType type, final JPAPath path, final AliasBuilder ab, final CriteriaBuilder cb) {
+<span class="nc" id="L72">    super(Optional.ofNullable(path), Optional.empty(), type, Optional.of(ab.getNext()));</span>
+<span class="nc" id="L73">    this.joins = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L74">    this.fetches = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L75">    this.aliasBuilder = ab;</span>
+<span class="nc" id="L76">    this.cb = cb;</span>
+<span class="nc" id="L77">    this.inInfo = new InheritanceInfo(type);</span>
+<span class="nc" id="L78">  }</span>
+
+  /**
+   * Perform a type cast upon the expression, returning a new expression object.
+   * This method does not cause type conversion:&lt;br&gt;
+   * the runtime type is not changed.
+   * Warning: may result in a runtime failure.
+   * @param type intended type of the expression
+   * @return new expression of the given type
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;X&gt; Expression&lt;X&gt; as(final Class&lt;X&gt; type) {
+    try {
+<span class="nc" id="L92">      final JPAEntityType target = ((CriteriaBuilderImpl) cb).getServiceDocument().getEntity(type);</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">      if (target == null)</span>
+<span class="nc" id="L94">        throw new IllegalArgumentException(type.getName() + &quot; is unknown&quot;);</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">      if (isSubtype(type)) {</span>
+<span class="nc" id="L96">        st = target;</span>
+<span class="nc" id="L97">        inInfo = new InheritanceInfo(target);</span>
+      }
+<span class="nc" id="L99">      return (Expression&lt;X&gt;) this;</span>
+<span class="nc" id="L100">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L101">      throw new IllegalArgumentException(e);</span>
+    }
+  }
+
+  @Override
+  public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L107">    statement.append(st.getTableName());</span>
+<span class="nc" id="L108">    tableAlias.ifPresent(p -&gt; statement.append(&quot; &quot;).append(p));</span>
+<span class="nc" id="L109">    statement.append(joins.stream().collect(new StringBuilderCollector.ExpressionCollector(statement, &quot; &quot;)));</span>
+<span class="nc" id="L110">    return statement;</span>
+  }
+
+  /**
+   * Create a fetch join to the specified collection-valued
+   * attribute using an inner join.
+   * @param attribute target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; Fetch&lt;X, Y&gt; fetch(@Nonnull final PluralAttribute&lt;? super X, ?, Y&gt; attribute) {
+<span class="nc" id="L121">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a fetch join to the specified collection-valued
+   * attribute using the given join type.
+   * @param attribute target of the join
+   * @param jt join type
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; Fetch&lt;X, Y&gt; fetch(@Nonnull final PluralAttribute&lt;? super X, ?, Y&gt; attribute, @Nonnull final JoinType jt) {
+<span class="nc" id="L133">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a fetch join to the specified single-valued attribute
+   * using an inner join.
+   * @param attribute target of the join
+   * @return the resulting fetch join
+   */
+  @Override
+  public &lt;Y&gt; Fetch&lt;X, Y&gt; fetch(@Nonnull final SingularAttribute&lt;? super X, Y&gt; attribute) {
+<span class="nc" id="L144">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a fetch join to the specified single-valued attribute
+   * using the given join type.
+   * @param attribute target of the join
+   * @param jt join type
+   * @return the resulting fetch join
+   */
+  @Override
+  public &lt;Y&gt; Fetch&lt;X, Y&gt; fetch(@Nonnull final SingularAttribute&lt;? super X, Y&gt; attribute, @Nonnull final JoinType jt) {
+<span class="nc" id="L156">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a fetch join to the specified attribute using an
+   * inner join.
+   * @param attributeName name of the attribute for the
+   * target of the join
+   * @return the resulting fetch join
+   * @throws IllegalArgumentException if attribute of the given
+   * name does not exist
+   */
+
+  @Override
+  public &lt;X, Y&gt; Fetch&lt;X, Y&gt; fetch(@Nonnull final String attributeName) {
+<span class="nc" id="L171">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a fetch join to the specified attribute using
+   * the given join type.
+   * @param attributeName name of the attribute for the
+   * target of the join
+   * @param jt join type
+   * @return the resulting fetch join
+   * @throws IllegalArgumentException if attribute of the given
+   * name does not exist
+   */
+  @Override
+  public &lt;X, Y&gt; Fetch&lt;X, Y&gt; fetch(@Nonnull final String attributeName, @Nonnull final JoinType jt) {
+<span class="nc" id="L186">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Returns the parent &lt;code&gt;From&lt;/code&gt; object from which the correlated
+   * &lt;code&gt;From&lt;/code&gt; object has been obtained through correlation (use
+   * of a &lt;code&gt;Subquery&lt;/code&gt; &lt;code&gt;correlate&lt;/code&gt; method).
+   * @return the parent of the correlated From object
+   * @throws IllegalStateException if the From object has
+   * not been obtained through correlation
+   */
+  @Override
+  public From&lt;Z, X&gt; getCorrelationParent() {
+<span class="nc" id="L199">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Return the fetch joins that have been made from this type.
+   * Returns empty set if no fetch joins have been made from
+   * this type.
+   * Modifications to the set do not affect the query.
+   * @return fetch joins made from this type
+   */
+  @Override
+  public Set&lt;Fetch&lt;X, ?&gt;&gt; getFetches() {
+<span class="nc" id="L211">    return fetches;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public Class&lt;? extends X&gt; getJavaType() {
+<span class="nc" id="L217">    return (Class&lt;? extends X&gt;) st.getTypeClass();</span>
+  }
+
+  /**
+   * Return the joins that have been made from this bound type.
+   * Returns empty set if no joins have been made from this
+   * bound type.
+   * Modifications to the set do not affect the query.
+   * @return joins made from this type
+   */
+  @Override
+  public Set&lt;Join&lt;X, ?&gt;&gt; getJoins() {
+<span class="nc" id="L229">    return joins;</span>
+  }
+
+  /**
+   * Whether the &lt;code&gt;From&lt;/code&gt; object has been obtained as a result of
+   * correlation (use of a &lt;code&gt;Subquery&lt;/code&gt; &lt;code&gt;correlate&lt;/code&gt;
+   * method).
+   * @return boolean indicating whether the object has been
+   * obtained through correlation
+   */
+  @Override
+  public boolean isCorrelated() {
+<span class="nc" id="L241">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified Collection-valued
+   * attribute.
+   * @param collection target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; CollectionJoin&lt;X, Y&gt; join(@Nonnull final CollectionAttribute&lt;? super X, Y&gt; collection) {
+<span class="nc" id="L252">    return join(collection, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create an inner join to the specified Collection-valued
+   * attribute.
+   * @param collection target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; CollectionJoin&lt;X, Y&gt; join(@Nonnull final CollectionAttribute&lt;? super X, Y&gt; collection,
+      @Nonnull final JoinType jt) {
+<span class="nc" id="L264">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified List-valued attribute.
+   * @param list target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; ListJoin&lt;X, Y&gt; join(@Nonnull final ListAttribute&lt;? super X, Y&gt; list) {
+<span class="nc" id="L274">    return join(list, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create an inner join to the specified List-valued attribute.
+   * @param list target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; ListJoin&lt;X, Y&gt; join(@Nonnull final ListAttribute&lt;? super X, Y&gt; list, @Nonnull final JoinType jt) {
+<span class="nc" id="L284">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified Map-valued attribute.
+   * @param map target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;K, V&gt; MapJoin&lt;X, K, V&gt; join(@Nonnull final MapAttribute&lt;? super X, K, V&gt; map) {
+<span class="nc" id="L294">    return join(map, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create an inner join to the specified Map-valued attribute.
+   * @param map target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;K, V&gt; MapJoin&lt;X, K, V&gt; join(@Nonnull final MapAttribute&lt;? super X, K, V&gt; map, @Nonnull final JoinType jt) {
+<span class="nc" id="L304">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified Set-valued attribute.
+   * @param set target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; SetJoin&lt;X, Y&gt; join(@Nonnull final SetAttribute&lt;? super X, Y&gt; set) {
+<span class="nc" id="L314">    return join(set, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create an inner join to the specified Set-valued attribute.
+   * @param set target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; SetJoin&lt;X, Y&gt; join(@Nonnull final SetAttribute&lt;? super X, Y&gt; set, @Nonnull final JoinType jt) {
+<span class="nc" id="L324">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified single-valued attribute.
+   * @param attribute target of the join
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; Join&lt;X, Y&gt; join(@Nonnull final SingularAttribute&lt;? super X, Y&gt; attribute) {
+<span class="nc" id="L334">    return join(attribute, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create a join to the specified single-valued attribute
+   * using the given join type.
+   * @param attribute target of the join
+   * @param jt join type
+   * @return the resulting join
+   */
+  @Override
+  public &lt;Y&gt; Join&lt;X, Y&gt; join(@Nonnull final SingularAttribute&lt;? super X, Y&gt; attribute, final JoinType jt) {
+<span class="nc" id="L346">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified attribute.
+   * @param attributeName name of the attribute for the
+   * target of the join
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given
+   * name does not exist
+   */
+  @Override
+  public &lt;X, Y&gt; Join&lt;X, Y&gt; join(@Nonnull final String attributeName) {
+<span class="nc" id="L359">    return join(attributeName, null);</span>
+  }
+
+  /**
+   * Create a join to the specified attribute using the given join type.
+   * @param attributeName name of the attribute for the target of the join
+   * @param jt join type
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given name does not exist
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;X, Y&gt; Join&lt;X, Y&gt; join(@Nonnull final String attributeName, final JoinType jt) {
+
+    try {
+<span class="nc" id="L374">      final JPAStructuredType source = determineSource();</span>
+<span class="nc" id="L375">      final JPAAttribute joinAttribute = source</span>
+<span class="nc" id="L376">          .getAttribute(Objects.requireNonNull(attributeName))</span>
+<span class="nc" id="L377">          .orElse(getAssociation(source, attributeName));</span>
+
+<span class="nc bnc" id="L379" title="All 2 branches missed.">      if (joinAttribute == null)</span>
+<span class="nc" id="L380">        throw new IllegalArgumentException(buildExceptionText(attributeName));</span>
+<span class="nc" id="L381">      final JPAPath joinPath = determinePath(joinAttribute);</span>
+      @SuppressWarnings(&quot;rawtypes&quot;)
+      Join join;
+<span class="nc bnc" id="L384" title="All 2 branches missed.">      if (joinAttribute instanceof JPADescriptionAttribute) {</span>
+<span class="nc bnc" id="L385" title="All 2 branches missed.">        final JoinType joinType = jt == null ? JoinType.LEFT : jt;</span>
+<span class="nc" id="L386">        final Optional&lt;JPAAssociationPath&gt; path = Optional.ofNullable(((JPADescriptionAttribute) joinAttribute)</span>
+<span class="nc" id="L387">            .asAssociationAttribute().getPath());</span>
+<span class="nc" id="L388">        join = new SimpleJoin&lt;&gt;(path.orElseThrow(() -&gt; new IllegalArgumentException(buildExceptionText(attributeName))),</span>
+<span class="nc" id="L389">            joinType, determineParent(), aliasBuilder, cb);</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">      } else if (joinAttribute instanceof JPACollectionAttribute) {</span>
+<span class="nc" id="L391">        join = new CollectionJoinImpl&lt;&gt;(joinPath, determineParent(), aliasBuilder, cb);</span>
+<span class="nc bnc" id="L392" title="All 2 branches missed.">      } else if (joinAttribute.isComplex()) {</span>
+<span class="nc" id="L393">        join = new PathJoin&lt;&gt;((FromImpl&lt;X, Y&gt;) determineParent(), joinPath, aliasBuilder, cb);</span>
+      } else {
+<span class="nc bnc" id="L395" title="All 2 branches missed.">        final JoinType joinType = jt == null ? JoinType.INNER : jt;</span>
+        Optional&lt;JPAAssociationPath&gt; associationPath;
+<span class="nc bnc" id="L397" title="All 2 branches missed.">        if (path.isPresent())</span>
+<span class="nc" id="L398">          associationPath = Optional.ofNullable(st.getAssociationPath(path.get().getAlias() + JPAPath.PATH_SEPARATOR</span>
+<span class="nc" id="L399">              + joinAttribute.getExternalName()));</span>
+        else
+<span class="nc" id="L401">          associationPath = Optional.ofNullable(source.getAssociationPath(joinAttribute</span>
+<span class="nc" id="L402">              .getExternalName()));</span>
+<span class="nc" id="L403">        if (associationPath.orElseThrow(() -&gt; new IllegalArgumentException(buildExceptionText(attributeName)))</span>
+<span class="nc bnc" id="L404" title="All 2 branches missed.">            .hasJoinTable())</span>
+<span class="nc" id="L405">          join = new JoinTableJoin&lt;&gt;(associationPath.orElseThrow(() -&gt; new IllegalArgumentException(buildExceptionText(</span>
+<span class="nc" id="L406">              attributeName))), joinType, determineParent(), aliasBuilder, cb);</span>
+        else
+<span class="nc" id="L408">          join = new SimpleJoin&lt;&gt;(associationPath.orElseThrow(() -&gt; new IllegalArgumentException(buildExceptionText(</span>
+<span class="nc" id="L409">              attributeName))), joinType, determineParent(), aliasBuilder, cb);</span>
+      }
+<span class="nc" id="L411">      joins.add(join);</span>
+<span class="nc" id="L412">      return join;</span>
+<span class="nc" id="L413">    } catch (ODataJPAModelException | IllegalArgumentException e) {</span>
+<span class="nc" id="L414">      throw new IllegalArgumentException(e);</span>
+    }
+  }
+
+  /**
+   * Create an inner join to the specified Collection-valued attribute.
+   * @param attributeName name of the attribute for the target of the join
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given name does not exist
+   */
+  @Override
+  public &lt;X, Y&gt; CollectionJoin&lt;X, Y&gt; joinCollection(@Nonnull final String attributeName) {
+<span class="nc" id="L426">    return joinCollection(attributeName, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create a join to the specified Collection-valued attribute using the given join type.
+   * @param attributeName name of the attribute for the target of the join
+   * @param jt join type
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given name does not exist
+   */
+  @Override
+  public &lt;X, Y&gt; CollectionJoin&lt;X, Y&gt; joinCollection(@Nonnull final String attributeName, @Nonnull final JoinType jt) {
+<span class="nc" id="L438">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified List-valued attribute.
+   * @param attributeName name of the attribute for the
+   * target of the join
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given
+   * name does not exist
+   */
+  @Override
+  public &lt;X, Y&gt; ListJoin&lt;X, Y&gt; joinList(@Nonnull final String attributeName) {
+<span class="nc" id="L451">    return joinList(attributeName, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create a join to the specified List-valued attribute using the given join type.
+   * @param attributeName name of the attribute for the target of the join
+   * @param jt join type
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given name does not exist
+   */
+  @Override
+  public &lt;X, Y&gt; ListJoin&lt;X, Y&gt; joinList(@Nonnull final String attributeName, @Nonnull final JoinType jt) {
+<span class="nc" id="L463">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified Map-valued attribute.
+   * @param attributeName name of the attribute for the
+   * target of the join
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given
+   * name does not exist
+   */
+  @Override
+  public &lt;X, K, V&gt; MapJoin&lt;X, K, V&gt; joinMap(@Nonnull final String attributeName) {
+<span class="nc" id="L476">    return joinMap(attributeName, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create a join to the specified Map-valued attribute using the given join type.
+   * @param attributeName name of the attribute for the target of the join
+   * @param jt join type
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given name does not exist
+   */
+  @Override
+  public &lt;X, K, V&gt; MapJoin&lt;X, K, V&gt; joinMap(@Nonnull final String attributeName, @Nonnull final JoinType jt) {
+<span class="nc" id="L488">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an inner join to the specified Set-valued attribute.
+   * @param attributeName name of the attribute for the
+   * target of the join
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given
+   * name does not exist
+   */
+  @Override
+  public &lt;X, Y&gt; SetJoin&lt;X, Y&gt; joinSet(@Nonnull final String attributeName) {
+<span class="nc" id="L501">    return joinSet(attributeName, JoinType.INNER);</span>
+  }
+
+  /**
+   * Create a join to the specified Set-valued attribute using the given join type.
+   * @param attributeName name of the attribute for the target of the join
+   * @param jt join type
+   * @return the resulting join
+   * @throws IllegalArgumentException if attribute of the given name does not exist
+   */
+  @Override
+  public &lt;X, Y&gt; SetJoin&lt;X, Y&gt; joinSet(@Nonnull final String attributeName, @Nonnull final JoinType jt) {
+<span class="nc" id="L513">    throw new NotImplementedException();</span>
+  }
+
+  String buildExceptionText(final String attributeName) {
+<span class="nc" id="L517">    return &quot;'&amp;a' is unknown at '&amp;e'&quot;.replace(&quot;&amp;a&quot;,</span>
+<span class="nc" id="L518">        attributeName).replace(&quot;&amp;e&quot;, st.getInternalName());</span>
+  }
+
+  Expression&lt;Boolean&gt; createInheritanceWhere() {
+<span class="nc bnc" id="L522" title="All 4 branches missed.">    if (inInfo.getInheritanceType().filter(t -&gt; t == InheritanceType.SINGLE_TABLE).isPresent()) {</span>
+<span class="nc" id="L523">      final Optional&lt;String&gt; columnName = inInfo.getDiscriminatorColumn();</span>
+<span class="nc bnc" id="L524" title="All 2 branches missed.">      if (!columnName.isPresent())</span>
+<span class="nc" id="L525">        throw new IllegalStateException(&quot;DiscriminatorColumn annotation missing at &quot; + st.getTypeClass().getSuperclass()</span>
+<span class="nc" id="L526">            .getCanonicalName());</span>
+<span class="nc" id="L527">      Path&lt;?&gt; columnPath = null;</span>
+      try {
+<span class="nc bnc" id="L529" title="All 2 branches missed.">        for (final JPAPath a : st.getPathList()) {</span>
+<span class="nc bnc" id="L530" title="All 2 branches missed.">          if (a.getDBFieldName().equals(columnName.get()))</span>
+<span class="nc" id="L531">            columnPath = new PathImpl&lt;&gt;(a, parent, st, tableAlias);</span>
+<span class="nc" id="L532">        }</span>
+<span class="nc" id="L533">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L534">        throw new IllegalStateException(&quot;Internal server error&quot;, e);</span>
+<span class="nc" id="L535">      }</span>
+
+<span class="nc" id="L537">      final DiscriminatorValue value = st.getTypeClass().getDeclaredAnnotation(DiscriminatorValue.class);</span>
+<span class="nc bnc" id="L538" title="All 2 branches missed.">      if (value == null)</span>
+<span class="nc" id="L539">        throw new IllegalStateException(&quot;DiscriminatorValue annotation missing at &quot; + st.getTypeClass()</span>
+<span class="nc" id="L540">            .getCanonicalName());</span>
+<span class="nc" id="L541">      return cb.equal(columnPath, value.value());</span>
+<span class="nc bnc" id="L542" title="All 4 branches missed.">    } else if (inInfo.getInheritanceType().filter(t -&gt; t == InheritanceType.JOINED).isPresent()) {</span>
+<span class="nc" id="L543">      LOGGER.warn(&quot;Unsupported inheritance type &quot; + inInfo.getInheritanceType() + &quot; not supported&quot;);</span>
+    }
+<span class="nc" id="L545">    return null;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  &lt;U, V&gt; FromImpl&lt;U, V&gt; determineParent() {
+<span class="nc" id="L550">    return (FromImpl&lt;U, V&gt;) this;</span>
+  }
+
+  JPAStructuredType determineSource() throws ODataJPAModelException {
+    final JPAStructuredType source;
+<span class="nc bnc" id="L555" title="All 4 branches missed.">    if (path.isPresent() &amp;&amp; path.get().getLeaf().isComplex()) {</span>
+<span class="nc" id="L556">      source = path.get().getLeaf().getStructuredType();</span>
+    } else {
+<span class="nc" id="L558">      source = st;</span>
+    }
+<span class="nc" id="L560">    return source;</span>
+  }
+
+  @Override
+  List&lt;JPAPath&gt; getPathList() {
+    try {
+<span class="nc" id="L566">      return st.getPathList();</span>
+<span class="nc" id="L567">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L568">      throw new IllegalStateException(e);</span>
+    }
+  }
+
+  Optional&lt;InheritanceType&gt; getInheritanceType() {
+<span class="nc" id="L573">    return inInfo.getInheritanceType();</span>
+  }
+
+  private JPAPath determinePath(final JPAAttribute joinAttribute) throws ODataJPAModelException {
+<span class="nc bnc" id="L577" title="All 2 branches missed.">    if (path.isPresent())</span>
+<span class="nc" id="L578">      return st.getPath(path.get().getAlias() + JPAPath.PATH_SEPARATOR + joinAttribute.getExternalName());</span>
+<span class="nc" id="L579">    return st.getPath(joinAttribute.getExternalName());</span>
+  }
+
+  private JPAAssociationAttribute getAssociation(final JPAStructuredType source, final String attributeName) {
+    try {
+<span class="nc" id="L584">      return source.getAssociation(attributeName);</span>
+<span class="nc" id="L585">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L586">      throw new IllegalArgumentException(buildExceptionText(attributeName), e);</span>
+    }
+  }
+
+  private boolean isSubtype(final Class&lt;?&gt; type) {
+<span class="nc" id="L591">    return st.getTypeClass().isAssignableFrom(type);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L596">    return super.hashCode();</span>
+  }
+
+  @Override
+  public boolean equals(final Object obj) {
+<span class="nc" id="L601">    return super.equals(obj);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

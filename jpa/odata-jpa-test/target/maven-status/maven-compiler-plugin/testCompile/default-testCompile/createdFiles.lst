@@ -1,0 +1,8 @@
+com\sap\olingo\jpa\processor\test\TestFunctionsHSQLDB.class
+com\sap\olingo\jpa\processor\test\TestAssociations.class
+com\sap\olingo\jpa\processor\test\TestStandardMethodsOfTestModel.class
+com\sap\olingo\jpa\processor\test\TestFunctions.class
+com\sap\olingo\jpa\processor\test\TestEqualHashCodeMethodsErrorModel.class
+com\sap\olingo\jpa\processor\test\TestCriteriaBuilder.class
+com\sap\olingo\jpa\processor\test\TestEqualHashCodeMethodsTestModel.class
+com\sap\olingo\jpa\processor\test\TestEqualHashCodeMethods.class

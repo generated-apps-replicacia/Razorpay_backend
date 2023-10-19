@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>StringBuilderJoiner.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.joiner</a> &gt; <span class="el_source">StringBuilderJoiner.java</span></div><h1>StringBuilderJoiner.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.joiner;
+
+import java.util.Objects;
+
+import javax.annotation.Nonnull;
+
+final class StringBuilderJoiner&lt;T&gt; {
+  private static final String EMPTY_RESULT = &quot;&quot;;
+  private final StringBuilder statement;
+  private final String delimiter;
+  private final int initLength;
+
+<span class="nc" id="L13">  StringBuilderJoiner(@Nonnull final StringBuilder statement, @Nonnull final String delimiter) {</span>
+<span class="nc" id="L14">    this.statement = Objects.requireNonNull(statement);</span>
+<span class="nc" id="L15">    this.delimiter = Objects.requireNonNull(delimiter);</span>
+<span class="nc" id="L16">    this.initLength = statement.length();</span>
+<span class="nc" id="L17">  }</span>
+
+  public StringBuilderJoiner&lt;T&gt; add(final T newElement) {
+<span class="nc" id="L20">    ((SqlConvertible) newElement).asSQL(prepareStatement());</span>
+<span class="nc" id="L21">    return this;</span>
+  }
+
+  public StringBuilderJoiner&lt;T&gt; merge() {
+<span class="nc" id="L25">    return this;</span>
+  }
+
+  public String finish() {
+<span class="nc" id="L29">    return EMPTY_RESULT;</span>
+  }
+
+  private StringBuilder prepareStatement() {
+<span class="nc bnc" id="L33" title="All 2 branches missed.">    if (statement.length() != initLength) {</span>
+<span class="nc" id="L34">      statement.append(delimiter);</span>
+    }
+<span class="nc" id="L36">    return statement;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

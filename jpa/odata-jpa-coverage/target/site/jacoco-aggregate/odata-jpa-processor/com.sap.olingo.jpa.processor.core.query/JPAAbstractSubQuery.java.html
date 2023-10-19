@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAAbstractSubQuery.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPAAbstractSubQuery.java</span></div><h1>JPAAbstractSubQuery.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+import javax.persistence.EntityManager;
+import javax.persistence.criteria.AbstractQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Subquery;
+
+import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.Binary;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+import org.apache.olingo.server.api.uri.queryoption.expression.VisitableExpression;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAOnConditionItem;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAODataClaimProvider;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+import com.sap.olingo.jpa.processor.core.filter.JPAFilterElementComplier;
+import com.sap.olingo.jpa.processor.core.filter.JPAFilterExpression;
+import com.sap.olingo.jpa.processor.core.filter.JPAMemberOperator;
+
+public abstract class JPAAbstractSubQuery extends JPAAbstractQuery {
+
+<span class="nc" id="L43">  protected From&lt;?, ?&gt; queryJoinTable = null;</span>
+  protected Subquery&lt;?&gt; subQuery;
+  protected final JPAAbstractQuery parentQuery;
+  protected UriResourceKind aggregationType;
+<span class="nc" id="L47">  protected From&lt;?, ?&gt; queryRoot = null;</span>
+  protected final From&lt;?, ?&gt; from;
+  protected final JPAAssociationPath association;
+  protected JPAFilterElementComplier filterComplier;
+
+  JPAAbstractSubQuery(final OData odata, final JPAServiceDocument sd, final EdmEntityType edmEntityType,
+      final EntityManager em, final JPAAbstractQuery parent, final From&lt;?, ?&gt; from,
+      final JPAAssociationPath association, final Optional&lt;JPAODataClaimProvider&gt; claimsProvider)
+      throws ODataApplicationException {
+
+<span class="nc" id="L57">    super(odata, sd, edmEntityType, em, claimsProvider);</span>
+<span class="nc" id="L58">    this.parentQuery = parent;</span>
+<span class="nc" id="L59">    this.from = from;</span>
+<span class="nc" id="L60">    this.association = association;</span>
+<span class="nc" id="L61">  }</span>
+
+  JPAAbstractSubQuery(final OData odata, final JPAServiceDocument sd, final JPAEntityType jpaEntity,
+      final EntityManager em, final JPAAbstractQuery parent, final From&lt;?, ?&gt; from,
+      final JPAAssociationPath association) {
+
+<span class="nc" id="L67">    super(odata, sd, jpaEntity, em, Optional.empty());</span>
+<span class="nc" id="L68">    this.parentQuery = parent;</span>
+<span class="nc" id="L69">    this.from = from;</span>
+<span class="nc" id="L70">    this.association = association;</span>
+<span class="nc" id="L71">  }</span>
+
+  public abstract &lt;T extends Object&gt; Subquery&lt;T&gt; getSubQuery(final Subquery&lt;?&gt; childQuery)
+      throws ODataApplicationException;
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;T&gt; AbstractQuery&lt;T&gt; getQuery() {
+<span class="nc" id="L79">    return (AbstractQuery&lt;T&gt;) subQuery;</span>
+  }
+
+  @Override
+  protected Locale getLocale() {
+<span class="nc" id="L84">    return locale;</span>
+  }
+
+  @Override
+  JPAODataRequestContextAccess getContext() {
+<span class="nc" id="L89">    return parentQuery.getContext();</span>
+  }
+
+  protected void createRoots(final JPAAssociationPath association) throws ODataJPAQueryException {
+
+<span class="nc bnc" id="L94" title="All 4 branches missed.">    if (association != null &amp;&amp; association.hasJoinTable()) {</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">      if (association.getJoinTable().getEntityType() != null) {</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (aggregationType != null) {</span>
+<span class="nc" id="L97">          this.queryJoinTable = subQuery.from(from.getJavaType());</span>
+<span class="nc" id="L98">          From&lt;?, ?&gt; p = queryJoinTable;</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">          for (int i = 0; i &lt; association.getPath().size() - 1; i++)</span>
+<span class="nc" id="L100">            p = p.join(association.getPath().get(i).getInternalName());</span>
+<span class="nc" id="L101">          this.queryRoot = p.join(association.getLeaf().getInternalName(), JoinType.LEFT);</span>
+<span class="nc" id="L102">        } else {</span>
+<span class="nc" id="L103">          this.queryRoot = subQuery.from(this.jpaEntity.getTypeClass());</span>
+<span class="nc" id="L104">          this.queryJoinTable = subQuery.from(association.getJoinTable()</span>
+<span class="nc" id="L105">              .getEntityType()</span>
+<span class="nc" id="L106">              .getTypeClass());</span>
+        }
+      } else {
+<span class="nc" id="L109">        throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_NOT_IMPLEMENTED,</span>
+<span class="nc" id="L110">            HttpStatusCode.NOT_IMPLEMENTED, association.getAlias());</span>
+      }
+    } else {
+<span class="nc" id="L113">      this.queryRoot = subQuery.from(this.jpaEntity.getTypeClass());</span>
+    }
+<span class="nc" id="L115">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  protected &lt;T&gt; void createSelectClauseJoin(final Subquery&lt;T&gt; subQuery, final From&lt;?, ?&gt; from,
+      final List&lt;JPAOnConditionItem&gt; conditionItems) {
+
+<span class="nc" id="L121">    Path&lt;?&gt; p = from;</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">    for (final JPAElement jpaPathElement : conditionItems.get(0).getRightPath().getPath())</span>
+<span class="nc" id="L123">      p = p.get(jpaPathElement.getInternalName());</span>
+<span class="nc" id="L124">    subQuery.select((Expression&lt;T&gt;) p);</span>
+<span class="nc" id="L125">  }</span>
+
+  protected Expression&lt;Boolean&gt; createWhereByAssociation(final From&lt;?, ?&gt; subRoot, final From&lt;?, ?&gt; parentFrom,
+      final List&lt;JPAOnConditionItem&gt; conditionItems) {
+
+<span class="nc" id="L130">    Expression&lt;Boolean&gt; whereCondition = null;</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">    for (final JPAOnConditionItem onItem : conditionItems) {</span>
+<span class="nc" id="L132">      Path&lt;?&gt; parentPath = parentFrom;</span>
+<span class="nc" id="L133">      Path&lt;?&gt; subPath = subRoot;</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">      for (final JPAElement jpaPathElement : onItem.getRightPath().getPath())</span>
+<span class="nc" id="L135">        parentPath = parentPath.get(jpaPathElement.getInternalName());</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">      for (final JPAElement jpaPathElement : onItem.getLeftPath().getPath())</span>
+<span class="nc" id="L137">        subPath = subPath.get(jpaPathElement.getInternalName());</span>
+<span class="nc" id="L138">      final Expression&lt;Boolean&gt; equalCondition = cb.equal(parentPath, subPath);</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">      if (whereCondition == null)</span>
+<span class="nc" id="L140">        whereCondition = equalCondition;</span>
+      else
+<span class="nc" id="L142">        whereCondition = cb.and(whereCondition, equalCondition);</span>
+<span class="nc" id="L143">    }</span>
+<span class="nc" id="L144">    return whereCondition;</span>
+
+  }
+
+  protected Expression&lt;Boolean&gt; applyAdditionalFilter(final Expression&lt;Boolean&gt; where)
+      throws ODataApplicationException {
+
+<span class="nc" id="L151">    Expression&lt;Boolean&gt; whereCondition = where;</span>
+<span class="nc bnc" id="L152" title="All 4 branches missed.">    if (filterComplier != null &amp;&amp; aggregationType == null)</span>
+      try {
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        if (filterComplier.getExpressionMember() != null)</span>
+<span class="nc" id="L155">          whereCondition = addWhereClause(whereCondition, filterComplier.compile());</span>
+<span class="nc" id="L156">      } catch (final ExpressionVisitException e) {</span>
+<span class="nc" id="L157">        throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L158">      }</span>
+<span class="nc" id="L159">    return whereCondition;</span>
+  }
+
+  protected void createSubQueryJoinTable() throws ODataApplicationException {
+    /*
+     * SELECT t0.&quot;TeamKey&quot;
+     * FROM &quot;OLINGO&quot;.&quot;Team&quot; t0
+     * WHERE (EXISTS (SELECT t2.&quot;TeamID&quot;
+     * FROM &quot;OLINGO&quot;.&quot;BusinessPartner&quot; t1, &quot;OLINGO&quot;.&quot;Membership&quot; t2
+     * WHERE t2.&quot;TeamID&quot; = t0.&quot;TeamKey&quot;
+     * AND t1.&quot;ID&quot; = t2.&quot;PersonID&quot;
+     * AND t1.&quot;Type&quot; = '1'
+     * AND t1.&quot;NameLine2&quot; = 'Mustermann'))
+     */
+    try {
+<span class="nc" id="L174">      final List&lt;JPAOnConditionItem&gt; left = association</span>
+<span class="nc" id="L175">          .getJoinTable()</span>
+<span class="nc" id="L176">          .getJoinColumns(); // Team --&gt;</span>
+<span class="nc" id="L177">      final List&lt;JPAOnConditionItem&gt; right = association</span>
+<span class="nc" id="L178">          .getJoinTable()</span>
+<span class="nc" id="L179">          .getInverseJoinColumns(); // Person --&gt;</span>
+<span class="nc" id="L180">      createSelectClauseJoin(subQuery, queryRoot, right);</span>
+<span class="nc" id="L181">      Expression&lt;Boolean&gt; whereCondition = createWhereByAssociation(from, queryJoinTable, left);</span>
+<span class="nc" id="L182">      whereCondition = cb.and(whereCondition, createWhereByAssociation(queryJoinTable, queryRoot, right));</span>
+<span class="nc" id="L183">      subQuery.where(applyAdditionalFilter(whereCondition));</span>
+<span class="nc" id="L184">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L185">      throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L186">    }</span>
+
+<span class="nc" id="L188">  }</span>
+
+  /**
+   * Self Join
+   * @param subRoot
+   * @param parentFrom
+   * @param jpaEntity
+   * @return
+   * @throws ODataJPAModelException
+   */
+  protected Expression&lt;Boolean&gt; createWhereByAssociation(final From&lt;?, ?&gt; subRoot, final From&lt;?, ?&gt; parentFrom,
+      final JPAEntityType jpaEntity) throws ODataJPAModelException {
+<span class="nc" id="L200">    Expression&lt;Boolean&gt; whereCondition = null;</span>
+
+<span class="nc bnc" id="L202" title="All 2 branches missed.">    for (final JPAPath onItem : jpaEntity.getKeyPath()) {</span>
+<span class="nc" id="L203">      Path&lt;?&gt; parentPath = parentFrom;</span>
+<span class="nc" id="L204">      Path&lt;?&gt; subPath = subRoot;</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">      for (final JPAElement jpaPathElement : onItem.getPath()) {</span>
+<span class="nc" id="L206">        parentPath = parentPath.get(jpaPathElement.getInternalName());</span>
+<span class="nc" id="L207">        subPath = subPath.get(jpaPathElement.getInternalName());</span>
+<span class="nc" id="L208">      }</span>
+<span class="nc" id="L209">      final Expression&lt;Boolean&gt; equalCondition = cb.equal(parentPath, subPath);</span>
+<span class="nc" id="L210">      whereCondition = addWhereClause(whereCondition, equalCondition);</span>
+<span class="nc" id="L211">    }</span>
+<span class="nc" id="L212">    return whereCondition;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  protected &lt;T&gt; void createSelectClauseAggregation(final Subquery&lt;T&gt; subQuery, final From&lt;?, ?&gt; from,
+      final List&lt;JPAOnConditionItem&gt; conditionItems) {
+<span class="nc" id="L218">    Path&lt;?&gt; p = from;</span>
+
+<span class="nc bnc" id="L220" title="All 2 branches missed.">    for (final JPAElement jpaPathElement : conditionItems.get(0).getLeftPath().getPath())</span>
+<span class="nc" id="L221">      p = p.get(jpaPathElement.getInternalName());</span>
+<span class="nc" id="L222">    subQuery.select((Expression&lt;T&gt;) p);</span>
+<span class="nc" id="L223">  }</span>
+
+  protected void handleAggregation(final Subquery&lt;?&gt; subQuery, final From&lt;?, ?&gt; subRoot,
+      final List&lt;JPAOnConditionItem&gt; conditionItems) throws ODataApplicationException {
+
+<span class="nc" id="L228">    final List&lt;Expression&lt;?&gt;&gt; groupByLIst = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L229" title="All 4 branches missed.">    if (filterComplier != null &amp;&amp; this.aggregationType != null) {</span>
+<span class="nc bnc" id="L230" title="All 2 branches missed.">      for (final JPAOnConditionItem onItem : conditionItems) {</span>
+<span class="nc" id="L231">        Path&lt;?&gt; subPath = subRoot;</span>
+<span class="nc bnc" id="L232" title="All 2 branches missed.">        for (final JPAElement jpaPathElement : onItem.getRightPath().getPath())</span>
+<span class="nc" id="L233">          subPath = subPath.get(jpaPathElement.getInternalName());</span>
+<span class="nc" id="L234">        groupByLIst.add(subPath);</span>
+<span class="nc" id="L235">      }</span>
+<span class="nc" id="L236">      subQuery.groupBy(groupByLIst);</span>
+
+      try {
+<span class="nc" id="L239">        subQuery.having(this.filterComplier.compile());</span>
+<span class="nc" id="L240">      } catch (final ExpressionVisitException e) {</span>
+<span class="nc" id="L241">        throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L242">      }</span>
+    }
+<span class="nc" id="L244">  }</span>
+
+  protected void createSubQueryJoinTableAggregation() throws ODataApplicationException {
+    /*
+     * SELECT t0.&quot;ID&quot;
+     * FROM &quot;OLINGO&quot;.&quot;BusinessPartner&quot; t0
+     * WHERE (EXISTS (SELECT t1.&quot;ID&quot;
+     * FROM &quot;OLINGO&quot;.&quot;BusinessPartner&quot; t1
+     * LEFT OUTER JOIN (&quot;OLINGO&quot;.&quot;Membership&quot; t3 JOIN &quot;OLINGO&quot;.&quot;Team&quot; t2
+     * ON (t2.&quot;TeamKey&quot; = t3.&quot;TeamID&quot;))
+     * ON (t3.&quot;PersonID&quot; = t1.&quot;ID&quot;)
+     * WHERE ((t1.&quot;ID&quot; = t0.&quot;ID&quot;)
+     * AND (t1.&quot;Type&quot; = '1'))
+     * GROUP BY t1.&quot;ID&quot;
+     * HAVING (COUNT(t2.&quot;TeamKey&quot;) &gt; 0))
+     * AND (t0.&quot;Type&quot; = '1'))
+     */
+    try {
+<span class="nc" id="L262">      final List&lt;JPAOnConditionItem&gt; left = association</span>
+<span class="nc" id="L263">          .getJoinTable()</span>
+<span class="nc" id="L264">          .getJoinColumns(); // Person --&gt;</span>
+<span class="nc" id="L265">      final List&lt;JPAOnConditionItem&gt; right = association</span>
+<span class="nc" id="L266">          .getJoinTable()</span>
+<span class="nc" id="L267">          .getInverseJoinColumns(); // Team --&gt;</span>
+<span class="nc" id="L268">      createSelectClauseAggregation(subQuery, queryJoinTable, left);</span>
+<span class="nc" id="L269">      final Expression&lt;Boolean&gt; whereCondition = createWhereByAssociation(from, queryJoinTable, parentQuery.jpaEntity);</span>
+<span class="nc" id="L270">      subQuery.where(applyAdditionalFilter(whereCondition));</span>
+<span class="nc" id="L271">      handleAggregation(subQuery, queryJoinTable, right);</span>
+<span class="nc" id="L272">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L273">      throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L274">    }</span>
+<span class="nc" id="L275">  }</span>
+
+  protected UriResourceKind getAggregationType(final VisitableExpression expression) {
+<span class="nc" id="L278">    UriInfoResource member = null;</span>
+<span class="nc bnc" id="L279" title="All 2 branches missed.">    if (expression instanceof Binary) {</span>
+<span class="nc bnc" id="L280" title="All 2 branches missed.">      if (((Binary) expression).getLeftOperand() instanceof JPAMemberOperator)</span>
+<span class="nc" id="L281">        member = ((JPAMemberOperator) ((Binary) expression).getLeftOperand()).getMember().getResourcePath();</span>
+<span class="nc bnc" id="L282" title="All 2 branches missed.">      else if (((Binary) expression).getRightOperand() instanceof JPAMemberOperator)</span>
+<span class="nc" id="L283">        member = ((JPAMemberOperator) ((Binary) expression).getRightOperand()).getMember().getResourcePath();</span>
+<span class="nc bnc" id="L284" title="All 2 branches missed.">    } else if (expression instanceof JPAFilterExpression) {</span>
+<span class="nc" id="L285">      member = ((JPAFilterExpression) expression).getMember();</span>
+    }
+<span class="nc bnc" id="L287" title="All 2 branches missed.">    if (member != null) {</span>
+<span class="nc bnc" id="L288" title="All 2 branches missed.">      for (final UriResource r : member.getUriResourceParts()) {</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">        if (r.getKind() == UriResourceKind.count)</span>
+<span class="nc" id="L290">          return r.getKind();</span>
+<span class="nc" id="L291">      }</span>
+    }
+<span class="nc" id="L293">    return null;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

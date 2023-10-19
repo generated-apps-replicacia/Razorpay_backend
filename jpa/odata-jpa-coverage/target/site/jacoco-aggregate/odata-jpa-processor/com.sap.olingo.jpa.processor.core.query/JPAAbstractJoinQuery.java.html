@@ -1,0 +1,793 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAAbstractJoinQuery.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPAAbstractJoinQuery.java</span></div><h1>JPAAbstractJoinQuery.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.ATTRIBUTE_NOT_FOUND;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_FILTER_ERROR;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_INVALID_SELECTION_PATH;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException.MessageKeys.QUERY_RESULT_ENTITY_TYPE_ERROR;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.BAD_REQUEST;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.INTERNAL_SERVER_ERROR;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.annotation.CheckForNull;
+import javax.persistence.Tuple;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.AbstractQuery;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Root;
+
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+import org.apache.olingo.server.api.uri.queryoption.SelectItem;
+import org.apache.olingo.server.api.uri.queryoption.SelectOption;
+import org.apache.olingo.server.api.uri.queryoption.SkipOption;
+import org.apache.olingo.server.api.uri.queryoption.TopOption;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmQueryExtensionProvider;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAODataClaimProvider;
+import com.sap.olingo.jpa.processor.core.api.JPAODataPage;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+import com.sap.olingo.jpa.processor.core.filter.JPAFilterCrossComplier;
+import com.sap.olingo.jpa.processor.core.filter.JPAOperationConverter;
+import com.sap.olingo.jpa.processor.core.processor.JPAODataInternalRequestContext;
+
+public abstract class JPAAbstractJoinQuery extends JPAAbstractQuery implements JPAQuery {
+  protected static final String ALIAS_SEPARATOR = &quot;.&quot;;
+  protected final UriInfoResource uriResource;
+  protected final CriteriaQuery&lt;Tuple&gt; cq;
+  protected Root&lt;?&gt; root; // Start of an navigation
+  protected From&lt;?, ?&gt; target; // The entity that shall be returned by the query
+  protected final JPAODataPage page;
+  protected final List&lt;JPANavigationPropertyInfo&gt; navigationInfo;
+  protected final JPANavigationPropertyInfo lastInfo;
+  protected final JPAODataRequestContextAccess requestContext;
+
+  JPAAbstractJoinQuery(final OData odata, final JPAEntityType jpaEntityType,
+      final JPAODataRequestContextAccess requestContext, final List&lt;JPANavigationPropertyInfo&gt; navigationInfo)
+      throws ODataException {
+
+<span class="nc" id="L83">    this(odata, jpaEntityType, requestContext.getUriInfo(), requestContext, navigationInfo);</span>
+<span class="nc" id="L84">  }</span>
+
+  JPAAbstractJoinQuery(final OData odata, final JPAODataRequestContextAccess requestContext,
+      final List&lt;JPANavigationPropertyInfo&gt; navigationInfo)
+      throws ODataException {
+<span class="nc" id="L89">    this(odata, navigationInfo.get(0).getEntityType(), requestContext.getUriInfo(), requestContext,</span>
+        navigationInfo);
+<span class="nc" id="L91">  }</span>
+
+  JPAAbstractJoinQuery(final OData odata, final JPAEntityType jpaEntityType, final UriInfoResource uriInfo,
+      final JPAODataRequestContextAccess requestContext, final List&lt;JPANavigationPropertyInfo&gt; navigationInfo)
+      throws ODataException {
+
+<span class="nc" id="L97">    super(odata, jpaEntityType, requestContext);</span>
+<span class="nc" id="L98">    this.requestContext = requestContext;</span>
+<span class="nc" id="L99">    this.locale = requestContext.getLocale();</span>
+<span class="nc" id="L100">    this.uriResource = uriInfo;</span>
+<span class="nc" id="L101">    this.cq = cb.createTupleQuery();</span>
+<span class="nc" id="L102">    this.page = requestContext.getPage();</span>
+<span class="nc" id="L103">    this.navigationInfo = navigationInfo;</span>
+<span class="nc" id="L104">    this.lastInfo = determineLastInfo(navigationInfo);</span>
+<span class="nc" id="L105">  }</span>
+
+  @CheckForNull
+  private static JPAEntityType determineCast(final UriInfoResource uriInfo) {
+
+<span class="nc" id="L110">    return null;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;T&gt; AbstractQuery&lt;T&gt; getQuery() {
+<span class="nc" id="L116">    return (AbstractQuery&lt;T&gt;) cq;</span>
+  }
+
+  @Override
+  public From&lt;?, ?&gt; getRoot() {
+<span class="nc" id="L121">    return target;</span>
+  }
+
+  /**
+   * Applies the $skip and $top options of the OData request to the query. The values are defined as follows:
+   * &lt;ul&gt;
+   * &lt;li&gt; The $top system query option specifies a non-negative integer n that limits the number of items returned from
+   * a collection.
+   * &lt;li&gt; The $skip system query option specifies a non-negative integer n that excludes the first n items of the
+   * queried collection from the result.
+   * &lt;/ul&gt;
+   * These values can be restricted by a page provided by server driven paging&lt;p&gt;
+   * For details see:
+   * &lt;a href=
+   * &quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part1-protocol/odata-v4.0-errata02-os-part1-protocol-complete.html#_Toc406398306&quot;
+   * &gt;OData Version 4.0 Part 1 - 11.2.5.3 System Query Option $top&lt;/a&gt; and
+   * &lt;a href=
+   * &quot;http://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part1-protocol/odata-v4.0-errata03-os-part1-protocol-complete.html#_Server-Driven_Paging&quot;
+   * &gt;OData Version 4.0 Part 1 - 11.2.5.7 Server-Driven Paging&lt;/a&gt;
+   *
+   * @throws ODataApplicationException
+   */
+  protected void addTopSkip(final TypedQuery&lt;Tuple&gt; tq) throws ODataApplicationException {
+    /*
+     * Where $top and $skip are used together, $skip MUST be applied before $top, regardless of the order in which they
+     * appear in the request.
+     * If no unique ordering is imposed through an $orderby query option, the service MUST impose a stable ordering
+     * across requests that include $skip.
+     *
+     * URL example: http://localhost:8080/BuPa/BuPa.svc/Organizations?$count=true&amp;$skip=5
+     */
+
+<span class="nc" id="L153">    addTop(tq);</span>
+<span class="nc" id="L154">    addSkip(tq);</span>
+<span class="nc" id="L155">  }</span>
+
+  protected List&lt;JPAPath&gt; buildEntityPathList(final JPAEntityType jpaEntity) throws ODataApplicationException {
+
+    try {
+<span class="nc" id="L160">      return jpaEntity.getPathList();</span>
+<span class="nc" id="L161">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L162">      throw new ODataJPAQueryException(e, BAD_REQUEST);</span>
+    }
+  }
+
+  protected final SelectionPathInfo&lt;JPAPath&gt; buildSelectionAddNavigationAndSelect(final UriInfoResource uriResource,
+      final SelectOption select, final SelectionPathInfo&lt;JPAPath&gt; jpaPathList) throws ODataApplicationException,
+      ODataJPAModelException {
+
+<span class="nc" id="L170">    final boolean targetIsCollection = determineTargetIsCollection(uriResource);</span>
+<span class="nc" id="L171">    final String pathPrefix = Util.determinePropertyNavigationPrefix(uriResource.getUriResourceParts());</span>
+
+<span class="nc bnc" id="L173" title="All 2 branches missed.">    if (Util.VALUE_RESOURCE.equals(pathPrefix))</span>
+<span class="nc" id="L174">      jpaPathList.getODataSelections().addAll(buildPathValue(jpaEntity));</span>
+<span class="nc bnc" id="L175" title="All 6 branches missed.">    else if (select == null || select.getSelectItems().isEmpty() || select.getSelectItems().get(0).isStar()) {</span>
+<span class="nc bnc" id="L176" title="All 4 branches missed.">      if (pathPrefix == null || pathPrefix.isEmpty())</span>
+<span class="nc" id="L177">        copySelectableProperties(jpaPathList, buildEntityPathList(jpaEntity));</span>
+      else {
+<span class="nc" id="L179">        expandPath(jpaEntity, jpaPathList, pathPrefix, targetIsCollection);</span>
+      }
+    } else {
+<span class="nc" id="L182">      convertSelectIntoPath(select, jpaPathList, targetIsCollection, pathPrefix);</span>
+    }
+<span class="nc" id="L184">    return jpaPathList;</span>
+  }
+
+  /**
+   * Creates the path to all properties that need to be selected from the database. A Property can be included for the
+   * following reasons:
+   * &lt;ul&gt;
+   * &lt;li&gt;It is a key in order to be able to build the links&lt;/li&gt;
+   * &lt;li&gt;It is part of the $select system query option&lt;/li&gt;
+   * &lt;li&gt;It is the result of a navigation, which my be restricted by a $select&lt;/li&gt;
+   * &lt;li&gt;If is required to link $expand with result with the parent result&lt;/li&gt;
+   * &lt;li&gt;A stream is requested and the property contains the mime type&lt;/&gt;
+   * &lt;/ul&gt;
+   * Not included are collection properties.
+   * @param uriResource
+   * @return
+   * @throws ODataApplicationException
+   */
+  protected SelectionPathInfo&lt;JPAPath&gt; buildSelectionPathList(final UriInfoResource uriResource)
+      throws ODataApplicationException {
+    // TODO It is also possible to request all actions or functions available for each returned entity:
+    // http://host/service/Products?$select=DemoService.*
+
+    try {
+<span class="nc" id="L208">      final SelectOption select = uriResource.getSelectOption();</span>
+<span class="nc" id="L209">      final SelectionPathInfo&lt;JPAPath&gt; jpaPathList = new SelectionPathInfo&lt;&gt;();</span>
+<span class="nc" id="L210">      buildSelectionAddNavigationAndSelect(uriResource, select, jpaPathList);</span>
+<span class="nc" id="L211">      buildSelectionAddMimeType(jpaEntity, jpaPathList.getODataSelections());</span>
+<span class="nc" id="L212">      buildSelectionAddKeys(jpaEntity, jpaPathList.getODataSelections());</span>
+<span class="nc" id="L213">      buildSelectionAddExpandSelection(uriResource, jpaPathList.getODataSelections());</span>
+<span class="nc" id="L214">      buildSelectionAddETag(jpaEntity, jpaPathList.getODataSelections());</span>
+<span class="nc" id="L215">      return jpaPathList;</span>
+<span class="nc" id="L216">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L217">      throw new ODataApplicationException(e.getLocalizedMessage(), INTERNAL_SERVER_ERROR</span>
+<span class="nc" id="L218">          .getStatusCode(), ODataJPAException.getLocales().nextElement(), e);</span>
+    }
+  }
+
+  protected &lt;Y extends Comparable&lt;? super Y&gt;&gt; javax.persistence.criteria.Expression&lt;Boolean&gt; createBoundary(
+      final List&lt;JPANavigationPropertyInfo&gt; info, final Optional&lt;JPAKeyBoundary&gt; keyBoundary)
+      throws ODataJPAQueryException {
+
+<span class="nc bnc" id="L226" title="All 2 branches missed.">    if (keyBoundary.isPresent()) {</span>
+      // Given key: Organizations('1')/Roles(...)
+      // First is the root
+<span class="nc" id="L229">      final JPANavigationPropertyInfo naviInfo = info.get(keyBoundary.get().getNoHops() - 1);</span>
+      try {
+<span class="nc" id="L231">        final JPAEntityType et = naviInfo.getEntityType();</span>
+<span class="nc" id="L232">        final From&lt;?, ?&gt; f = naviInfo.getFromClause();</span>
+
+<span class="nc bnc" id="L234" title="All 2 branches missed.">        if (keyBoundary.get().getKeyBoundary().hasUpperBoundary()) {</span>
+<span class="nc" id="L235">          return createBoundaryWithUpper(et, f, keyBoundary.get().getKeyBoundary());</span>
+        } else {
+<span class="nc" id="L237">          return createBoundaryEquals(et, f, keyBoundary.get().getKeyBoundary());</span>
+        }
+<span class="nc" id="L239">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L240">        throw new ODataJPAQueryException(e, INTERNAL_SERVER_ERROR);</span>
+      }
+    }
+<span class="nc" id="L243">    return null;</span>
+  }
+
+  /**
+   *
+   * @param orderByTarget
+   * @param descriptionFields List of the requested fields that of type description
+   * @param query
+   * @param lastInfo
+   * @param queryRoot
+   * @return
+   * @throws ODataApplicationException
+   * @throws JPANoSelectionException
+   */
+  protected Map&lt;String, From&lt;?, ?&gt;&gt; createFromClause(final List&lt;JPAAssociationPath&gt; orderByTarget,
+      final Collection&lt;JPAPath&gt; selectionPath, final CriteriaQuery&lt;?&gt; query, final JPANavigationPropertyInfo lastInfo)
+      throws ODataApplicationException, JPANoSelectionException {
+
+<span class="nc" id="L261">    final HashMap&lt;String, From&lt;?, ?&gt;&gt; joinTables = new HashMap&lt;&gt;();</span>
+    // 1. Create navigation joins
+<span class="nc" id="L263">    createFromClauseRoot(query, joinTables);</span>
+<span class="nc" id="L264">    target = root;</span>
+<span class="nc" id="L265">    createFromClauseNavigationJoins(joinTables);</span>
+<span class="nc" id="L266">    createFromClauseCollectionsJoins(joinTables);</span>
+    // 2. OrderBy navigation property
+<span class="nc" id="L268">    createFromClauseOrderBy(orderByTarget, joinTables, target);</span>
+    // 3. Description Join determine
+<span class="nc" id="L270">    createFromClauseDescriptionFields(selectionPath, joinTables, target, navigationInfo);</span>
+    // 4. Collection Attribute Joins
+<span class="nc" id="L272">    generateCollectionAttributeJoin(joinTables, selectionPath, lastInfo);</span>
+
+<span class="nc" id="L274">    return joinTables;</span>
+  }
+
+  protected final javax.persistence.criteria.Expression&lt;Boolean&gt; createKeyWhere(
+      final List&lt;JPANavigationPropertyInfo&gt; info) throws ODataApplicationException {
+
+<span class="nc" id="L280">    javax.persistence.criteria.Expression&lt;Boolean&gt; whereCondition = null;</span>
+    // Given key: Organizations('1')/Roles(...)
+<span class="nc bnc" id="L282" title="All 2 branches missed.">    for (final JPANavigationPropertyInfo naviInfo : info) {</span>
+<span class="nc bnc" id="L283" title="All 2 branches missed.">      if (naviInfo.getKeyPredicates() != null) {</span>
+        try {
+<span class="nc" id="L285">          final JPAEntityType et = naviInfo.getEntityType();</span>
+<span class="nc" id="L286">          final From&lt;?, ?&gt; from = naviInfo.getFromClause();</span>
+<span class="nc" id="L287">          final List&lt;UriParameter&gt; keyPredicates = naviInfo.getKeyPredicates();</span>
+<span class="nc" id="L288">          whereCondition = addWhereClause(whereCondition, createWhereByKey(from, keyPredicates, et));</span>
+<span class="nc" id="L289">        } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L290">          throw new ODataJPAQueryException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L291">        }</span>
+      }
+<span class="nc" id="L293">    }</span>
+<span class="nc" id="L294">    return whereCondition;</span>
+  }
+
+  protected javax.persistence.criteria.Expression&lt;Boolean&gt; createProtectionWhere(
+      final Optional&lt;JPAODataClaimProvider&gt; claimsProvider) throws ODataJPAQueryException {
+
+<span class="nc" id="L300">    javax.persistence.criteria.Expression&lt;Boolean&gt; restriction = null;</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">    for (final JPANavigationPropertyInfo navigation : navigationInfo) { // for all participating entity types/tables</span>
+      try {
+<span class="nc" id="L303">        final JPAEntityType et = navigation.getEntityType();</span>
+<span class="nc" id="L304">        final From&lt;?, ?&gt; from = navigation.getFromClause();</span>
+<span class="nc" id="L305">        restriction = addWhereClause(restriction, createProtectionWhereForEntityType(claimsProvider, et, from));</span>
+<span class="nc" id="L306">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L307">        throw new ODataJPAQueryException(QUERY_RESULT_ENTITY_TYPE_ERROR, INTERNAL_SERVER_ERROR, e);</span>
+<span class="nc" id="L308">      }</span>
+<span class="nc" id="L309">    }</span>
+<span class="nc" id="L310">    return restriction;</span>
+  }
+
+  protected javax.persistence.criteria.Expression&lt;Boolean&gt; createWhere(final UriInfoResource uriInfo,
+      final List&lt;JPANavigationPropertyInfo&gt; navigationInfo) throws ODataApplicationException {
+
+<span class="nc" id="L316">    final int handle = debugger.startRuntimeMeasurement(this, &quot;createWhere&quot;);</span>
+<span class="nc" id="L317">    javax.persistence.criteria.Expression&lt;Boolean&gt; whereCondition = null;</span>
+    // Given keys: Organizations('1')/Roles(...)
+    try {
+<span class="nc" id="L320">      whereCondition = createKeyWhere(navigationInfo);</span>
+<span class="nc" id="L321">    } catch (final ODataApplicationException e) {</span>
+<span class="nc" id="L322">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L323">      throw e;</span>
+<span class="nc" id="L324">    }</span>
+
+    // http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part1-protocol/odata-v4.0-errata02-os-part1-protocol-complete.html#_Toc406398301
+    // http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part2-url-conventions/odata-v4.0-errata02-os-part2-url-conventions-complete.html#_Toc406398094
+    // https://tools.oasis-open.org/version-control/browse/wsvn/odata/trunk/spec/ABNF/odata-abnf-construction-rules.txt
+    try {
+<span class="nc" id="L330">      whereCondition = addWhereClause(whereCondition, navigationInfo.get(navigationInfo.size() - 1).getFilterCompiler()</span>
+<span class="nc" id="L331">          .compile());</span>
+<span class="nc" id="L332">    } catch (final ExpressionVisitException e) {</span>
+<span class="nc" id="L333">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L334">      throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_FILTER_ERROR,</span>
+          HttpStatusCode.BAD_REQUEST, e);
+<span class="nc" id="L336">    }</span>
+
+<span class="nc bnc" id="L338" title="All 4 branches missed.">    if (uriInfo.getSearchOption() != null &amp;&amp; uriInfo.getSearchOption().getSearchExpression() != null)</span>
+<span class="nc" id="L339">      whereCondition = addWhereClause(whereCondition,</span>
+<span class="nc" id="L340">          requestContext.getDatabaseProcessor().createSearchWhereClause(cb, this.cq, target, jpaEntity, uriInfo</span>
+<span class="nc" id="L341">              .getSearchOption()));</span>
+<span class="nc" id="L342">    final Optional&lt;EdmQueryExtensionProvider&gt; queryEnhancement = requestContext.getQueryEnhancement(jpaEntity);</span>
+<span class="nc bnc" id="L343" title="All 2 branches missed.">    if (queryEnhancement.isPresent()) {</span>
+<span class="nc" id="L344">      debugger.trace(this, &quot;Query Enhancement found. Add WHERE condition of: %s&quot;, queryEnhancement.get().getClass()</span>
+<span class="nc" id="L345">          .getName());</span>
+<span class="nc" id="L346">      whereCondition = addWhereClause(whereCondition, queryEnhancement.get().getFilterExtension(cb, target));</span>
+    }
+<span class="nc" id="L348">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L349">    return whereCondition;</span>
+  }
+
+  protected JPANavigationPropertyInfo determineLastInfo(final List&lt;JPANavigationPropertyInfo&gt; navigationInfo) {
+<span class="nc bnc" id="L353" title="All 2 branches missed.">    return navigationInfo.isEmpty() ? null : navigationInfo.get(navigationInfo.size() - 1);</span>
+  }
+
+  protected final boolean determineTargetIsCollection(final UriInfoResource uriResource) {
+
+<span class="nc bnc" id="L358" title="All 2 branches missed.">    final UriResource last = !uriResource.getUriResourceParts().isEmpty() ? uriResource.getUriResourceParts().get(</span>
+<span class="nc" id="L359">        uriResource.getUriResourceParts().size() - 1) : null;</span>
+<span class="nc bnc" id="L360" title="All 4 branches missed.">    return (last instanceof UriResourceProperty &amp;&amp; ((UriResourceProperty) last).isCollection());</span>
+  }
+
+  protected void expandPath(final JPAEntityType jpaEntity, final SelectionPathInfo&lt;JPAPath&gt; jpaPathList,
+      final String selectItem, final boolean targetIsCollection) throws ODataJPAModelException,
+      ODataJPAProcessException {
+
+<span class="nc" id="L367">    final JPAPath selectItemPath = jpaEntity.getPath(selectItem);</span>
+<span class="nc bnc" id="L368" title="All 2 branches missed.">    if (selectItemPath == null)</span>
+<span class="nc" id="L369">      throw new ODataJPAQueryException(QUERY_PREPARATION_INVALID_SELECTION_PATH, BAD_REQUEST);</span>
+<span class="nc bnc" id="L370" title="All 2 branches missed.">    if (selectItemPath.getLeaf().isComplex()) {</span>
+<span class="nc" id="L371">      expandComplexPath(jpaEntity, jpaPathList, targetIsCollection, selectItemPath);</span>
+<span class="nc bnc" id="L372" title="All 2 branches missed.">    } else if (selectItemPath.isTransient()) {</span>
+<span class="nc" id="L373">      addTransientAttribute(jpaEntity, jpaPathList, selectItemPath);</span>
+<span class="nc bnc" id="L374" title="All 4 branches missed.">    } else if (!selectItemPath.getLeaf().isCollection()</span>
+        || targetIsCollection) {// Primitive Type
+<span class="nc" id="L376">      jpaPathList.getODataSelections().add(selectItemPath);</span>
+    }
+<span class="nc" id="L378">  }</span>
+
+  private void expandComplexPath(final JPAEntityType jpaEntity, final SelectionPathInfo&lt;JPAPath&gt; jpaPathList,
+      final boolean targetIsCollection, final JPAPath selectItemPath) throws ODataJPAModelException,
+      ODataJPAProcessorException {
+<span class="nc" id="L383">    final List&lt;JPAPath&gt; c = jpaEntity.searchChildPath(selectItemPath);</span>
+<span class="nc bnc" id="L384" title="All 2 branches missed.">    if (targetIsCollection) {</span>
+<span class="nc bnc" id="L385" title="All 2 branches missed.">      for (final JPAPath p : c) {</span>
+<span class="nc bnc" id="L386" title="All 2 branches missed.">        if (p.isTransient())</span>
+<span class="nc" id="L387">          addTransientAttribute(jpaEntity, jpaPathList, p);</span>
+        else
+<span class="nc" id="L389">          jpaPathList.getODataSelections().add(p);</span>
+<span class="nc" id="L390">      }</span>
+    } else {
+<span class="nc" id="L392">      copySelectableProperties(jpaPathList, c);</span>
+    }
+<span class="nc" id="L394">  }</span>
+
+  private void addTransientAttribute(final JPAEntityType jpaEntity, final SelectionPathInfo&lt;JPAPath&gt; jpaPathList,
+      final JPAPath p) throws ODataJPAModelException, ODataJPAProcessorException {
+<span class="nc" id="L398">    buildRequiredSelections(jpaEntity, p, jpaPathList.getRequiredSelections());</span>
+<span class="nc" id="L399">    jpaPathList.getTransientSelections().add(p);</span>
+<span class="nc" id="L400">  }</span>
+
+  /*
+   * Create the join condition for a collection property. This attribute can be part of structure type, therefore the
+   * path to the collection property needs to be traversed
+   */
+  protected void generateCollectionAttributeJoin(final Map&lt;String, From&lt;?, ?&gt;&gt; joinTables,
+      final Collection&lt;JPAPath&gt; jpaPathList, final JPANavigationPropertyInfo lastInfo) throws JPANoSelectionException,
+      ODataJPAProcessorException {
+
+<span class="nc bnc" id="L410" title="All 2 branches missed.">    for (final JPAPath path : jpaPathList) {</span>
+      // 1. check if path contains collection attribute
+<span class="nc" id="L412">      final JPAElement collection = findCollection(lastInfo, path);</span>
+      // 2. Check if join exists and create join if not
+<span class="nc" id="L414">      addCollection(joinTables, path, collection);</span>
+<span class="nc" id="L415">    }</span>
+<span class="nc" id="L416">  }</span>
+
+  @Override
+  protected Locale getLocale() {
+<span class="nc" id="L420">    return locale;</span>
+  }
+
+  @Override
+  JPAODataRequestContextAccess getContext() {
+<span class="nc" id="L425">    return requestContext;</span>
+  }
+
+  private void addCollection(final Map&lt;String, From&lt;?, ?&gt;&gt; joinTables, final JPAPath path,
+      final JPAElement collection) {
+
+<span class="nc bnc" id="L431" title="All 4 branches missed.">    if (collection != null &amp;&amp; !joinTables.containsKey(collection.getExternalName())) {</span>
+<span class="nc" id="L432">      From&lt;?, ?&gt; f = target;</span>
+<span class="nc bnc" id="L433" title="All 2 branches missed.">      for (final JPAElement element : path.getPath()) {</span>
+<span class="nc" id="L434">        f = f.join(element.getInternalName());</span>
+<span class="nc bnc" id="L435" title="All 2 branches missed.">        if (element instanceof JPACollectionAttribute) {</span>
+<span class="nc" id="L436">          break;</span>
+        }
+<span class="nc" id="L438">      }</span>
+<span class="nc" id="L439">      joinTables.put(collection.getExternalName(), f);</span>
+    }
+<span class="nc" id="L441">  }</span>
+
+  private void addSkip(final TypedQuery&lt;Tuple&gt; tq) throws ODataJPAQueryException {
+<span class="nc" id="L444">    final SkipOption skipOption = uriResource.getSkipOption();</span>
+<span class="nc bnc" id="L445" title="All 4 branches missed.">    if (skipOption != null || page != null) {</span>
+<span class="nc bnc" id="L446" title="All 2 branches missed.">      int skipNumber = skipOption != null ? skipOption.getValue() : page.getSkip();</span>
+<span class="nc bnc" id="L447" title="All 4 branches missed.">      skipNumber = skipOption != null &amp;&amp; page != null ? Math.max(skipOption.getValue(), page.getSkip()) : skipNumber;</span>
+<span class="nc bnc" id="L448" title="All 2 branches missed.">      if (skipNumber &gt;= 0)</span>
+<span class="nc" id="L449">        tq.setFirstResult(skipNumber);</span>
+      else
+<span class="nc" id="L451">        throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_INVALID_VALUE,</span>
+<span class="nc" id="L452">            HttpStatusCode.BAD_REQUEST, Integer.toString(skipNumber), &quot;$skip&quot;);</span>
+    }
+<span class="nc" id="L454">  }</span>
+
+  private void addTop(final TypedQuery&lt;Tuple&gt; tq) throws ODataJPAQueryException {
+<span class="nc" id="L457">    final TopOption topOption = uriResource.getTopOption();</span>
+<span class="nc bnc" id="L458" title="All 4 branches missed.">    if (topOption != null || page != null) {</span>
+<span class="nc bnc" id="L459" title="All 2 branches missed.">      int topNumber = topOption != null ? topOption.getValue() : page.getTop();</span>
+<span class="nc bnc" id="L460" title="All 4 branches missed.">      topNumber = topOption != null &amp;&amp; page != null ? Math.min(topOption.getValue(), page.getTop())</span>
+<span class="nc" id="L461">          : topNumber;</span>
+<span class="nc bnc" id="L462" title="All 2 branches missed.">      if (topNumber &gt;= 0)</span>
+<span class="nc" id="L463">        tq.setMaxResults(topNumber);</span>
+      else
+<span class="nc" id="L465">        throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_INVALID_VALUE,</span>
+<span class="nc" id="L466">            HttpStatusCode.BAD_REQUEST, Integer.toString(topNumber), &quot;$top&quot;);</span>
+    }
+<span class="nc" id="L468">  }</span>
+
+  // Only for streams e.g. .../OrganizationImages('9')/$value
+  // Transient not possible
+  private List&lt;JPAPath&gt; buildPathValue(final JPAEntityType jpaEntity)
+      throws ODataApplicationException {
+
+<span class="nc" id="L475">    final List&lt;JPAPath&gt; jpaPathList = new ArrayList&lt;&gt;();</span>
+    try {
+      // Stream value
+<span class="nc" id="L478">      jpaPathList.add(jpaEntity.getStreamAttributePath());</span>
+<span class="nc" id="L479">      jpaPathList.addAll(jpaEntity.getKeyPath());</span>
+
+<span class="nc" id="L481">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L482">      throw new ODataJPAQueryException(e, HttpStatusCode.BAD_REQUEST);</span>
+<span class="nc" id="L483">    }</span>
+<span class="nc" id="L484">    return jpaPathList;</span>
+  }
+
+  private void buildRequiredSelections(final JPAEntityType et, final JPAPath transientAttributePath,
+      final Set&lt;JPAPath&gt; requitedSelections) throws ODataJPAModelException, ODataJPAProcessorException {
+
+<span class="nc" id="L490">    final StringBuilder pathName = new StringBuilder();</span>
+<span class="nc" id="L491">    JPAStructuredType st = et;</span>
+<span class="nc bnc" id="L492" title="All 2 branches missed.">    for (int i = 0; i &lt; transientAttributePath.getPath().size() - 1; i++) {</span>
+<span class="nc" id="L493">      final JPAElement element = transientAttributePath.getPath().get(i);</span>
+<span class="nc" id="L494">      pathName.append(element.getExternalName()).append(JPAPath.PATH_SEPARATOR);</span>
+<span class="nc bnc" id="L495" title="All 2 branches missed.">      if (element instanceof JPAAttribute) {</span>
+<span class="nc" id="L496">        st = ((JPAAttribute) element).getStructuredType();</span>
+      }
+    }
+
+<span class="nc bnc" id="L500" title="All 2 branches missed.">    for (final String internalName : transientAttributePath.getLeaf().getRequiredProperties()) {</span>
+<span class="nc" id="L501">      final String externalName = st.getDeclaredAttribute(internalName)</span>
+<span class="nc" id="L502">          .orElseThrow(() -&gt; new ODataJPAProcessorException(ATTRIBUTE_NOT_FOUND,</span>
+              HttpStatusCode.INTERNAL_SERVER_ERROR, internalName))
+<span class="nc" id="L504">          .getExternalName();</span>
+<span class="nc" id="L505">      final StringBuilder requiredPathName = new StringBuilder(pathName.toString()).append(externalName);</span>
+<span class="nc" id="L506">      requitedSelections.add(et.getPath(requiredPathName.toString(), false));</span>
+<span class="nc" id="L507">    }</span>
+<span class="nc" id="L508">  }</span>
+
+  private void buildSelectionAddETag(final JPAEntityType jpaEntity, final Collection&lt;JPAPath&gt; jpaPathList)
+      throws ODataJPAModelException {
+<span class="nc bnc" id="L512" title="All 2 branches missed.">    if (jpaEntity.hasEtag())</span>
+<span class="nc" id="L513">      jpaPathList.add(jpaEntity.getEtagPath());</span>
+
+<span class="nc" id="L515">  }</span>
+
+  /**
+   * In order to be able to link the result of a expand query with the super-ordinate query it is necessary to ensure
+   * that the join columns are selected.&lt;br&gt;
+   * The same columns are required for the count query, for select as well as order by.
+   * @param uriResource
+   * @param jpaPathList
+   * @throws ODataApplicationException
+   * @throws ODataJPAQueryException
+   */
+  private void buildSelectionAddExpandSelection(final UriInfoResource uriResource,
+      final Collection&lt;JPAPath&gt; jpaPathList)
+      throws ODataApplicationException {
+
+<span class="nc" id="L530">    final Map&lt;JPAExpandItem, JPAAssociationPath&gt; associationPathList = Util.determineAssociations(sd, uriResource</span>
+<span class="nc" id="L531">        .getUriResourceParts(), uriResource.getExpandOption());</span>
+<span class="nc bnc" id="L532" title="All 2 branches missed.">    if (!associationPathList.isEmpty()) {</span>
+<span class="nc" id="L533">      final List&lt;JPAPath&gt; tmpPathList = new ArrayList&lt;&gt;(jpaPathList);</span>
+<span class="nc" id="L534">      final List&lt;JPAPath&gt; addPathList = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L536">      Collections.sort(tmpPathList);</span>
+<span class="nc bnc" id="L537" title="All 2 branches missed.">      for (final Entry&lt;JPAExpandItem, JPAAssociationPath&gt; item : associationPathList.entrySet()) {</span>
+<span class="nc" id="L538">        final JPAAssociationPath associationPath = item.getValue();</span>
+        try {
+<span class="nc bnc" id="L540" title="All 2 branches missed.">          for (final JPAPath joinItem : associationPath.getLeftColumnsList()) {</span>
+<span class="nc" id="L541">            final int pathIndex = Collections.binarySearch(tmpPathList, joinItem);</span>
+<span class="nc" id="L542">            final int insertIndex = Collections.binarySearch(addPathList, joinItem);</span>
+<span class="nc bnc" id="L543" title="All 4 branches missed.">            if (pathIndex &lt; 0 &amp;&amp; insertIndex &lt; 0)</span>
+<span class="nc" id="L544">              addPathList.add(Math.abs(insertIndex) - 1, joinItem);</span>
+<span class="nc" id="L545">          }</span>
+<span class="nc" id="L546">        } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L547">          throw new ODataJPAQueryException(e, HttpStatusCode.BAD_REQUEST);</span>
+<span class="nc" id="L548">        }</span>
+<span class="nc" id="L549">      }</span>
+<span class="nc" id="L550">      jpaPathList.addAll(addPathList);</span>
+    }
+<span class="nc" id="L552">  }</span>
+
+  private void buildSelectionAddKeys(final JPAEntityType jpaEntity, final Set&lt;JPAPath&gt; jpaPathList)
+      throws ODataJPAModelException {
+
+<span class="nc bnc" id="L557" title="All 2 branches missed.">    for (final JPAAttribute key : jpaEntity.getKey()) {</span>
+<span class="nc" id="L558">      JPAPath path = jpaEntity.getPath(key.getExternalName());</span>
+<span class="nc bnc" id="L559" title="All 2 branches missed.">      if(path != null)</span>
+<span class="nc" id="L560">        jpaPathList.add(path);</span>
+<span class="nc" id="L561">    }</span>
+<span class="nc" id="L562">  }</span>
+
+  private void buildSelectionAddMimeType(final JPAEntityType jpaEntity, final Collection&lt;JPAPath&gt; jpaPathList)
+      throws ODataJPAModelException {
+
+<span class="nc bnc" id="L567" title="All 2 branches missed.">    if (jpaEntity.hasStream()) {</span>
+<span class="nc" id="L568">      final JPAPath mimeTypeAttribute = jpaEntity.getContentTypeAttributePath();</span>
+<span class="nc bnc" id="L569" title="All 2 branches missed.">      if (mimeTypeAttribute != null) {</span>
+<span class="nc" id="L570">        jpaPathList.add(mimeTypeAttribute);</span>
+      }
+    }
+<span class="nc" id="L573">  }</span>
+
+  private boolean checkCollectionIsPartOfGroup(final String collectionPath) throws ODataJPAProcessorException {
+
+    try {
+<span class="nc" id="L578">      final JPAPath path = jpaEntity.getPath(collectionPath);</span>
+<span class="nc" id="L579">      return path.isPartOfGroups(groups);</span>
+<span class="nc" id="L580">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L581">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  private void convertSelectIntoPath(final SelectOption select, final SelectionPathInfo&lt;JPAPath&gt; jpaPathList,
+      final boolean targetIsCollection, final String pathPrefix) throws ODataJPAModelException,
+      ODataJPAProcessException {
+
+<span class="nc bnc" id="L589" title="All 2 branches missed.">    for (final SelectItem sItem : select.getSelectItems()) {</span>
+<span class="nc" id="L590">      final String pathItem = sItem.getResourcePath().getUriResourceParts()</span>
+<span class="nc" id="L591">          .stream()</span>
+<span class="nc" id="L592">          .map(path -&gt; (path.getSegmentValue()))</span>
+<span class="nc" id="L593">          .collect(Collectors.joining(JPAPath.PATH_SEPARATOR));</span>
+<span class="nc bnc" id="L594" title="All 2 branches missed.">      expandPath(jpaEntity, jpaPathList, pathPrefix.isEmpty() ? pathItem : pathPrefix + &quot;/&quot; + pathItem,</span>
+          targetIsCollection);
+<span class="nc" id="L596">    }</span>
+<span class="nc" id="L597">  }</span>
+
+  /**
+   * Skips all those properties that are or belong to a collection property or marked as transient. E.g
+   * (Organization)Comment or (Person)InhouseAddress/Room
+   * @param selPathList
+   * @param allPathList
+   * @throws ODataJPAProcessorException
+   * @throws ODataJPAModelException
+   */
+  private void copySelectableProperties(final SelectionPathInfo&lt;JPAPath&gt; selPathList, final List&lt;JPAPath&gt; allPathList)
+      throws ODataJPAProcessorException, ODataJPAModelException {
+<span class="nc bnc" id="L609" title="All 2 branches missed.">    for (final JPAPath p : allPathList) {</span>
+<span class="nc" id="L610">      boolean skip = false;</span>
+<span class="nc bnc" id="L611" title="All 2 branches missed.">      for (final JPAElement pathElement : p.getPath()) {</span>
+<span class="nc bnc" id="L612" title="All 2 branches missed.">        if (pathElement instanceof JPAAttribute) {</span>
+<span class="nc bnc" id="L613" title="All 2 branches missed.">          if (((JPAAttribute) pathElement).isTransient()) {</span>
+<span class="nc" id="L614">            addTransientAttribute(jpaEntity, selPathList, p);</span>
+          }
+<span class="nc bnc" id="L616" title="All 4 branches missed.">          if (((JPAAttribute) pathElement).isCollection() || ((JPAAttribute) pathElement).isTransient()) {</span>
+<span class="nc" id="L617">            skip = true;</span>
+<span class="nc" id="L618">            break;</span>
+          }
+        }
+<span class="nc" id="L621">      }</span>
+<span class="nc bnc" id="L622" title="All 2 branches missed.">      if (!skip)</span>
+<span class="nc" id="L623">        selPathList.getODataSelections().add(p);</span>
+<span class="nc" id="L624">    }</span>
+<span class="nc" id="L625">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private &lt;Y extends Comparable&lt;? super Y&gt;&gt; javax.persistence.criteria.Expression&lt;Boolean&gt; createBoundaryEquals(
+      final JPAEntityType et, final From&lt;?, ?&gt; f, final JPAKeyPair jpaKeyPair) throws ODataJPAModelException {
+
+<span class="nc" id="L631">    javax.persistence.criteria.Expression&lt;Boolean&gt; whereCondition = null;</span>
+<span class="nc" id="L632">    final List&lt;JPAAttribute&gt; keyElements = new ArrayList&lt;&gt;(et.getKey());</span>
+<span class="nc" id="L633">    Collections.reverse(keyElements);</span>
+<span class="nc bnc" id="L634" title="All 2 branches missed.">    for (final JPAAttribute keyElement : keyElements) {</span>
+<span class="nc" id="L635">      final Path&lt;Y&gt; keyPath = (Path&lt;Y&gt;) ExpressionUtil.convertToCriteriaPath(f, et.getPath(keyElement.getExternalName())</span>
+<span class="nc" id="L636">          .getPath());</span>
+<span class="nc" id="L637">      final javax.persistence.criteria.Expression&lt;Boolean&gt; eqFragment = cb.equal(keyPath, jpaKeyPair.getMin().get(</span>
+          keyElement));
+<span class="nc bnc" id="L639" title="All 2 branches missed.">      if (whereCondition == null)</span>
+<span class="nc" id="L640">        whereCondition = eqFragment;</span>
+      else
+<span class="nc" id="L642">        whereCondition = cb.and(whereCondition, eqFragment);</span>
+<span class="nc" id="L643">    }</span>
+<span class="nc" id="L644">    return whereCondition;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private &lt;Y extends Comparable&lt;? super Y&gt;&gt; javax.persistence.criteria.Expression&lt;Boolean&gt; createBoundaryWithUpper(
+      final JPAEntityType et, final From&lt;?, ?&gt; f, final JPAKeyPair jpaKeyPair) throws ODataJPAModelException {
+
+<span class="nc" id="L651">    final List&lt;JPAAttribute&gt; keyElements = new ArrayList&lt;&gt;(et.getKey());</span>
+<span class="nc" id="L652">    Collections.reverse(keyElements);</span>
+<span class="nc" id="L653">    javax.persistence.criteria.Expression&lt;Boolean&gt; lowerExpression = null;</span>
+<span class="nc" id="L654">    javax.persistence.criteria.Expression&lt;Boolean&gt; upperExpression = null;</span>
+<span class="nc bnc" id="L655" title="All 2 branches missed.">    for (int primaryIndex = 0; primaryIndex &lt; keyElements.size(); primaryIndex++) {</span>
+<span class="nc bnc" id="L656" title="All 2 branches missed.">      for (int secondaryIndex = primaryIndex; secondaryIndex &lt; keyElements.size(); secondaryIndex++) {</span>
+<span class="nc" id="L657">        final JPAAttribute keyElement = keyElements.get(secondaryIndex);</span>
+<span class="nc" id="L658">        final Path&lt;Y&gt; keyPath = (Path&lt;Y&gt;) ExpressionUtil.convertToCriteriaPath(f,</span>
+<span class="nc" id="L659">            et.getPath(keyElement.getExternalName()).getPath());</span>
+<span class="nc" id="L660">        final Y lowerBoundary = jpaKeyPair.getMinElement(keyElement);</span>
+<span class="nc" id="L661">        final Y upperBoundary = jpaKeyPair.getMaxElement(keyElement);</span>
+<span class="nc bnc" id="L662" title="All 2 branches missed.">        if (secondaryIndex == primaryIndex) {</span>
+<span class="nc bnc" id="L663" title="All 2 branches missed.">          if (primaryIndex == 0) {</span>
+<span class="nc" id="L664">            lowerExpression = cb.greaterThanOrEqualTo(keyPath, lowerBoundary);</span>
+<span class="nc" id="L665">            upperExpression = cb.lessThanOrEqualTo(keyPath, upperBoundary);</span>
+          } else {
+<span class="nc" id="L667">            lowerExpression = cb.or(lowerExpression, cb.greaterThan(keyPath, lowerBoundary));</span>
+<span class="nc" id="L668">            upperExpression = cb.or(upperExpression, cb.lessThan(keyPath, upperBoundary));</span>
+          }
+        } else {
+<span class="nc" id="L671">          lowerExpression = cb.and(lowerExpression, cb.equal(keyPath, lowerBoundary));</span>
+<span class="nc" id="L672">          upperExpression = cb.and(upperExpression, cb.equal(keyPath, upperBoundary));</span>
+        }
+      }
+
+    }
+<span class="nc" id="L677">    return cb.and(lowerExpression, upperExpression);</span>
+  }
+
+  private void createFromClauseCollectionsJoins(final HashMap&lt;String, From&lt;?, ?&gt;&gt; joinTables)
+      throws ODataJPAQueryException, ODataJPAProcessorException {
+
+    try {
+<span class="nc bnc" id="L684" title="All 2 branches missed.">      if (lastInfo.getAssociationPath() != null</span>
+<span class="nc bnc" id="L685" title="All 2 branches missed.">          &amp;&amp; lastInfo.getAssociationPath().getLeaf() instanceof JPACollectionAttribute</span>
+<span class="nc bnc" id="L686" title="All 2 branches missed.">          &amp;&amp; !uriResource.getUriResourceParts().isEmpty()</span>
+<span class="nc" id="L687">          &amp;&amp; uriResource.getUriResourceParts().get(uriResource.getUriResourceParts().size() - 1)</span>
+<span class="nc bnc" id="L688" title="All 2 branches missed.">              .getKind() == UriResourceKind.complexProperty) {</span>
+<span class="nc" id="L689">        From&lt;?, ?&gt; p = target;</span>
+<span class="nc" id="L690">        JPAElement element = null;</span>
+<span class="nc bnc" id="L691" title="All 2 branches missed.">        for (final JPAElement pathElement : lastInfo.getAssociationPath().getPath()) {</span>
+<span class="nc" id="L692">          p = p.join(pathElement.getInternalName());</span>
+<span class="nc" id="L693">          element = pathElement;</span>
+<span class="nc" id="L694">        }</span>
+<span class="nc" id="L695">        joinTables.put(lastInfo.getAssociationPath().getAlias(), p);</span>
+<span class="nc" id="L696">        final JPAEntityType targetEt = (JPAEntityType) ((JPAAssociationAttribute) element).getTargetEntity(); // NOSONAR</span>
+<span class="nc" id="L697">        final JPAOperationConverter converter = new JPAOperationConverter(cb, requestContext.getOperationConverter());</span>
+<span class="nc" id="L698">        final JPAODataRequestContextAccess subContext = new JPAODataInternalRequestContext(uriResource, requestContext);</span>
+<span class="nc" id="L699">        lastInfo.setFilterCompiler(new JPAFilterCrossComplier(odata, sd, targetEt, converter, this, p,</span>
+<span class="nc" id="L700">            lastInfo.getAssociationPath(), subContext));</span>
+<span class="nc" id="L701">      } else {</span>
+<span class="nc" id="L702">        final JPAOperationConverter converter = new JPAOperationConverter(cb, requestContext.getOperationConverter());</span>
+<span class="nc" id="L703">        final JPAODataRequestContextAccess subContext = new JPAODataInternalRequestContext(uriResource, requestContext);</span>
+<span class="nc" id="L704">        lastInfo.setFilterCompiler(new JPAFilterCrossComplier(odata, sd, jpaEntity, converter, this, lastInfo</span>
+<span class="nc" id="L705">            .getAssociationPath(), subContext));</span>
+      }
+<span class="nc" id="L707">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L708">      throw new ODataJPAQueryException(QUERY_PREPARATION_FILTER_ERROR, BAD_REQUEST, e);</span>
+<span class="nc" id="L709">    }</span>
+<span class="nc" id="L710">    lastInfo.setFromClause(target);</span>
+<span class="nc" id="L711">  }</span>
+
+  /**
+   * Completes NavigationInfo and add Joins for navigation parts e.g. from &lt;code&gt;../Organizations('3')/Roles&lt;/code&gt;
+   * @param joinTables
+   * @throws ODataJPAQueryException
+   * @throws ODataJPAProcessorException
+   */
+  protected final void createFromClauseNavigationJoins(final HashMap&lt;String, From&lt;?, ?&gt;&gt; joinTables)
+      throws ODataJPAQueryException, ODataJPAProcessorException {
+
+<span class="nc bnc" id="L722" title="All 2 branches missed.">    for (int i = 0; i &lt; this.navigationInfo.size() - 1; i++) {</span>
+<span class="nc" id="L723">      final JPANavigationPropertyInfo naviInfo = this.navigationInfo.get(i);</span>
+<span class="nc" id="L724">      naviInfo.setFromClause(target);</span>
+<span class="nc bnc" id="L725" title="All 4 branches missed.">      if (naviInfo.getUriInfo() != null &amp;&amp; naviInfo.getUriInfo().getFilterOption() != null) {</span>
+        try {
+<span class="nc" id="L727">          addFilterCompiler(naviInfo);</span>
+<span class="nc" id="L728">        } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L729">          throw new ODataJPAQueryException(QUERY_PREPARATION_FILTER_ERROR, BAD_REQUEST, e);</span>
+<span class="nc" id="L730">        }</span>
+      }
+<span class="nc" id="L732">      target = createJoinFromPath(naviInfo.getAssociationPath().getAlias(), naviInfo.getAssociationPath()</span>
+<span class="nc" id="L733">          .getPath(), target, JoinType.INNER);</span>
+      try {
+<span class="nc" id="L735">        final JPAEntityType cast = this.navigationInfo.get(i + 1).getEntityType();</span>
+<span class="nc" id="L736">        target = (From&lt;?, ?&gt;) target.as(cast.getTypeClass());</span>
+<span class="nc" id="L737">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L738">        throw new ODataJPAQueryException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L739">      }</span>
+<span class="nc" id="L740">      joinTables.put(naviInfo.getAssociationPath().getAlias(), target);</span>
+    }
+<span class="nc" id="L742">  }</span>
+
+  protected final void addFilterCompiler(final JPANavigationPropertyInfo navigationInfo) throws ODataJPAModelException,
+      ODataJPAProcessorException {
+
+<span class="nc" id="L747">    final JPAOperationConverter converter = new JPAOperationConverter(cb, requestContext.getOperationConverter());</span>
+<span class="nc" id="L748">    final JPAODataRequestContextAccess subContext = new JPAODataInternalRequestContext(navigationInfo.getUriInfo(),</span>
+        requestContext);
+<span class="nc" id="L750">    navigationInfo.setFilterCompiler(new JPAFilterCrossComplier(odata, sd, navigationInfo.getEntityType(), converter,</span>
+<span class="nc" id="L751">        this, navigationInfo.getFromClause(), null, subContext));</span>
+<span class="nc" id="L752">  }</span>
+
+  /**
+   * Start point of a Join Query e.g. triggered by &lt;code&gt;../Organizations&lt;/code&gt; or
+   * &lt;code&gt;../Organizations('3')/Roles&lt;/code&gt;
+   * @param query
+   * @param joinTables
+   * @throws ODataJPAQueryException
+   */
+  protected final void createFromClauseRoot(final CriteriaQuery&lt;?&gt; query, final HashMap&lt;String, From&lt;?, ?&gt;&gt; joinTables)
+      throws ODataJPAQueryException {
+    try {
+<span class="nc" id="L764">      final JPAEntityType sourceEt = this.navigationInfo.get(0).getEntityType();</span>
+<span class="nc" id="L765">      this.root = query.from(sourceEt.getTypeClass());</span>
+<span class="nc" id="L766">      joinTables.put(sourceEt.getExternalFQN().getFullQualifiedNameAsString(), root);</span>
+<span class="nc" id="L767">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L768">      throw new ODataJPAQueryException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L769">    }</span>
+<span class="nc" id="L770">  }</span>
+
+  private JPAElement findCollection(final JPANavigationPropertyInfo lastInfo, final JPAPath path)
+      throws ODataJPAProcessorException, JPANoSelectionException {
+
+<span class="nc" id="L775">    JPAElement collection = null;</span>
+<span class="nc" id="L776">    final StringBuilder collectionPath = new StringBuilder();</span>
+<span class="nc bnc" id="L777" title="All 2 branches missed.">    for (final JPAElement element : path.getPath()) {</span>
+<span class="nc" id="L778">      collectionPath.append(element.getExternalName());</span>
+<span class="nc bnc" id="L779" title="All 2 branches missed.">      if (element instanceof JPACollectionAttribute) {</span>
+<span class="nc bnc" id="L780" title="All 2 branches missed.">        if (checkCollectionIsPartOfGroup(collectionPath.toString())) {</span>
+<span class="nc" id="L781">          collection = element;</span>
+<span class="nc bnc" id="L782" title="All 2 branches missed.">        } else if (lastInfo.getAssociationPath() != null</span>
+<span class="nc bnc" id="L783" title="All 2 branches missed.">            &amp;&amp; (lastInfo.getAssociationPath().getLeaf() instanceof JPACollectionAttribute)) {</span>
+<span class="nc" id="L784">          throw new JPANoSelectionException();</span>
+        }
+        break;
+      }
+<span class="nc" id="L788">      collectionPath.append(JPAPath.PATH_SEPARATOR);</span>
+<span class="nc" id="L789">    }</span>
+<span class="nc" id="L790">    return collection;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

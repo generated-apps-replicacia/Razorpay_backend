@@ -1,0 +1,9 @@
+com\sap\olingo\jpa\processor\core\processor\JPAODataBatchAbstractRequestGroupTest.class
+com\sap\olingo\jpa\processor\test\util\IntegrationTestHelper$OutPutStream.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataBatchParallelRequestGroupTest.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataBatchSequentialRequestGroupTest.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataParallelBatchProcessorTest.class
+com\sap\olingo\jpa\processor\test\util\IntegrationTestHelper.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataBatchParallelRequestGroupTest$AnswerLate.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataParallelBatchProcessorIntegrationTest.class
+com\sap\olingo\jpa\processor\test\util\IntegrationTestHelper$ResultStream.class

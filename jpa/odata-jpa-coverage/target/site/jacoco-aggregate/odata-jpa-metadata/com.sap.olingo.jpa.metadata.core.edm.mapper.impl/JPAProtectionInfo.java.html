@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAProtectionInfo.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">JPAProtectionInfo.java</span></div><h1>JPAProtectionInfo.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.util.List;
+
+final class JPAProtectionInfo {
+  private final List&lt;String&gt; path;
+  private final boolean wildcards;
+
+  JPAProtectionInfo(List&lt;String&gt; path, boolean wildcards) {
+<span class="nc" id="L10">    super();</span>
+<span class="nc" id="L11">    this.path = path;</span>
+<span class="nc" id="L12">    this.wildcards = wildcards;</span>
+<span class="nc" id="L13">  }</span>
+
+  @Override
+  public String toString() {
+<span class="nc" id="L17">    return &quot;JPAProtectionInfo [path=&quot; + path + &quot;, wildcards=&quot; + wildcards + &quot;]&quot;;</span>
+  }
+
+  List&lt;String&gt; getPath() {
+<span class="nc" id="L21">    return path;</span>
+  }
+
+  /**
+   * Returns the maintained wildcard setting.
+   * @return
+   */
+  boolean supportsWildcards() {
+<span class="nc" id="L29">    return wildcards;</span>
+  }
+
+  /**
+   * Returns wildcard support if the protected property it of type &lt;i&gt;clazz&lt;/i&gt;
+   * @param &lt;T&gt;
+   * @param clazz
+   * @return
+   */
+  &lt;T&gt; boolean supportsWildcards(final Class&lt;T&gt; clazz) {
+<span class="nc bnc" id="L39" title="All 2 branches missed.">    if (clazz.equals(String.class))</span>
+<span class="nc" id="L40">      return wildcards;</span>
+<span class="nc" id="L41">    return false;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

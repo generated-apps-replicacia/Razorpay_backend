@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAExpandJoinCountQuery.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPAExpandJoinCountQuery.java</span></div><h1>JPAExpandJoinCountQuery.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.INTERNAL_SERVER_ERROR;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.persistence.Tuple;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.Selection;
+
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+
+/**
+ * Requires Processor Query
+ *
+ * @author Oliver Grande
+ * @since 1.0.1
+ * 25.11.2020
+ */
+public final class JPAExpandJoinCountQuery extends JPAAbstractExpandQuery {
+  private final Optional&lt;JPAKeyBoundary&gt; keyBoundary;
+
+  public JPAExpandJoinCountQuery(final OData odata,
+      final JPAODataRequestContextAccess requestContext, final JPAEntityType et,
+      final JPAAssociationPath association, final List&lt;JPANavigationPropertyInfo&gt; hops,
+      final Optional&lt;JPAKeyBoundary&gt; keyBoundary)
+      throws ODataException {
+
+<span class="nc" id="L52">    super(odata, requestContext, et, association, copyHops(hops));</span>
+<span class="nc" id="L53">    this.keyBoundary = keyBoundary;</span>
+<span class="nc" id="L54">  }</span>
+
+  private static List&lt;JPANavigationPropertyInfo&gt; copyHops(final List&lt;JPANavigationPropertyInfo&gt; hops) {
+<span class="nc" id="L57">    return hops.stream()</span>
+<span class="nc" id="L58">        .map(JPANavigationPropertyInfo::new)</span>
+<span class="nc" id="L59">        .collect(Collectors.toList());</span>
+  }
+
+  @Override
+  public JPAExpandQueryResult execute() throws ODataApplicationException {
+<span class="nc" id="L64">    final int handle = debugger.startRuntimeMeasurement(this, &quot;execute&quot;);</span>
+    try {
+      //
+<span class="nc" id="L67">      return null;</span>
+    } finally {
+<span class="nc" id="L69">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+  }
+
+  @Override
+  protected Map&lt;String, From&lt;?, ?&gt;&gt; createFromClause(final List&lt;JPAAssociationPath&gt; orderByTarget,
+      final Collection&lt;JPAPath&gt; selectionPath, final CriteriaQuery&lt;?&gt; query, final JPANavigationPropertyInfo lastInfo)
+      throws ODataApplicationException, JPANoSelectionException {
+
+<span class="nc" id="L78">    final HashMap&lt;String, From&lt;?, ?&gt;&gt; joinTables = new HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L80">    createFromClauseRoot(query, joinTables, lastInfo);</span>
+<span class="nc" id="L81">    target = root;</span>
+<span class="nc" id="L82">    createFromClauseDescriptionFields(selectionPath, joinTables, target, singletonList(lastInfo));</span>
+<span class="nc" id="L83">    return joinTables;</span>
+  }
+
+  @Override
+  protected JPAAssociationPath getAssociation(@Nonnull final JPAInlineItemInfo item) {
+<span class="nc" id="L88">    return item.hops.get(item.hops.size() - 2).getAssociationPath();</span>
+  }
+
+  private void createFromClauseRoot(final CriteriaQuery&lt;?&gt; query, final HashMap&lt;String, From&lt;?, ?&gt;&gt; joinTables,
+      final JPANavigationPropertyInfo lastInfo) throws ODataJPAQueryException {
+    try {
+<span class="nc" id="L94">      final JPAEntityType sourceEt = lastInfo.getEntityType();</span>
+<span class="nc" id="L95">      this.root = query.from(sourceEt.getTypeClass());</span>
+<span class="nc" id="L96">      this.lastInfo.setFromClause(root);</span>
+<span class="nc" id="L97">      joinTables.put(sourceEt.getExternalFQN().getFullQualifiedNameAsString(), root);</span>
+<span class="nc" id="L98">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L99">      throw new ODataJPAQueryException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L100">    }</span>
+<span class="nc" id="L101">  }</span>
+
+  @Override
+  final Map&lt;String, Long&gt; count() throws ODataApplicationException {
+<span class="nc" id="L105">    final int handle = debugger.startRuntimeMeasurement(this, &quot;count&quot;);</span>
+
+<span class="nc bnc" id="L107" title="All 2 branches missed.">    if (countRequested(lastInfo)) {</span>
+<span class="nc" id="L108">      final CriteriaQuery&lt;Tuple&gt; countQuery = cb.createTupleQuery();</span>
+<span class="nc" id="L109">      createCountFrom(countQuery);</span>
+<span class="nc" id="L110">      final List&lt;Selection&lt;?&gt;&gt; selectionPath = buildExpandJoinPath(target);</span>
+<span class="nc" id="L111">      countQuery.multiselect(addCount(selectionPath));</span>
+<span class="nc" id="L112">      final javax.persistence.criteria.Expression&lt;Boolean&gt; whereClause = createWhere();</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">      if (whereClause != null)</span>
+<span class="nc" id="L114">        countQuery.where(whereClause);</span>
+<span class="nc" id="L115">      countQuery.groupBy(buildExpandCountGroupBy(target));</span>
+<span class="nc" id="L116">      final TypedQuery&lt;Tuple&gt; query = em.createQuery(countQuery);</span>
+<span class="nc" id="L117">      final List&lt;Tuple&gt; intermediateResult = query.getResultList();</span>
+<span class="nc" id="L118">      return convertCountResult(intermediateResult);</span>
+    }
+<span class="nc" id="L120">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L121">    return emptyMap();</span>
+  }
+
+  void createCountFrom(final CriteriaQuery&lt;Tuple&gt; countQuery) throws ODataJPAQueryException {
+<span class="nc" id="L125">    final HashMap&lt;String, From&lt;?, ?&gt;&gt; joinTables = new HashMap&lt;&gt;();</span>
+    // 1. Create navigation joins
+<span class="nc" id="L127">    createFromClauseRoot(countQuery, joinTables);</span>
+<span class="nc" id="L128">    target = root;</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">    for (int i = 0; i &lt; this.navigationInfo.size() - 1; i++) {</span>
+<span class="nc" id="L130">      final JPANavigationPropertyInfo naviInfo = this.navigationInfo.get(i);</span>
+<span class="nc" id="L131">      naviInfo.setFromClause(target);</span>
+<span class="nc" id="L132">      target = createJoinFromPath(naviInfo.getAssociationPath().getAlias(), naviInfo.getAssociationPath().getPath(),</span>
+          target, JoinType.INNER);
+    }
+<span class="nc" id="L135">    lastInfo.setFromClause(target);</span>
+<span class="nc" id="L136">  }</span>
+
+  private Expression&lt;Boolean&gt; createWhere() throws ODataApplicationException {
+
+<span class="nc" id="L140">    final int handle = debugger.startRuntimeMeasurement(this, &quot;createWhere&quot;);</span>
+    try {
+<span class="nc" id="L142">      javax.persistence.criteria.Expression&lt;Boolean&gt; whereCondition = null;</span>
+      // Given keys: Organizations('1')/Roles(...)
+<span class="nc" id="L144">      whereCondition = createKeyWhere(navigationInfo);</span>
+<span class="nc" id="L145">      whereCondition = addWhereClause(whereCondition, createBoundary(navigationInfo, keyBoundary));</span>
+<span class="nc" id="L146">      whereCondition = addWhereClause(whereCondition, createExpandWhere());</span>
+<span class="nc" id="L147">      whereCondition = addWhereClause(whereCondition, createProtectionWhere(claimsProvider));</span>
+<span class="nc" id="L148">      return whereCondition;</span>
+    } finally {
+<span class="nc" id="L150">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+  }
+
+  private javax.persistence.criteria.Expression&lt;Boolean&gt; createExpandWhere() throws ODataApplicationException {
+
+<span class="nc" id="L156">    javax.persistence.criteria.Expression&lt;Boolean&gt; whereCondition = null;</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">    for (final JPANavigationPropertyInfo info : this.navigationInfo) {</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">      if (info.getFilterCompiler() != null) {</span>
+        try {
+<span class="nc" id="L160">          whereCondition = addWhereClause(whereCondition, info.getFilterCompiler().compile());</span>
+<span class="nc" id="L161">        } catch (final ExpressionVisitException e) {</span>
+<span class="nc" id="L162">          throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_PREPARATION_FILTER_ERROR,</span>
+              HttpStatusCode.BAD_REQUEST, e);
+<span class="nc" id="L164">        }</span>
+      }
+<span class="nc" id="L166">    }</span>
+<span class="nc" id="L167">    return whereCondition;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

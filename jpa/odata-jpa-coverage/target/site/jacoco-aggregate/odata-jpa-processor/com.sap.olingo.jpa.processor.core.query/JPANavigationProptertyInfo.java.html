@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPANavigationProptertyInfo.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPANavigationProptertyInfo.java</span></div><h1>JPANavigationProptertyInfo.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import java.util.Collections;
+import java.util.List;
+
+import javax.persistence.criteria.From;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.UriResourcePartTyped;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.filter.JPAFilterComplier;
+
+<span class="nc bnc" id="L19" title="All 2 branches missed.">public final class JPANavigationProptertyInfo {</span>
+  private final JPAServiceDocument sd;
+  private final UriResourcePartTyped navigationTarget;
+  private JPAAssociationPath associationPath;
+  private final List&lt;UriParameter&gt; keyPredicates;
+<span class="nc" id="L24">  private From&lt;?, ?&gt; fromClause = null;</span>
+  private final UriInfoResource uriInfo;
+<span class="nc" id="L26">  private JPAEntityType et = null;</span>
+<span class="nc" id="L27">  private JPAFilterComplier filterCompiler = null;</span>
+
+  /**
+   * 
+   * Copy constructor, that does not copy the &lt;i&gt;from&lt;/i&gt; clause, so the new JPANavigationProptertyInfo can be used in a
+   * new query.
+   * @param original
+   */
+<span class="nc" id="L35">  public JPANavigationProptertyInfo(final JPANavigationProptertyInfo original) {</span>
+
+<span class="nc" id="L37">    this.navigationTarget = original.getUriResiource();</span>
+<span class="nc" id="L38">    this.associationPath = original.getAssociationPath();</span>
+<span class="nc" id="L39">    this.keyPredicates = original.getKeyPredicates();</span>
+<span class="nc" id="L40">    this.uriInfo = original.getUriInfo();</span>
+<span class="nc" id="L41">    this.sd = original.getServiceDocument();</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">    this.et = this.uriInfo instanceof JPAExpandItem ? ((JPAExpandItem) uriInfo).getEntityType() : null;</span>
+<span class="nc" id="L43">  }</span>
+
+  public JPANavigationProptertyInfo(final JPAServiceDocument sd, final JPAAssociationPath associationPath,
+      final UriInfoResource uriInfo, final JPAEntityType et) {
+<span class="nc" id="L47">    super();</span>
+<span class="nc" id="L48">    this.navigationTarget = null;</span>
+<span class="nc" id="L49">    this.associationPath = associationPath;</span>
+<span class="nc" id="L50">    this.keyPredicates = Collections.emptyList();</span>
+<span class="nc" id="L51">    this.uriInfo = uriInfo;</span>
+<span class="nc" id="L52">    this.sd = sd;</span>
+<span class="nc" id="L53">    this.et = et;</span>
+<span class="nc" id="L54">  }</span>
+
+  public JPANavigationProptertyInfo(final JPAServiceDocument sd, final UriResourcePartTyped uriResource,
+<span class="nc" id="L57">      final JPAAssociationPath associationPath, final UriInfoResource uriInfo) throws ODataApplicationException {</span>
+
+<span class="nc" id="L59">    this.navigationTarget = uriResource;</span>
+<span class="nc" id="L60">    this.associationPath = associationPath;</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">    this.keyPredicates = uriResource.isCollection() ? Collections.emptyList() : Util.determineKeyPredicates(</span>
+        uriResource);
+<span class="nc" id="L63">    this.uriInfo = uriInfo;</span>
+<span class="nc" id="L64">    this.sd = sd;</span>
+<span class="nc" id="L65">  }</span>
+
+  public JPAAssociationPath getAssociationPath() {
+<span class="nc" id="L68">    return associationPath;</span>
+  }
+
+  public UriResourcePartTyped getUriResiource() {
+<span class="nc" id="L72">    return navigationTarget;</span>
+  }
+
+  /**
+   * Set the association path to a other entity.
+   * @param associationPath
+   */
+  public void setAssociationPath(JPAAssociationPath associationPath) {
+<span class="nc bnc" id="L80" title="All 4 branches missed.">    assert this.associationPath == null;</span>
+<span class="nc" id="L81">    this.associationPath = associationPath;</span>
+<span class="nc" id="L82">  }</span>
+
+  JPAEntityType getEntityType() throws ODataJPAModelException {
+<span class="nc bnc" id="L85" title="All 2 branches missed.">    if (et != null)</span>
+<span class="nc" id="L86">      return et;</span>
+<span class="nc" id="L87">    return sd.getEntity(getUriResiource().getType());</span>
+  }
+
+  JPAFilterComplier getFilterCompiler() {
+<span class="nc" id="L91">    return filterCompiler;</span>
+  }
+
+  From&lt;?, ?&gt; getFromClause() { // NOSONAR
+<span class="nc" id="L95">    return fromClause;</span>
+  }
+
+  List&lt;UriParameter&gt; getKeyPredicates() {
+<span class="nc" id="L99">    return keyPredicates;</span>
+  }
+
+  UriInfoResource getUriInfo() {
+<span class="nc" id="L103">    return uriInfo;</span>
+  }
+
+  void setFilterCompiler(JPAFilterComplier filterCompiler) {
+<span class="nc bnc" id="L107" title="All 4 branches missed.">    assert this.filterCompiler == null;</span>
+<span class="nc" id="L108">    this.filterCompiler = filterCompiler;</span>
+<span class="nc" id="L109">  }</span>
+
+  /**
+   * Set the from clause. This is possible only once and can not be changed later.
+   * @param from
+   */
+  void setFromClause(final From&lt;?, ?&gt; from) {
+<span class="nc bnc" id="L116" title="All 4 branches missed.">    assert fromClause == null;</span>
+<span class="nc" id="L117">    fromClause = from;</span>
+<span class="nc" id="L118">  }</span>
+
+  private JPAServiceDocument getServiceDocument() {
+<span class="nc" id="L121">    return sd;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

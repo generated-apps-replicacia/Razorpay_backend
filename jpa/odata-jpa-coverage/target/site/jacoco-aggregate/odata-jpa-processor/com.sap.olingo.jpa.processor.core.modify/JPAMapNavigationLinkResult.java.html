@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAMapNavigationLinkResult.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.modify</a> &gt; <span class="el_source">JPAMapNavigationLinkResult.java</span></div><h1>JPAMapNavigationLinkResult.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.modify;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Tuple;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.converter.JPATupleChildConverter;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.processor.JPARequestEntity;
+
+final class JPAMapNavigationLinkResult extends JPACreateResult {
+  private final List&lt;Tuple&gt; result;
+
+  public JPAMapNavigationLinkResult(final JPAEntityType targetType, final List&lt;JPARequestEntity&gt; entities,
+      final Map&lt;String, List&lt;String&gt;&gt; requestHeaders, final JPATupleChildConverter converter)
+      throws ODataJPAModelException, ODataApplicationException {
+
+<span class="nc" id="L26">    super(targetType, requestHeaders);</span>
+<span class="nc" id="L27">    result = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L29" title="All 2 branches missed.">    for (JPARequestEntity entity : entities) {</span>
+<span class="nc" id="L30">      result.add(new JPAMapResult(entity.getEntityType(), entity.getData(), requestHeaders, converter).getResult(</span>
+          ROOT_RESULT_KEY)
+<span class="nc" id="L32">          .get(0));</span>
+<span class="nc" id="L33">    }</span>
+<span class="nc" id="L34">  }</span>
+
+  @Override
+  public List&lt;Tuple&gt; getResult(String key) {
+<span class="nc" id="L38">    return result;</span>
+  }
+
+  @Override
+  public Map&lt;String, List&lt;Tuple&gt;&gt; getResults() {
+<span class="nc" id="L43">    final Map&lt;String, List&lt;Tuple&gt;&gt; results = new HashMap&lt;&gt;(1);</span>
+<span class="nc" id="L44">    results.put(ROOT_RESULT_KEY, result);</span>
+<span class="nc" id="L45">    return results;</span>
+  }
+
+  @Override
+  protected String determineLocale(final Map&lt;String, Object&gt; descGetterMap, final JPAPath localeAttribute,
+      final int index) throws ODataJPAProcessorException {
+    // Not needed for JPAMapNavigationLinkResult
+<span class="nc" id="L52">    return null;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  protected Map&lt;String, Object&gt; entryAsMap(final Object entry) throws ODataJPAProcessorException {
+<span class="nc" id="L58">    return (Map&lt;String, Object&gt;) entry;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

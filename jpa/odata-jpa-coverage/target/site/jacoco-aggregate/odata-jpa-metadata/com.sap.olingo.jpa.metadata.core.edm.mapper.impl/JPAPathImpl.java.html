@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAPathImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">JPAPathImpl.java</span></div><h1>JPAPathImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.NOT_SUPPORTED_MIXED_PART_OF_GROUP;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+final class JPAPathImpl implements JPAPath {
+<span class="nc" id="L16">  private static final List&lt;String&gt; EMPTY_FILED_GROUPS = Collections.emptyList();</span>
+  private final String alias;
+  private final List&lt;JPAElement&gt; pathElements;
+  private final String dbFieldName;
+  private final boolean ignore;
+  private final List&lt;String&gt; fieldGroups;
+  private Optional&lt;Boolean&gt; isTransient;
+
+  JPAPathImpl(final String alias, final String dbFieldName, final IntermediateProperty element)
+      throws ODataJPAModelException {
+
+<span class="nc" id="L27">    this(alias, dbFieldName, Arrays.asList(element));</span>
+<span class="nc" id="L28">  }</span>
+
+  JPAPathImpl(final String alias, final String dbFieldName, final List&lt;JPAElement&gt; attribute)
+<span class="nc" id="L31">      throws ODataJPAModelException {</span>
+
+<span class="nc" id="L33">    this.alias = alias;</span>
+<span class="nc" id="L34">    this.pathElements = Collections.unmodifiableList(attribute);</span>
+<span class="nc" id="L35">    this.dbFieldName = dbFieldName;</span>
+<span class="nc" id="L36">    this.ignore = ((IntermediateModelElement) pathElements.get(pathElements.size() - 1)).ignore();</span>
+<span class="nc" id="L37">    this.fieldGroups = determineFieldGroups();</span>
+<span class="nc" id="L38">    this.isTransient = Optional.empty();</span>
+<span class="nc" id="L39">  }</span>
+
+  @Override
+  public int compareTo(final JPAPath o) {
+<span class="nc" id="L43">    return this.alias.compareTo(o.getAlias());</span>
+  }
+
+  @Override
+  public boolean equals(final Object obj) {
+<span class="nc bnc" id="L48" title="All 2 branches missed.">    if (this == obj) return true;</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">    if (obj == null) return false;</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">    if (getClass() != obj.getClass()) return false;</span>
+<span class="nc" id="L51">    final JPAPathImpl other = (JPAPathImpl) obj;</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">    if (alias == null) {</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">      if (other.alias != null) return false;</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">    } else if (!alias.equals(other.alias)) return false;</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">    if (pathElements == null) {</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">      if (other.pathElements != null) return false;</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">    } else if (!pathElements.equals(other.pathElements)) return false;</span>
+<span class="nc" id="L58">    return true;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAPath#getAlias()
+   */
+  @Override
+  public String getAlias() {
+<span class="nc" id="L68">    return alias;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAPath#getDBFieldName()
+   */
+  @Override
+  public String getDBFieldName() {
+<span class="nc" id="L78">    return dbFieldName;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAPath#getLeaf()
+   */
+  @Override
+  public JPAAttribute getLeaf() {
+<span class="nc" id="L88">    return (JPAAttribute) pathElements.get(pathElements.size() - 1);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAPath#getPath()
+   */
+  @Override
+  public List&lt;JPAElement&gt; getPath() {
+<span class="nc" id="L98">    return pathElements;</span>
+  }
+
+  @Override
+  public boolean isTransient() {
+<span class="nc" id="L103">    return isTransient.orElseGet(this::determineIsTransient);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L108">    final int prime = 31;</span>
+<span class="nc" id="L109">    int result = 1;</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">    result = prime * result + ((alias == null) ? 0 : alias.hashCode());</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">    result = prime * result + ((pathElements == null) ? 0 : pathElements.hashCode());</span>
+<span class="nc" id="L112">    return result;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAPath#ignore()
+   */
+  @Override
+  public boolean ignore() {
+<span class="nc" id="L122">    return ignore;</span>
+  }
+
+  @Override
+  public boolean isPartOfGroups(final List&lt;String&gt; groups) {
+
+<span class="nc bnc" id="L128" title="All 4 branches missed.">    return fieldGroups == EMPTY_FILED_GROUPS || fieldGroupMatches(groups);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L133">    return &quot;JPAPathImpl [alias=&quot; + alias + &quot;, pathElements=&quot; + pathElements + &quot;, dbFieldName=&quot; + dbFieldName</span>
+        + &quot;, ignore=&quot; + ignore + &quot;, fieldGroups=&quot; + fieldGroups + &quot;]&quot;;
+  }
+
+  /**
+   * @return
+   * @throws ODataJPAModelException
+   */
+  private List&lt;String&gt; determineFieldGroups() throws ODataJPAModelException {
+<span class="nc" id="L142">    List&lt;String&gt; groups = null;</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">    for (final JPAElement pathElement : pathElements) {</span>
+<span class="nc bnc" id="L144" title="All 4 branches missed.">      if (pathElement instanceof IntermediateProperty &amp;&amp; ((IntermediateProperty) pathElement).isPartOfGroup()) {</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (groups == null)</span>
+<span class="nc" id="L146">          groups = ((IntermediateProperty) pathElement).getGroups();</span>
+        else {
+<span class="nc" id="L148">          final List&lt;String&gt; newGroups = ((IntermediateProperty) pathElement).getGroups();</span>
+<span class="nc bnc" id="L149" title="All 4 branches missed.">          if (groups.size() != newGroups.size() || !groups.stream().allMatch(newGroups::contains))</span>
+<span class="nc" id="L150">            throw new ODataJPAModelException(NOT_SUPPORTED_MIXED_PART_OF_GROUP, alias);</span>
+        }
+      }
+<span class="nc" id="L153">    }</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">    return groups == null ? EMPTY_FILED_GROUPS : groups;</span>
+  }
+
+  /**
+   * @param groups
+   * @return
+   */
+  private boolean fieldGroupMatches(final List&lt;String&gt; groups) {
+<span class="nc bnc" id="L162" title="All 2 branches missed.">    for (final String group : groups) {</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">      if (fieldGroups.contains(group))</span>
+<span class="nc" id="L164">        return true;</span>
+<span class="nc" id="L165">    }</span>
+<span class="nc" id="L166">    return false;</span>
+  }
+
+  private Boolean determineIsTransient() {
+<span class="nc" id="L170">    isTransient = Optional.of(</span>
+<span class="nc" id="L171">        pathElements.stream()</span>
+<span class="nc" id="L172">            .filter(JPAAttribute.class::isInstance)</span>
+<span class="nc" id="L173">            .map(JPAAttribute.class::cast)</span>
+<span class="nc" id="L174">            .anyMatch(JPAAttribute::isTransient));</span>
+<span class="nc" id="L175">    return isTransient.get();</span>
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

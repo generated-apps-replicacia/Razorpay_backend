@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateComplexType.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateComplexType.java</span></div><h1>IntermediateComplexType.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.util.List;
+
+import javax.persistence.metamodel.EmbeddableType;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.olingo.commons.api.edm.provider.CsdlComplexType;
+import org.apache.olingo.commons.api.edm.provider.CsdlNavigationProperty;
+import org.apache.olingo.commons.api.edm.provider.CsdlProperty;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+/**
+ * Complex Types are used to structure Entity Types by grouping properties that belong together. Complex Types can
+ * contain of
+ * &lt;ul&gt; &lt;li&gt; Properties &lt;li&gt; Navigation Properties&lt;/ul&gt;
+ * This means that they can contain of primitive, complex, or enumeration type, or a collection of primitive, complex,
+ * or enumeration types.&lt;p&gt;
+ * &lt;b&gt;Limitation:&lt;/b&gt; As of now the attributes BaseType, Abstract and OpenType are not supported. There is also no
+ * support for nested complex types &lt;p&gt;
+ * Complex Types are generated from JPA Embeddable Types.
+ * &lt;p&gt;For details about Complex Type metadata see:
+ * &lt;a href=
+ * &quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406397985&quot;
+ * &gt;OData Version 4.0 Part 3 - 9 Complex Type&lt;/a&gt;
+ * @author Oliver Grande
+ *
+ */
+final class IntermediateComplexType&lt;T&gt; extends IntermediateStructuredType&lt;T&gt; {
+<span class="nc" id="L33">  private static final Log LOGGER = LogFactory.getLog(IntermediateComplexType.class);</span>
+
+  IntermediateComplexType(final JPAEdmNameBuilder nameBuilder, final EmbeddableType&lt;T&gt; jpaEmbeddable,
+      final IntermediateSchema schema) {
+
+<span class="nc" id="L38">    super(nameBuilder, jpaEmbeddable, schema);</span>
+<span class="nc" id="L39">    this.setExternalName(nameBuilder.buildComplexTypeName(jpaEmbeddable));</span>
+
+<span class="nc" id="L41">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  protected synchronized void lazyBuildEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L46" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L47">      buildPropertyList();</span>
+<span class="nc" id="L48">      buildNaviPropertyList();</span>
+<span class="nc" id="L49">      addTransientProperties();</span>
+<span class="nc" id="L50">      edmStructuralType = new CsdlComplexType();</span>
+
+<span class="nc" id="L52">      edmStructuralType.setName(this.getExternalName());</span>
+<span class="nc" id="L53">      edmStructuralType.setProperties((List&lt;CsdlProperty&gt;) extractEdmModelElements(declaredPropertiesList));</span>
+<span class="nc" id="L54">      edmStructuralType.setNavigationProperties((List&lt;CsdlNavigationProperty&gt;) extractEdmModelElements(</span>
+          declaredNaviPropertiesList));
+<span class="nc" id="L56">      edmStructuralType.setBaseType(determineBaseType());</span>
+      // TODO Abstract
+      // edmComplexType.setAbstract(isAbstract)
+      // TODO OpenType
+      // edmComplexType.setOpenType(isOpenType)
+<span class="nc bnc" id="L61" title="All 2 branches missed.">      if (determineHasStream()) {</span>
+<span class="nc" id="L62">        throw new ODataJPAModelException(ODataJPAModelException.MessageKeys.NOT_SUPPORTED_EMBEDDED_STREAM,</span>
+            internalName);
+      }
+    }
+<span class="nc" id="L66">  }</span>
+
+  @Override
+  CsdlComplexType getEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L70" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L71">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L73">    return (CsdlComplexType) edmStructuralType;</span>
+  }
+
+  @Override
+  protected IntermediateStructuredType&lt;? super T&gt; getBaseType() {
+<span class="nc" id="L78">    final Class&lt;?&gt; baseType = jpaManagedType.getJavaType().getSuperclass();</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">    if (baseType != null) {</span>
+      @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L81">      final IntermediateStructuredType&lt;? super T&gt; baseComplex = (IntermediateStructuredType&lt;? super T&gt;) schema</span>
+<span class="nc" id="L82">          .getComplexType(baseType);</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">      if (baseComplex != null)</span>
+<span class="nc" id="L84">        return baseComplex;</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">      else if (baseType != Object.class)</span>
+<span class="nc" id="L86">        LOGGER.warn(&quot;Embeddable &quot; + jpaManagedType.getJavaType().getName()</span>
+<span class="nc" id="L87">            + &quot; is subtype of &quot; + baseType.getName() + &quot; but this is not embeddable or shall be ignored&quot;);</span>
+    }
+<span class="nc" id="L89">    return null;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

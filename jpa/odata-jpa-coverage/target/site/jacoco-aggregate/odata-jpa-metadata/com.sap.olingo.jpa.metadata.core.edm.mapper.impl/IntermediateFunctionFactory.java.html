@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateFunctionFactory.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateFunctionFactory.java</span></div><h1>IntermediateFunctionFactory.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.persistence.metamodel.EntityType;
+
+import org.reflections8.Reflections;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunction;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunctions;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.ODataFunction;
+
+<span class="nc" id="L18">final class IntermediateFunctionFactory&lt;F extends IntermediateFunction&gt; extends IntermediateOperationFactory&lt;F&gt; {</span>
+
+  /**
+   * Creates all functions declared at on entity type
+   * @param nameBuilder
+   * @param jpaEntityType
+   * @param schema
+   * @return
+   * @throws ODataJPAModelException
+   */
+  Map&lt;String, F&gt; create(final JPAEdmNameBuilder nameBuilder,
+      final EntityType&lt;?&gt; jpaEntityType, final IntermediateSchema schema) {
+
+<span class="nc" id="L31">    final Map&lt;String, F&gt; funcList = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L33" title="All 2 branches missed.">    if (jpaEntityType.getJavaType() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L34">      final EdmFunctions jpaStoredProcedureList = jpaEntityType.getJavaType()</span>
+<span class="nc" id="L35">          .getAnnotation(EdmFunctions.class);</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">      if (jpaStoredProcedureList != null) {</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">        for (final EdmFunction jpaStoredProcedure : jpaStoredProcedureList.value()) {</span>
+<span class="nc" id="L38">          putFunction(nameBuilder, jpaEntityType, schema, funcList, jpaStoredProcedure);</span>
+        }
+      } else {
+<span class="nc" id="L41">        final EdmFunction jpaStoredProcedure = jpaEntityType.getJavaType()</span>
+<span class="nc" id="L42">            .getAnnotation(EdmFunction.class);</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        if (jpaStoredProcedure != null)</span>
+<span class="nc" id="L44">          putFunction(nameBuilder, jpaEntityType, schema, funcList, jpaStoredProcedure);</span>
+      }
+    }
+<span class="nc" id="L47">    return funcList;</span>
+  }
+
+  Map&lt;String, F&gt; create(final JPAEdmNameBuilder nameBuilder,
+      final Reflections reflections, final IntermediateSchema schema) throws ODataJPAModelException {
+<span class="nc" id="L52">    return createOperationMap(nameBuilder, reflections, schema,</span>
+        ODataFunction.class, EdmFunction.class);
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  F createOperation(final JPAEdmNameBuilder nameBuilder, final IntermediateSchema schema,
+      final Method m, final Object functionDescription) throws ODataJPAModelException {
+<span class="nc" id="L60">    return (F) new IntermediateJavaFunction(nameBuilder, (EdmFunction) functionDescription, m, schema);</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private void putFunction(final JPAEdmNameBuilder nameBuilder, final EntityType&lt;?&gt; jpaEntityType,
+      final IntermediateSchema schema, final Map&lt;String, F&gt; funcList,
+      final EdmFunction jpaStoredProcedure) {
+
+<span class="nc" id="L68">    final IntermediateFunction func = new IntermediateDataBaseFunction(nameBuilder, jpaStoredProcedure, jpaEntityType</span>
+<span class="nc" id="L69">        .getJavaType(), schema);</span>
+<span class="nc" id="L70">    funcList.put(func.getInternalName(), (F) func);</span>
+<span class="nc" id="L71">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

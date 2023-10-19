@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>BusinessPartnerRoleWithGroup.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.testmodel</a> &gt; <span class="el_source">BusinessPartnerRoleWithGroup.java</span></div><h1>BusinessPartnerRoleWithGroup.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.testmodel;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.IdClass;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmVisibleFor;
+
+@IdClass(BusinessPartnerRoleKey.class)
+//@ReadOnly
+@Entity(name = &quot;BusinessPartnerRoleWithGroup&quot;)
+@Table(schema = &quot;\&quot;OLINGO\&quot;&quot;, name = &quot;\&quot;BusinessPartnerRole\&quot;&quot;)
+public class BusinessPartnerRoleWithGroup {
+
+  @Id
+  @Column(name = &quot;\&quot;BusinessPartnerID\&quot;&quot;)
+  private String businessPartnerID;
+  @Id
+  @Column(name = &quot;\&quot;BusinessPartnerRole\&quot;&quot;)
+  private String roleCategory;
+
+  @EdmVisibleFor(&quot;Company&quot;)
+  @Column(name = &quot;\&quot;Details\&quot;&quot;, length = 256)
+  private String details;
+
+  @ManyToOne(optional = false, fetch = FetchType.LAZY)
+  @JoinColumn(name = &quot;\&quot;BusinessPartnerID\&quot;&quot;, insertable = false, updatable = false)
+  private BusinessPartnerWithGroups businessPartner;
+
+  public BusinessPartnerRoleWithGroup() {
+<span class="nc" id="L36">    super();</span>
+<span class="nc" id="L37">  }</span>
+
+  public BusinessPartnerRoleWithGroup(final String businessPartnerID, final String roleCategory) {
+<span class="nc" id="L40">    super();</span>
+<span class="nc" id="L41">    this.setBusinessPartnerID(businessPartnerID);</span>
+<span class="nc" id="L42">    this.setRoleCategory(roleCategory);</span>
+<span class="nc" id="L43">  }</span>
+
+  public BusinessPartnerRoleWithGroup(final BusinessPartnerWithGroups businessPartner, final String roleCategory) {
+<span class="nc" id="L46">    super();</span>
+<span class="nc" id="L47">    this.setBusinessPartner(businessPartner);</span>
+<span class="nc" id="L48">    this.setRoleCategory(roleCategory);</span>
+<span class="nc" id="L49">  }</span>
+
+  public String getBusinessPartnerID() {
+<span class="nc" id="L52">    return businessPartnerID;</span>
+  }
+
+  public String getRoleCategory() {
+<span class="nc" id="L56">    return roleCategory;</span>
+  }
+
+  public BusinessPartnerWithGroups getBusinessPartner() {
+<span class="nc" id="L60">    return businessPartner;</span>
+  }
+
+  public void setBusinessPartnerID(String businessPartnerID) {
+<span class="nc" id="L64">    this.businessPartnerID = businessPartnerID;</span>
+<span class="nc" id="L65">  }</span>
+
+  public void setRoleCategory(final String roleCategory) {
+<span class="nc" id="L68">    this.roleCategory = roleCategory;</span>
+<span class="nc" id="L69">  }</span>
+
+  public void setBusinessPartner(final BusinessPartnerWithGroups businessPartner) {
+<span class="nc" id="L72">    businessPartnerID = businessPartner.getID();</span>
+<span class="nc" id="L73">    this.businessPartner = businessPartner;</span>
+
+<span class="nc" id="L75">  }</span>
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L79">    final int prime = 31;</span>
+<span class="nc" id="L80">    int result = 1;</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">    result = prime * result + ((businessPartnerID == null) ? 0 : businessPartnerID.hashCode());</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">    result = prime * result + ((roleCategory == null) ? 0 : roleCategory.hashCode());</span>
+<span class="nc" id="L83">    return result;</span>
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+<span class="nc bnc" id="L88" title="All 2 branches missed.">    if (this == obj) return true;</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">    if (obj == null) return false;</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">    if (getClass() != obj.getClass()) return false;</span>
+<span class="nc" id="L91">    BusinessPartnerRoleWithGroup other = (BusinessPartnerRoleWithGroup) obj;</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">    if (businessPartnerID == null) {</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">      if (other.businessPartnerID != null) return false;</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">    } else if (!businessPartnerID.equals(other.businessPartnerID)) return false;</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">    if (roleCategory == null) {</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">      if (other.roleCategory != null) return false;</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">    } else if (!roleCategory.equals(other.roleCategory)) return false;</span>
+<span class="nc" id="L98">    return true;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

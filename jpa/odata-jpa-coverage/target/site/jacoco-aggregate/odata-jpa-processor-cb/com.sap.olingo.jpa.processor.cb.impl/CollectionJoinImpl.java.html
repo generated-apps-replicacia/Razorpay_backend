@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>CollectionJoinImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">CollectionJoinImpl.java</span></div><h1>CollectionJoinImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.Path;
+import javax.persistence.metamodel.Attribute;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+import com.sap.olingo.jpa.processor.cb.joiner.SqlConvertible;
+
+class CollectionJoinImpl&lt;Z, X&gt; extends AbstractJoinImp&lt;Z, X&gt; {
+
+  private final JPACollectionAttribute attribute;
+
+  CollectionJoinImpl(@Nonnull final JPAPath path, @Nonnull final FromImpl&lt;?, Z&gt; parent,
+      @Nonnull final AliasBuilder aliasBuilder, @Nonnull final CriteriaBuilder cb) throws ODataJPAModelException {
+
+<span class="nc" id="L29">    super(determineEt(path, parent), parent, determinePath(path), aliasBuilder, cb);</span>
+<span class="nc" id="L30">    this.attribute = (JPACollectionAttribute) path.getLeaf();</span>
+
+<span class="nc" id="L32">    createOn(attribute.asAssociation()</span>
+<span class="nc" id="L33">        .getJoinTable()</span>
+<span class="nc" id="L34">        .getRawJoinInformation());</span>
+<span class="nc" id="L35">  }</span>
+
+  private static JPAPath determinePath(final JPAPath path) throws ODataJPAModelException {
+<span class="nc" id="L38">    return ((JPACollectionAttribute) path.getLeaf())</span>
+<span class="nc" id="L39">        .asAssociation()</span>
+<span class="nc" id="L40">        .getJoinTable()</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">        .getEntityType() == null</span>
+<span class="nc" id="L42">            ? path : null;</span>
+  }
+
+  private static JPAEntityType determineEt(@Nonnull final JPAPath path, @Nonnull final FromImpl&lt;?, ?&gt; parent)
+      throws ODataJPAModelException {
+<span class="nc" id="L47">    return Optional.ofNullable(((JPACollectionAttribute) path.getLeaf())</span>
+<span class="nc" id="L48">        .asAssociation()</span>
+<span class="nc" id="L49">        .getJoinTable()</span>
+<span class="nc" id="L50">        .getEntityType())</span>
+<span class="nc" id="L51">        .orElse(parent.st);</span>
+  }
+
+  @Override
+  public StringBuilder asSQL(final StringBuilder statement) {
+
+    try {
+<span class="nc" id="L58">      statement.append(&quot; &quot;)</span>
+<span class="nc" id="L59">          .append(SqlJoinType.byJoinType(getJoinType()))</span>
+<span class="nc" id="L60">          .append(&quot; &quot;)</span>
+<span class="nc" id="L61">          .append(attribute</span>
+<span class="nc" id="L62">              .asAssociation()</span>
+<span class="nc" id="L63">              .getJoinTable()</span>
+<span class="nc" id="L64">              .getTableName());</span>
+
+<span class="nc" id="L66">      tableAlias.ifPresent(p -&gt; statement.append(&quot; &quot;).append(p));</span>
+<span class="nc" id="L67">      statement.append(&quot; ON &quot;);</span>
+<span class="nc" id="L68">      return ((SqlConvertible) on).asSQL(statement);</span>
+<span class="nc" id="L69">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L70">      throw new IllegalStateException(&quot;Target DB table of collection attribute &amp;1 of &amp;2&quot;</span>
+<span class="nc" id="L71">          .replace(&quot;&amp;1&quot;, attribute.getInternalName())</span>
+<span class="nc" id="L72">          .replace(&quot;&amp;2&quot;, st.getInternalName()), e);</span>
+    }
+  }
+
+  @Override
+  List&lt;Path&lt;Object&gt;&gt; resolvePathElements() {
+<span class="nc" id="L78">    final List&lt;Path&lt;Object&gt;&gt; pathList = new ArrayList&lt;&gt;();</span>
+    try {
+<span class="nc bnc" id="L80" title="All 2 branches missed.">      if (!attribute.isComplex()) {</span>
+<span class="nc" id="L81">        final JPAStructuredType source = attribute.asAssociation().getSourceType();</span>
+<span class="nc" id="L82">        pathList.add(new PathImpl&lt;&gt;(source.getPath(attribute.asAssociation().getAlias()),</span>
+            parent, st, tableAlias));
+<span class="nc" id="L84">      } else {</span>
+<span class="nc" id="L85">        final JPAStructuredType source = attribute.getStructuredType();</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        for (final JPAPath p : source.getPathList()) {</span>
+<span class="nc" id="L87">          pathList.add(new PathImpl&lt;&gt;(p, parent, st, tableAlias));</span>
+<span class="nc" id="L88">        }</span>
+      }
+<span class="nc" id="L90">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L91">      throw new IllegalStateException(e);</span>
+<span class="nc" id="L92">    }</span>
+<span class="nc" id="L93">    return pathList;</span>
+  }
+
+  @Override
+  List&lt;JPAPath&gt; getPathList() {
+<span class="nc" id="L98">    final List&lt;JPAPath&gt; pathList = new ArrayList&lt;&gt;();</span>
+    try {
+<span class="nc bnc" id="L100" title="All 2 branches missed.">      if (!attribute.isComplex()) {</span>
+<span class="nc" id="L101">        final JPAStructuredType source = attribute.asAssociation().getSourceType();</span>
+<span class="nc" id="L102">        final JPAPath path = source.getPath(this.alias.orElse(attribute.getExternalName()));</span>
+<span class="nc" id="L103">        pathList.add(path);</span>
+<span class="nc" id="L104">      } else {</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        pathList.addAll(attribute.getStructuredType().getPathList().stream().filter(p -&gt; !p.ignore()).collect(Collectors</span>
+<span class="nc" id="L106">            .toList()));</span>
+      }
+<span class="nc" id="L108">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L109">      throw new IllegalStateException(e);</span>
+<span class="nc" id="L110">    }</span>
+<span class="nc" id="L111">    return pathList;</span>
+  }
+
+  /**
+   * Return the metamodel attribute corresponding to the join.
+   * @return metamodel attribute corresponding to the join
+   */
+  @Override
+  public Attribute&lt;? super Z, ?&gt; getAttribute() {
+<span class="nc" id="L120">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public JoinType getJoinType() {
+<span class="nc" id="L125">    return JoinType.INNER;</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L130">    final int prime = 31;</span>
+<span class="nc" id="L131">    int result = super.hashCode();</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">    result = prime * result + ((attribute == null) ? 0 : attribute.hashCode());</span>
+<span class="nc" id="L133">    return result;</span>
+  }
+
+  @Override
+  public boolean equals(final Object obj) {
+<span class="nc bnc" id="L138" title="All 2 branches missed.">    if (this == obj) return true;</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">    if (!super.equals(obj)) return false;</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">    if (getClass() != obj.getClass()) return false;</span>
+<span class="nc" id="L141">    final CollectionJoinImpl&lt;?, ?&gt; other = (CollectionJoinImpl&lt;?, ?&gt;) obj;</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">    if (attribute == null) {</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">      if (other.attribute != null) return false;</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">    } else if (!attribute.equals(other.attribute)) return false;</span>
+<span class="nc" id="L145">    return true;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

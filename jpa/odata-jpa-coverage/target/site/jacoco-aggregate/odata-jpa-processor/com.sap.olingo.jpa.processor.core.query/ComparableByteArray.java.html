@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ComparableByteArray.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">ComparableByteArray.java</span></div><h1>ComparableByteArray.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import java.util.Arrays;
+
+class ComparableByteArray implements Comparable&lt;byte[]&gt; {
+
+  private final byte[] bytes;
+  private final String value;
+
+  static byte[] unboxedArray(final Object object) {
+<span class="nc bnc" id="L11" title="All 2 branches missed.">    if (object instanceof Byte[]) {</span>
+<span class="nc" id="L12">      final Byte[] input = (Byte[]) object;</span>
+<span class="nc" id="L13">      final byte[] result = new byte[input.length];</span>
+<span class="nc bnc" id="L14" title="All 2 branches missed.">      for (int i = 0; i &lt; input.length; i++) {</span>
+<span class="nc" id="L15">        result[i] = input[i]; // NOSONAR</span>
+      }
+<span class="nc" id="L17">      return result;</span>
+<span class="nc bnc" id="L18" title="All 2 branches missed.">    } else if (object instanceof byte[])</span>
+<span class="nc" id="L19">      return (byte[]) object;</span>
+    else
+<span class="nc" id="L21">      throw new IllegalArgumentException(&quot;Method called with wrong Type&quot;);</span>
+  }
+
+  ComparableByteArray(final byte[] bytes) {
+<span class="nc" id="L25">    super();</span>
+<span class="nc" id="L26">    this.bytes = bytes;</span>
+<span class="nc" id="L27">    this.value = new String(unboxedArray(bytes));</span>
+<span class="nc" id="L28">  }</span>
+
+  @Override
+  public int compareTo(final byte[] o) {
+<span class="nc" id="L32">    return value.compareTo(new String(o));</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L37">    final int prime = 31;</span>
+<span class="nc" id="L38">    int result = 1;</span>
+<span class="nc" id="L39">    result = prime * result + Arrays.hashCode(bytes);</span>
+<span class="nc" id="L40">    return result;</span>
+  }
+
+  @Override
+  public boolean equals(final Object obj) {
+<span class="nc bnc" id="L45" title="All 2 branches missed.">    if (this == obj) return true;</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">    if (!(obj instanceof ComparableByteArray)) return false;</span>
+<span class="nc" id="L47">    final ComparableByteArray other = (ComparableByteArray) obj;</span>
+<span class="nc" id="L48">    return Arrays.equals(bytes, other.bytes);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAErrorProcessorWrapper.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAErrorProcessorWrapper.java</span></div><h1>JPAErrorProcessorWrapper.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.ODataServerError;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.processor.DefaultProcessor;
+import org.apache.olingo.server.api.processor.ErrorProcessor;
+
+public class JPAErrorProcessorWrapper implements ErrorProcessor {
+  private final ErrorProcessor defaultProcessor;
+  private final JPAErrorProcessor errorProcessor;
+
+  public JPAErrorProcessorWrapper(final JPAErrorProcessor errorProcessor) {
+<span class="nc" id="L17">    super();</span>
+<span class="nc" id="L18">    this.defaultProcessor = new DefaultProcessor();</span>
+<span class="nc" id="L19">    this.errorProcessor = errorProcessor;</span>
+
+<span class="nc" id="L21">  }</span>
+
+  @Override
+  public void init(OData odata, ServiceMetadata serviceMetadata) {
+<span class="nc" id="L25">    defaultProcessor.init(odata, serviceMetadata);</span>
+<span class="nc" id="L26">  }</span>
+
+  @Override
+  public void processError(ODataRequest request, ODataResponse response, ODataServerError serverError,
+      ContentType responseFormat) {
+<span class="nc" id="L31">    errorProcessor.processError(request, serverError);</span>
+<span class="nc" id="L32">    defaultProcessor.processError(request, response, serverError, responseFormat);</span>
+<span class="nc" id="L33">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

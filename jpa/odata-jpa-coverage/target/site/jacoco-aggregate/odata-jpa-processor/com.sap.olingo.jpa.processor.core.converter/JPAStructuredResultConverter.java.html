@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAStructuredResultConverter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.converter</a> &gt; <span class="el_source">JPAStructuredResultConverter.java</span></div><h1>JPAStructuredResultConverter.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.converter;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.AttributeConverter;
+
+import org.apache.olingo.commons.api.data.ComplexValue;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.data.ValueType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.serializer.SerializerException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPADefaultEdmNameBuilder;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+
+/**
+ * Abstract super class to converts a list of JPA POJOs into Olingo format. The POJOs have to have
+ * @author Oliver Grande
+ *
+ */
+
+public abstract class JPAStructuredResultConverter {
+
+  public static final String ACCESS_MODIFIER_GET = &quot;get&quot;;
+  public static final String ACCESS_MODIFIER_SET = &quot;set&quot;;
+  public static final String ACCESS_MODIFIER_IS = &quot;is&quot;;
+<span class="nc" id="L39">  private static final Map&lt;String, HashMap&lt;String, Method&gt;&gt; METHOD_BUFFER =</span>
+      new HashMap&lt;&gt;();
+  protected final List&lt;?&gt; jpaQueryResult;
+  protected final JPAStructuredType jpaTopLevelType;
+
+  protected JPAStructuredResultConverter(final List&lt;?&gt; jpaQueryResult, final JPAStructuredType jpaStructuredType) {
+
+<span class="nc" id="L46">    super();</span>
+<span class="nc" id="L47">    this.jpaQueryResult = jpaQueryResult;</span>
+<span class="nc" id="L48">    this.jpaTopLevelType = jpaStructuredType;</span>
+<span class="nc" id="L49">  }</span>
+
+  public abstract Object getResult() throws ODataApplicationException, SerializerException, URISyntaxException;
+
+  protected Map&lt;String, Method&gt; getMethods(final Class&lt;?&gt; clazz) {
+<span class="nc" id="L54">    HashMap&lt;String, Method&gt; methods = METHOD_BUFFER.get(clazz.getName());</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">    if (methods == null) {</span>
+<span class="nc" id="L56">      methods = new HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L58">      final Method[] allMethods = clazz.getMethods();</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">      for (final Method m : allMethods) {</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (!m.getReturnType().getName().equalsIgnoreCase(&quot;void&quot;)</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">            &amp;&amp; Modifier.isPublic(m.getModifiers()))</span>
+<span class="nc" id="L62">          methods.put(m.getName(), m);</span>
+      }
+<span class="nc" id="L64">      METHOD_BUFFER.put(clazz.getName(), methods);</span>
+    }
+<span class="nc" id="L66">    return methods;</span>
+  }
+
+  protected void convertProperties(final Object row,
+      final List&lt;Property&gt; properties, final JPAStructuredType jpaStructuredType) throws ODataJPAQueryException {
+
+    List&lt;JPAAttribute&gt; attributeList;
+<span class="nc" id="L73">    final Map&lt;String, Method&gt; methodMap = getMethods(jpaStructuredType.getTypeClass());</span>
+    try {
+<span class="nc" id="L75">      attributeList = jpaStructuredType.getAttributes();</span>
+<span class="nc" id="L76">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L77">      throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L78">    }</span>
+
+<span class="nc bnc" id="L80" title="All 2 branches missed.">    for (final JPAAttribute attribute : attributeList) {</span>
+<span class="nc" id="L81">      final String attributeName = attribute.getInternalName();</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">      if (attribute.isTransient())</span>
+<span class="nc" id="L83">        continue;</span>
+<span class="nc" id="L84">      final Method getMethod = getGetter(attributeName, methodMap);</span>
+      try {
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (attribute.isCollection()) {</span>
+<span class="nc" id="L87">          convertCollectionProperty(row, properties, attribute, getMethod);</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">        } else if (attribute.isComplex()) {</span>
+<span class="nc" id="L89">          convertComplexProperty(row, properties, attribute, getMethod);</span>
+        } else {
+<span class="nc" id="L91">          convertPrimitiveProperty(row, properties, attribute, getMethod);</span>
+        }
+<span class="nc" id="L93">      } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException</span>
+          | ODataJPAModelException e) {
+<span class="nc" id="L95">        throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L96">      }</span>
+<span class="nc" id="L97">    }</span>
+<span class="nc" id="L98">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private &lt;T, S&gt; void convertPrimitiveProperty(final Object row, final List&lt;Property&gt; properties,
+      final JPAAttribute attribute, final Method getMethod) throws IllegalAccessException, InvocationTargetException {
+<span class="nc bnc" id="L103" title="All 2 branches missed.">    if (row != null) {</span>
+<span class="nc" id="L104">      Object odataValue = getMethod.invoke(row);</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">      if (attribute.getConverter() != null) {</span>
+<span class="nc" id="L106">        final AttributeConverter&lt;T, S&gt; converter = attribute.getConverter();</span>
+<span class="nc" id="L107">        odataValue = converter.convertToDatabaseColumn((T) odataValue);</span>
+      }
+
+<span class="nc" id="L110">      properties.add(new Property(</span>
+<span class="nc" id="L111">          attribute.getExternalFQN().getFullQualifiedNameAsString(),</span>
+<span class="nc" id="L112">          attribute.getExternalName(),</span>
+          ValueType.PRIMITIVE,
+          odataValue));
+<span class="nc" id="L115">    } else {</span>
+<span class="nc" id="L116">      properties.add(new Property(</span>
+<span class="nc" id="L117">          attribute.getExternalFQN().getFullQualifiedNameAsString(),</span>
+<span class="nc" id="L118">          attribute.getExternalName(),</span>
+          ValueType.PRIMITIVE,
+          null));
+    }
+<span class="nc" id="L122">  }</span>
+
+  private void convertComplexProperty(final Object row, final List&lt;Property&gt; properties, final JPAAttribute attribute,
+      final Method getMethod) throws ODataJPAModelException, ODataJPAQueryException, IllegalAccessException,
+      InvocationTargetException {
+<span class="nc" id="L127">    final ComplexValue complexValue = new ComplexValue();</span>
+<span class="nc" id="L128">    properties.add(new Property(</span>
+<span class="nc" id="L129">        attribute.getStructuredType().getExternalFQN().getFullQualifiedNameAsString(),</span>
+<span class="nc" id="L130">        attribute.getExternalName(),</span>
+        ValueType.COMPLEX,
+        complexValue));
+<span class="nc" id="L133">    final List&lt;Property&gt; values = complexValue.getValue();</span>
+<span class="nc" id="L134">    convertProperties(getMethod.invoke(row), values, attribute.getStructuredType());</span>
+<span class="nc" id="L135">  }</span>
+
+  private void convertCollectionProperty(final Object row, final List&lt;Property&gt; properties,
+      final JPAAttribute attribute, final Method getMethod) throws IllegalAccessException, InvocationTargetException,
+      ODataJPAQueryException, ODataJPAModelException {
+<span class="nc" id="L140">    final Collection&lt;?&gt; odataValue = (Collection&lt;?&gt;) getMethod.invoke(row);</span>
+<span class="nc" id="L141">    final List&lt;Object&gt; collection = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L142" title="All 4 branches missed.">    if (attribute.isComplex() &amp;&amp; odataValue != null) {</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">      for (final Object element : odataValue) {</span>
+<span class="nc" id="L144">        final ComplexValue values = new ComplexValue();</span>
+<span class="nc" id="L145">        convertProperties(element, values.getValue(), attribute.getStructuredType());</span>
+<span class="nc" id="L146">        collection.add(values);</span>
+<span class="nc" id="L147">      }</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">    } else if (odataValue != null) {</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">      if(attribute.getConverter() != null) {</span>
+<span class="nc" id="L150">        final AttributeConverter attributeConverter = attribute.getConverter();</span>
+<span class="nc" id="L151">        odataValue.stream().forEach((v) -&gt; { collection.add(attributeConverter.convertToDatabaseColumn(v));});</span>
+<span class="nc" id="L152">      } else {</span>
+<span class="nc" id="L153">        collection.addAll(odataValue);</span>
+      }
+    }
+<span class="nc" id="L156">    properties.add(new Property(</span>
+<span class="nc" id="L157">        attribute.getExternalFQN().getFullQualifiedNameAsString(),</span>
+<span class="nc" id="L158">        attribute.getExternalName(),</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        attribute.isComplex() ? ValueType.COLLECTION_COMPLEX : ValueType.COLLECTION_PRIMITIVE,</span>
+        collection));
+<span class="nc" id="L161">  }</span>
+
+  private Method getGetter(final String attributeName, final Map&lt;String, Method&gt; methodMap)
+      throws ODataJPAQueryException {
+<span class="nc" id="L165">    final String getterName = ACCESS_MODIFIER_GET + JPADefaultEdmNameBuilder.firstToUpper(attributeName);</span>
+
+<span class="nc bnc" id="L167" title="All 2 branches missed.">    if (methodMap.get(getterName) == null)</span>
+<span class="nc" id="L168">      throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_RESULT_ACCESS_NOT_FOUND,</span>
+          HttpStatusCode.INTERNAL_SERVER_ERROR, attributeName);
+    Method getMethod;
+<span class="nc" id="L171">    getMethod = methodMap.get(getterName);</span>
+<span class="nc" id="L172">    return getMethod;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

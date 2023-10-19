@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateJoinTable.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateJoinTable.java</span></div><h1>IntermediateJoinTable.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.NO_JOIN_TABLE_TYPE;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.sap.olingo.jpa.metadata.api.JPAJoinColumn;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAJoinTable;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAOnConditionItem;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+class IntermediateJoinTable implements JPAJoinTable {
+<span class="nc" id="L22">  private static final Log LOGGER = LogFactory.getLog(IntermediateJoinTable.class);</span>
+
+  private final IntermediateNavigationProperty intermediateProperty;
+  private final JoinTable jpaJoinTable;
+  private final IntermediateStructuredType&lt;?&gt; sourceType;
+<span class="nc" id="L27">  private List&lt;IntermediateJoinColumn&gt; joinColumns = null;</span>
+<span class="nc" id="L28">  private List&lt;IntermediateJoinColumn&gt; inverseJoinColumns = null;</span>
+  private final Optional&lt;JPAEntityType&gt; jpaEntityType;
+
+  IntermediateJoinTable(final IntermediateNavigationProperty intermediateProperty, final JoinTable jpaJoinTable,
+      final IntermediateSchema schema) {
+<span class="nc" id="L33">    super();</span>
+<span class="nc" id="L34">    this.intermediateProperty = intermediateProperty;</span>
+<span class="nc" id="L35">    this.jpaJoinTable = jpaJoinTable;</span>
+<span class="nc" id="L36">    this.sourceType = intermediateProperty.getSourceType();</span>
+<span class="nc" id="L37">    this.jpaEntityType = Optional.ofNullable(schema.getEntityType(jpaJoinTable.catalog(), jpaJoinTable.schema(),</span>
+<span class="nc" id="L38">        jpaJoinTable.name()));</span>
+<span class="nc" id="L39">    LOGGER.trace(&quot;Determined entity type of join table: &quot;</span>
+<span class="nc" id="L40">        + jpaEntityType.map(JPAEntityType::getInternalName).orElse(&quot;null&quot;));</span>
+<span class="nc" id="L41">  }</span>
+
+  private IntermediateJoinTable(final IntermediateJoinTable intermediateJoinTable,
+<span class="nc" id="L44">      final IntermediateNavigationProperty mappedBy) throws ODataJPAModelException {</span>
+
+<span class="nc" id="L46">    this.jpaJoinTable = intermediateJoinTable.jpaJoinTable;</span>
+<span class="nc" id="L47">    this.sourceType = intermediateJoinTable.getTargetType();</span>
+<span class="nc" id="L48">    this.jpaEntityType = intermediateJoinTable.jpaEntityType;</span>
+<span class="nc" id="L49">    this.intermediateProperty = mappedBy;</span>
+<span class="nc" id="L50">    this.joinColumns = intermediateJoinTable.buildInverseJoinColumns();</span>
+<span class="nc" id="L51">    this.inverseJoinColumns = intermediateJoinTable.buildJoinColumns();</span>
+<span class="nc" id="L52">  }</span>
+
+  private IntermediateJoinTable(final IntermediateJoinTable intermediateJoinTable,
+<span class="nc" id="L55">      final IntermediateStructuredType&lt;?&gt; sourceType) throws ODataJPAModelException {</span>
+<span class="nc" id="L56">    this.jpaJoinTable = intermediateJoinTable.jpaJoinTable;</span>
+<span class="nc" id="L57">    this.sourceType = sourceType;</span>
+<span class="nc" id="L58">    this.jpaEntityType = intermediateJoinTable.jpaEntityType;</span>
+<span class="nc" id="L59">    this.intermediateProperty = intermediateJoinTable.intermediateProperty;</span>
+<span class="nc" id="L60">    this.inverseJoinColumns = intermediateJoinTable.buildInverseJoinColumns();</span>
+<span class="nc" id="L61">    buildJoinColumns();</span>
+<span class="nc" id="L62">  }</span>
+
+  @Override
+  public String getAlias(final String dbFieldName) {
+<span class="nc bnc" id="L66" title="All 2 branches missed.">    for (final IntermediateJoinColumn column : joinColumns) {</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">      if (column.getName().equals(dbFieldName))</span>
+<span class="nc" id="L68">        return column.getReferencedColumnName();</span>
+<span class="nc" id="L69">    }</span>
+<span class="nc" id="L70">    return null;</span>
+  }
+
+  @Override
+  public JPAEntityType getEntityType() {
+<span class="nc" id="L75">    return jpaEntityType.orElse(null);</span>
+  }
+
+  @Override
+  public String getInverseAlias(final String dbFieldName) {
+    try {
+<span class="nc" id="L81">      buildInverseJoinColumns();</span>
+<span class="nc" id="L82">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L83">      throw new IllegalArgumentException(e);</span>
+<span class="nc" id="L84">    }</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">    for (final IntermediateJoinColumn column : inverseJoinColumns) {</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">      if (column.getName().equals(dbFieldName))</span>
+<span class="nc" id="L87">        return column.getReferencedColumnName();</span>
+<span class="nc" id="L88">    }</span>
+<span class="nc" id="L89">    return null;</span>
+  }
+
+  @Override
+  public List&lt;JPAOnConditionItem&gt; getInverseJoinColumns() throws ODataJPAModelException {
+
+<span class="nc" id="L95">    buildInverseJoinColumns();</span>
+<span class="nc" id="L96">    final IntermediateStructuredType&lt;?&gt; targetType = (IntermediateStructuredType&lt;?&gt;) intermediateProperty</span>
+<span class="nc" id="L97">        .getTargetEntity();</span>
+<span class="nc" id="L98">    final List&lt;JPAOnConditionItem&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">    for (final IntermediateJoinColumn column : inverseJoinColumns) {</span>
+<span class="nc" id="L100">      result.add(new JPAOnConditionItemImpl(</span>
+          ((IntermediateEntityType&lt;?&gt;) jpaEntityType
+<span class="nc" id="L102">              .orElseThrow(() -&gt; new ODataJPAModelException(NO_JOIN_TABLE_TYPE)))</span>
+<span class="nc" id="L103">                  .getPathByDBField(column.getReferencedColumnName()),</span>
+<span class="nc" id="L104">          targetType.getPathByDBField(column.getName())));</span>
+<span class="nc" id="L105">    }</span>
+<span class="nc" id="L106">    return result;</span>
+  }
+
+  @Override
+  public List&lt;JPAOnConditionItem&gt; getJoinColumns() throws ODataJPAModelException {
+
+<span class="nc" id="L112">    final List&lt;JPAOnConditionItem&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">    for (final IntermediateJoinColumn column : joinColumns) {</span>
+<span class="nc" id="L114">      result.add(new JPAOnConditionItemImpl(</span>
+<span class="nc" id="L115">          sourceType.getPathByDBField(column.getName()),</span>
+          ((IntermediateEntityType&lt;?&gt;) jpaEntityType
+<span class="nc" id="L117">              .orElseThrow(() -&gt; new ODataJPAModelException(NO_JOIN_TABLE_TYPE)))</span>
+<span class="nc" id="L118">                  .getPathByDBField(column.getReferencedColumnName())));</span>
+<span class="nc" id="L119">    }</span>
+<span class="nc" id="L120">    return result;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;T extends JPAJoinColumn&gt; List&lt;T&gt; getRawInverseJoinInformation() throws ODataJPAModelException {
+<span class="nc" id="L126">    buildInverseJoinColumns();</span>
+    // For criteria builder the columns get switched
+<span class="nc" id="L128">    final List&lt;T&gt; invertedColumns = new ArrayList&lt;&gt;(inverseJoinColumns.size());</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">    for (final IntermediateJoinColumn column : inverseJoinColumns) {</span>
+<span class="nc" id="L130">      invertedColumns.add((T) new IntermediateJoinColumn(column.getReferencedColumnName(), column.getName()));</span>
+<span class="nc" id="L131">    }</span>
+<span class="nc" id="L132">    return invertedColumns;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;T extends JPAJoinColumn&gt; List&lt;T&gt; getRawJoinInformation() {
+<span class="nc" id="L138">    return (List&lt;T&gt;) joinColumns;</span>
+  }
+
+  /**
+   * Returns the name of database table
+   * @return
+   */
+  @Override
+  public String getTableName() {
+<span class="nc" id="L147">    return buildFQTableName(jpaJoinTable.schema(), jpaJoinTable.name());</span>
+  }
+
+  protected final String buildFQTableName(final String schema, final String table) {
+<span class="nc" id="L151">    final StringBuilder fqt = new StringBuilder();</span>
+<span class="nc bnc" id="L152" title="All 4 branches missed.">    if (schema != null &amp;&amp; !schema.isEmpty()) {</span>
+<span class="nc" id="L153">      fqt.append(schema);</span>
+<span class="nc" id="L154">      fqt.append(&quot;.&quot;);</span>
+    }
+<span class="nc" id="L156">    fqt.append(table);</span>
+<span class="nc" id="L157">    return fqt.toString();</span>
+  }
+
+  IntermediateJoinTable asMapped(final IntermediateNavigationProperty mappedBy) throws ODataJPAModelException {
+<span class="nc" id="L161">    return new IntermediateJoinTable(this, mappedBy);</span>
+  }
+
+  List&lt;IntermediateJoinColumn&gt; buildInverseJoinColumns() throws ODataJPAModelException {
+
+<span class="nc bnc" id="L166" title="All 2 branches missed.">    if (inverseJoinColumns == null) {</span>
+<span class="nc" id="L167">      inverseJoinColumns = new ArrayList&lt;&gt;(jpaJoinTable.inverseJoinColumns().length);</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">      for (final JoinColumn column : jpaJoinTable.inverseJoinColumns()) {</span>
+<span class="nc" id="L169">        buildInverseJoinColumn(column);</span>
+      }
+    }
+<span class="nc" id="L172">    return inverseJoinColumns;</span>
+  }
+
+  List&lt;IntermediateJoinColumn&gt; buildJoinColumns() throws ODataJPAModelException {
+<span class="nc bnc" id="L176" title="All 2 branches missed.">    if (joinColumns == null) {</span>
+<span class="nc" id="L177">      joinColumns = new ArrayList&lt;&gt;(jpaJoinTable.inverseJoinColumns().length);</span>
+
+<span class="nc bnc" id="L179" title="All 2 branches missed.">      for (final JoinColumn column : jpaJoinTable.joinColumns()) {</span>
+<span class="nc" id="L180">        buildJoinColumn(column);</span>
+      }
+    }
+<span class="nc" id="L183">    return joinColumns;</span>
+  }
+
+  IntermediateJoinTable withSource(final IntermediateStructuredType&lt;?&gt; sourceType) throws ODataJPAModelException {
+<span class="nc" id="L187">    return new IntermediateJoinTable(this, sourceType);</span>
+  }
+
+  private void buildInverseJoinColumn(final JoinColumn column) throws ODataJPAModelException {
+<span class="nc bnc" id="L191" title="All 4 branches missed.">    if (column.referencedColumnName() == null || column.referencedColumnName().isEmpty()) {</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">      if (jpaJoinTable.joinColumns().length &gt; 1)</span>
+<span class="nc" id="L193">        throw new ODataJPAModelException(ODataJPAModelException.MessageKeys.NOT_SUPPORTED_NO_IMPLICIT_COLUMNS,</span>
+<span class="nc" id="L194">            intermediateProperty.getInternalName());</span>
+      else
+<span class="nc" id="L196">        inverseJoinColumns.add(new IntermediateJoinColumn(</span>
+<span class="nc" id="L197">            ((IntermediateProperty) ((IntermediateEntityType&lt;?&gt;) getTargetType()).getKey().get(0)).getDBFieldName(),</span>
+<span class="nc" id="L198">            column.name()));</span>
+    } else {
+<span class="nc" id="L200">      inverseJoinColumns.add(new IntermediateJoinColumn(column.referencedColumnName(), column.name()));</span>
+    }
+<span class="nc" id="L202">  }</span>
+
+  private void buildJoinColumn(final JoinColumn column) throws ODataJPAModelException {
+<span class="nc bnc" id="L205" title="All 4 branches missed.">    if (column.referencedColumnName() == null || column.referencedColumnName().isEmpty()) {</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">      if (jpaJoinTable.joinColumns().length &gt; 1)</span>
+<span class="nc" id="L207">        throw new ODataJPAModelException(ODataJPAModelException.MessageKeys.NOT_SUPPORTED_NO_IMPLICIT_COLUMNS,</span>
+<span class="nc" id="L208">            intermediateProperty.getInternalName());</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">      else if (!(intermediateProperty.getSourceType() instanceof IntermediateEntityType))</span>
+<span class="nc" id="L210">        throw new ODataJPAModelException(</span>
+            ODataJPAModelException.MessageKeys.NOT_SUPPORTED_NO_IMPLICIT_COLUMNS_COMPLEX,
+<span class="nc" id="L212">            intermediateProperty.getInternalName());</span>
+      else {
+<span class="nc" id="L214">        joinColumns.add(new IntermediateJoinColumn(</span>
+<span class="nc" id="L215">            ((IntermediateProperty) ((IntermediateEntityType&lt;?&gt;) intermediateProperty.getSourceType()).getKey().get(</span>
+<span class="nc" id="L216">                0)).getDBFieldName(), column.name()));</span>
+      }
+    } else {
+<span class="nc" id="L219">      joinColumns.add(new IntermediateJoinColumn(column.referencedColumnName(), column.name()));</span>
+    }
+<span class="nc" id="L221">  }</span>
+
+  private IntermediateStructuredType&lt;?&gt; getTargetType() throws ODataJPAModelException {
+<span class="nc" id="L224">    return (IntermediateStructuredType&lt;?&gt;) intermediateProperty.getTargetEntity();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

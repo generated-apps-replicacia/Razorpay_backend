@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>UUIDToBinaryConverter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.testmodel</a> &gt; <span class="el_source">UUIDToBinaryConverter.java</span></div><h1>UUIDToBinaryConverter.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.testmodel;
+
+import java.nio.ByteBuffer;
+import java.util.UUID;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
+
+/**
+ * Default converter to convert from {@link java.util.UUID} to a byte array.
+ *
+ * @author Oliver Grande
+ */
+@Converter(autoApply = false)
+
+<span class="nc" id="L16">public class UUIDToBinaryConverter implements AttributeConverter&lt;UUID, byte[]&gt; {</span>
+
+  @Override
+  public byte[] convertToDatabaseColumn(final UUID uuid) {
+<span class="nc bnc" id="L20" title="All 2 branches missed.">    return uuid == null ? null : convertToBytes(uuid);</span>
+  }
+
+  private byte[] convertToBytes(final UUID uuid) {
+<span class="nc" id="L24">    byte[] buffer = new byte[16];</span>
+<span class="nc" id="L25">    ByteBuffer bb = ByteBuffer.wrap(buffer);</span>
+<span class="nc" id="L26">    bb.putLong(uuid.getMostSignificantBits());</span>
+<span class="nc" id="L27">    bb.putLong(uuid.getLeastSignificantBits());</span>
+<span class="nc" id="L28">    return buffer;</span>
+  }
+
+  @Override
+  public UUID convertToEntityAttribute(final byte[] bytes) {
+<span class="nc bnc" id="L33" title="All 2 branches missed.">    return bytes == null ? null : convertToUUID(bytes);</span>
+  }
+  
+  private UUID convertToUUID(byte[] bytes) {
+<span class="nc" id="L37">    ByteBuffer bb = ByteBuffer.wrap(bytes);</span>
+<span class="nc" id="L38">    long high = bb.getLong();</span>
+<span class="nc" id="L39">    long low = bb.getLong();</span>
+<span class="nc" id="L40">    return new UUID(high, low);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

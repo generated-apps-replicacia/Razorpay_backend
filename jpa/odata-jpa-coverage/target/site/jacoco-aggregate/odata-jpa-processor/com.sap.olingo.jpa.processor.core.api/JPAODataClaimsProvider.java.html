@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataClaimsProvider.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAODataClaimsProvider.java</span></div><h1>JPAODataClaimsProvider.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * Container that contains the claims that must be fulfilled, so an entity my be modified or read.
+ * @author Oliver Grande
+ *
+ */
+public class JPAODataClaimsProvider implements JPAODataClaimProvider {
+
+<span class="nc" id="L17">  private final Map&lt;String, List&lt;JPAClaimsPair&lt;?&gt;&gt;&gt; claims = new HashMap&lt;&gt;();</span>
+  private final Optional&lt;String&gt; user;
+
+  public JPAODataClaimsProvider() {
+<span class="nc" id="L21">    this(null);</span>
+<span class="nc" id="L22">  }</span>
+
+  public JPAODataClaimsProvider(final String user) {
+<span class="nc" id="L25">    super();</span>
+<span class="nc" id="L26">    this.user = Optional.ofNullable(user);</span>
+<span class="nc" id="L27">  }</span>
+
+  public void add(final String attributeName, final JPAClaimsPair&lt;?&gt; claimsPair) {
+<span class="nc bnc" id="L30" title="All 2 branches missed.">    if (!claims.containsKey(attributeName))</span>
+<span class="nc" id="L31">      claims.put(attributeName, new ArrayList&lt;&gt;());</span>
+<span class="nc" id="L32">    claims.get(attributeName).add(claimsPair);</span>
+
+<span class="nc" id="L34">  }</span>
+
+  @Override
+  public List&lt;JPAClaimsPair&lt;?&gt;&gt; get(final String attributeName) { // NOSONAR
+<span class="nc bnc" id="L38" title="All 2 branches missed.">    if (!claims.containsKey(attributeName))</span>
+<span class="nc" id="L39">      return Collections.emptyList();</span>
+<span class="nc" id="L40">    return claims.get(attributeName);</span>
+  }
+
+  @Override
+  public Optional&lt;String&gt; user() {
+<span class="nc" id="L45">    return user;</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L50">    return &quot;JPAODataClaimsProvider [claims=&quot; + claims + &quot;, user=&quot; + user + &quot;]&quot;;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

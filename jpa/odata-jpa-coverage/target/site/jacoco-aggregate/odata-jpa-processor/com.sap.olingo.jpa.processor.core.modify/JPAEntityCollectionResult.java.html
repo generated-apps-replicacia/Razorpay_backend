@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAEntityCollectionResult.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.modify</a> &gt; <span class="el_source">JPAEntityCollectionResult.java</span></div><h1>JPAEntityCollectionResult.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.modify;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Tuple;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.converter.JPACollectionResult;
+import com.sap.olingo.jpa.processor.core.converter.JPATuple;
+import com.sap.olingo.jpa.processor.core.converter.JPATupleChildConverter;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+
+final class JPAEntityCollectionResult extends JPAEntityBasedResult implements JPACollectionResult { // JPACollectionQueryResult
+
+  private Map&lt;String, List&lt;Object&gt;&gt; converted;
+  private final JPAAssociationPath path;
+
+  JPAEntityCollectionResult(final JPAEntityType et, final Collection&lt;?&gt; values,
+      final Map&lt;String, List&lt;String&gt;&gt; requestHeaders, final JPACollectionAttribute attribute)
+      throws ODataJPAModelException, ODataJPAProcessorException {
+<span class="nc" id="L31">    super(et, requestHeaders);</span>
+<span class="nc" id="L32">    this.path = attribute.asAssociation();</span>
+<span class="nc" id="L33">    result = convertToTuple(et, values, attribute);</span>
+
+<span class="nc" id="L35">  }</span>
+
+  private List&lt;Tuple&gt; convertToTuple(final JPAEntityType et, final Collection&lt;?&gt; values,
+      final JPACollectionAttribute attribute) throws ODataJPAProcessorException, ODataJPAModelException {
+
+<span class="nc" id="L40">    final List&lt;Tuple&gt; tupleList = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L42" title="All 2 branches missed.">    for (final Object value : values) {</span>
+<span class="nc" id="L43">      final JPATuple tuple = new JPATuple();</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">      if (attribute.isComplex()) {</span>
+<span class="nc" id="L45">        final Map&lt;String, Object&gt; embeddedGetterMap = helper.buildGetterMap(value);</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        for (JPAPath p : attribute.getStructuredType().getPathList())</span>
+<span class="nc" id="L47">          convertPathToTuple(tuple, embeddedGetterMap, et.getPath(this.path.getAlias()</span>
+<span class="nc" id="L48">              + JPAPath.PATH_SEPARATOR + p.getAlias()), 1);</span>
+<span class="nc" id="L49">      } else {</span>
+<span class="nc" id="L50">        tuple.addElement(path.getAlias(), attribute.getType(), value);</span>
+      }
+<span class="nc" id="L52">      tupleList.add(tuple);</span>
+<span class="nc" id="L53">    }</span>
+<span class="nc" id="L54">    return tupleList;</span>
+  }
+
+  @Override
+  public void convert(final JPATupleChildConverter converter) throws ODataApplicationException {
+<span class="nc" id="L59">    converted = converter.getCollectionResult(this, Collections.emptySet());</span>
+<span class="nc" id="L60">  }</span>
+
+  @Override
+  public List&lt;Object&gt; getPropertyCollection(String key) {
+<span class="nc" id="L64">    return converted.get(ROOT_RESULT_KEY);</span>
+  }
+
+  @Override
+  public JPAAssociationPath getAssociation() {
+<span class="nc" id="L69">    return path;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

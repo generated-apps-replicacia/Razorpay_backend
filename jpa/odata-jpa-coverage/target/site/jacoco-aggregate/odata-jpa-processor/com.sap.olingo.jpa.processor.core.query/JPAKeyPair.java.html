@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAKeyPair.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">JPAKeyPair.java</span></div><h1>JPAKeyPair.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.AttributeConverter;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAKeyPairException;
+
+/**
+ * A pair of comparable entity keys.&lt;br&gt;
+ * Such a pair is used to forward the lowest and highest key value from a query to the dependent $expand query in case
+ * the original query was restricted by &lt;code&gt;$top&lt;/code&gt; and/or &lt;code&gt;$skip&lt;/code&gt;.
+ * The pair is seen as closed interval, that is min and max are seen as part of the result. In case an attribute of the
+ * key has a conversion, the converted value is used for the comparison.
+ *
+ * @author Oliver Grande
+ * Created: 13.10.2019
+ * @since 0.3.6
+ * @param &lt;T&gt;
+ */
+@SuppressWarnings(&quot;rawtypes&quot;)
+public class JPAKeyPair {
+  private Map&lt;JPAAttribute, Comparable&gt; min;
+  private Map&lt;JPAAttribute, Comparable&gt; max;
+  private final List&lt;JPAAttribute&gt; keyDefinition;
+
+  public JPAKeyPair(final List&lt;JPAAttribute&gt; keyDef) {
+<span class="nc" id="L29">    super();</span>
+<span class="nc" id="L30">    this.keyDefinition = keyDef;</span>
+<span class="nc" id="L31">  }</span>
+
+  public Map&lt;JPAAttribute, Comparable&gt; getMin() {
+<span class="nc" id="L34">    return min;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Y getMinElement(final JPAAttribute keyElement) {
+<span class="nc" id="L39">    return (Y) min.get(keyElement);</span>
+  }
+
+  public Map&lt;JPAAttribute, Comparable&gt; getMax() {
+<span class="nc" id="L43">    return max;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Y getMaxElement(final JPAAttribute keyElement) {
+<span class="nc" id="L48">    return (Y) max.get(keyElement);</span>
+  }
+
+  public boolean hasUpperBoundary() {
+<span class="nc bnc" id="L52" title="All 4 branches missed.">    return max != null &amp;&amp; !min.equals(max);</span>
+  }
+
+  public void setValue(final Map&lt;JPAAttribute, Comparable&gt; keyValues) throws ODataJPAKeyPairException {
+
+<span class="nc bnc" id="L57" title="All 2 branches missed.">    for (final JPAAttribute keyElement : keyDefinition) {</span>
+<span class="nc" id="L58">      final Comparable value = keyValues.get(keyElement);</span>
+<span class="nc bnc" id="L59" title="All 6 branches missed.">      if (min == null || min.get(keyElement) == null</span>
+          || (value != null
+<span class="nc bnc" id="L61" title="All 2 branches missed.">              &amp;&amp; compareValues(value, min, keyElement) &lt; 0)) {</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">        if (max == null)</span>
+<span class="nc" id="L63">          max = min;</span>
+<span class="nc" id="L64">        min = keyValues;</span>
+<span class="nc" id="L65">        return;</span>
+<span class="nc bnc" id="L66" title="All 4 branches missed.">      } else if (max == null || compareValues(value, max, keyElement) &gt; 0) {</span>
+<span class="nc" id="L67">        max = keyValues;</span>
+<span class="nc" id="L68">        return;</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">      } else if (compareValues(value, max, keyElement) != 0) {</span>
+<span class="nc" id="L70">        return;</span>
+      }
+<span class="nc" id="L72">    }</span>
+<span class="nc" id="L73">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private int compareValues(final Comparable value, final Map&lt;JPAAttribute, Comparable&gt; comp,
+      final JPAAttribute keyElement) throws ODataJPAKeyPairException {
+
+<span class="nc" id="L79">    final Comparable minValue = comp.get(keyElement);</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">    if (keyElement.getRawConverter() != null) {</span>
+      try {
+<span class="nc" id="L82">        final AttributeConverter&lt;Object, Object&gt; converter = keyElement.getRawConverter();</span>
+<span class="nc bnc" id="L83" title="All 4 branches missed.">        if (keyElement.getDbType() == Byte[].class || keyElement.getDbType() == byte[].class) {</span>
+<span class="nc" id="L84">          return new ComparableByteArray(</span>
+<span class="nc" id="L85">              ComparableByteArray.unboxedArray(converter.convertToDatabaseColumn(value))).compareTo(</span>
+<span class="nc" id="L86">                  ComparableByteArray.unboxedArray(converter.convertToDatabaseColumn(minValue)));</span>
+        }
+<span class="nc" id="L88">        return ((Comparable) converter.convertToDatabaseColumn(value))</span>
+<span class="nc" id="L89">            .compareTo(converter.convertToDatabaseColumn(minValue));</span>
+<span class="nc" id="L90">      } catch (final ClassCastException e) {</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        throw new ODataJPAKeyPairException(e, keyElement.getDbType() == null ? keyElement.getType().getSimpleName()</span>
+<span class="nc" id="L92">            : keyElement.getDbType().getSimpleName());</span>
+      }
+    }
+<span class="nc" id="L95">    return value.compareTo(minValue);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L100">    return &quot;JPAKeyPair [min=&quot; + min + &quot;, max=&quot; + max + &quot;, hasUpperBoundary=&quot; + hasUpperBoundary() + &quot;]&quot;;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

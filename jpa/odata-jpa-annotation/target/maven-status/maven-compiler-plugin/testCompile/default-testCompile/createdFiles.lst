@@ -1,0 +1,5 @@
+com\sap\olingo\jpa\metadata\core\edm\annotation\EdmEnumerationTest.class
+com\sap\olingo\jpa\metadata\core\edm\annotation\EdmTransientPropertyCalculatorTest$calculatorImpl.class
+com\sap\olingo\jpa\metadata\converter\OffsetDateTimeConverterTest.class
+com\sap\olingo\jpa\metadata\core\edm\annotation\EdmTransientPropertyCalculatorTest.class
+com\sap\olingo\jpa\metadata\converter\TimeInstantLongConverterTest.class

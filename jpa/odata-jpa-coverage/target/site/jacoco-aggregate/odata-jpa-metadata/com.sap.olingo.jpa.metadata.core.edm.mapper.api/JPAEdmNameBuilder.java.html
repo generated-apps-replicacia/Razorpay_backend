@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAEdmNameBuilder.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.api</a> &gt; <span class="el_source">JPAEdmNameBuilder.java</span></div><h1>JPAEdmNameBuilder.java</h1><pre class="source lang-java linenums">/**
+ *
+ */
+package com.sap.olingo.jpa.metadata.core.edm.mapper.api;
+
+import javax.annotation.Nonnull;
+import javax.persistence.metamodel.Attribute;
+import javax.persistence.metamodel.EmbeddableType;
+import javax.persistence.metamodel.EntityType;
+
+import org.apache.olingo.commons.api.edm.provider.CsdlEntityType;
+
+/**
+ * A name builder creates, based on information from the JPA entity model names, the names of the corresponding element
+ * of the OData entity data model (EDM)
+ * @author Oliver Grande
+ * Created: 15.09.2019
+ *
+ */
+public interface JPAEdmNameBuilder {
+
+  /**
+   *
+   * @param jpaEmbeddedType
+   * @return
+   */
+  @Nonnull
+  String buildComplexTypeName(final EmbeddableType&lt;?&gt; jpaEmbeddedType);
+
+  /**
+   * Container names are &lt;a
+   * href=&quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_SimpleIdentifier&quot;&gt;
+   * Simple Identifier&lt;/a&gt;,
+   * so can contain only letters, digits and underscores.
+   * @return non empty unique name of an Entity Set
+   */
+  @Nonnull
+  String buildContainerName();
+
+  /**
+   * Create a name of an &lt;a
+   * href=&quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_12.2_The_edm:EntitySet&quot;&gt;
+   * Entity Set&lt;/a&gt; derived from the name of the corresponding entity type.
+   * @param entityTypeName
+   * @return non empty unique name of an Entity Set
+   */
+  @Nonnull
+  String buildEntitySetName(final String entityTypeName);
+
+  default String buildEntitySetName(final CsdlEntityType entityType) {
+<span class="nc" id="L51">    return buildEntitySetName(entityType.getName());</span>
+  }
+
+  /**
+   * Create a name of an &lt;a
+   * href=&quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406398032&quot;&gt;
+   * Singleton&lt;/a&gt; derived from the name of the corresponding entity type.
+   * @param entityTypeName
+   * @return non empty unique name of a Singleton
+   */
+  @Nonnull
+  default String buildSingletonName(final String entityTypeName) {
+<span class="nc" id="L63">    return entityTypeName;</span>
+  }
+
+  default String buildSingletonName(final CsdlEntityType entityType) {
+<span class="nc" id="L67">    return buildSingletonName(entityType.getName());</span>
+  }
+
+  /**
+   * Creates the name of an &lt;a
+   * href=&quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406397976&quot;&gt;Entity
+   * Type&lt;/a&gt; derived from JPA Entity Type.
+   * @param jpaEntityType
+   * @return non empty unique name of an Entity Type
+   */
+  @Nonnull
+  String buildEntityTypeName(final EntityType&lt;?&gt; jpaEntityType);
+
+  /**
+   * Converts the internal java class name of an enumeration into the external entity data model &lt;a
+   * href=&quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406397991&quot;&gt;
+   * Enumeration Type&lt;/a&gt; name.
+   * @param javaEnum
+   * @return non empty unique name of an Enumeration
+   */
+  @Nonnull
+  String buildEnumerationTypeName(final Class&lt;? extends Enum&lt;?&gt;&gt; javaEnum);
+
+  /**
+   * Converts the name of an JPA association attribute into the name of an EDM navigation property
+   * @param jpaAttribute
+   * @return non empty unique name of a Navigation Property
+   */
+  @Nonnull
+  String buildNaviPropertyName(final Attribute&lt;?, ?&gt; jpaAttribute);
+
+  /**
+   * Convert the internal name of a java based operation into the external entity data model name.
+   * @param internalOperationName
+   * @return non empty unique name of an Operation (Function or Action)
+   */
+  @Nonnull
+  String buildOperationName(final String internalOperationName);
+
+  /**
+   * Converts the name of an JPA attribute into the name of an EDM property
+   * @param jpaAttributeName
+   * @return non empty unique name of a property
+   */
+  @Nonnull
+  String buildPropertyName(final String jpaAttributeName);
+
+  /**
+   * @return name space to a schema
+   */
+  @Nonnull
+  String getNamespace();
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

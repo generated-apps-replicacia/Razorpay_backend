@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAMethodCallImp.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAMethodCallImp.java</span></div><h1>JPAMethodCallImp.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import javax.persistence.criteria.Expression;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.queryoption.expression.MethodKind;
+
+class JPAMethodCallImp implements JPAMethodCall {
+  private final MethodKind methodCall;
+  private final List&lt;JPAOperator&gt; parameters;
+  private final JPAOperationConverter converter;
+
+  public JPAMethodCallImp(final JPAOperationConverter converter, final MethodKind methodCall,
+      final List&lt;JPAOperator&gt; parameters) {
+<span class="nc" id="L19">    super();</span>
+<span class="nc" id="L20">    this.methodCall = methodCall;</span>
+<span class="nc" id="L21">    this.parameters = parameters;</span>
+<span class="nc" id="L22">    this.converter = converter;</span>
+<span class="nc" id="L23">  }</span>
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAFunctionCall#get()
+   */
+  @Override
+  public Object get() throws ODataApplicationException {
+<span class="nc" id="L32">    return converter.convert(this);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAFunctionCall#get(String prefix, String suffix)
+   */
+  @Override
+  public Object get(final String prefix, final String suffix) throws ODataApplicationException {
+<span class="nc" id="L42">    final List&lt;JPAOperator&gt; paramCopy = new ArrayList&lt;&gt;(parameters);</span>
+<span class="nc bnc" id="L43" title="All 4 branches missed.">    if (!parameters.isEmpty() &amp;&amp; parameters.get(0) instanceof JPALiteralOperator) {</span>
+<span class="nc" id="L44">      parameters.add(((JPALiteralOperator) parameters.get(0)).clone(prefix, suffix));</span>
+<span class="nc" id="L45">      parameters.remove(0);</span>
+    }
+<span class="nc" id="L47">    Expression&lt;?&gt; result = converter.convert(this);</span>
+<span class="nc" id="L48">    Collections.copy(parameters, paramCopy);</span>
+<span class="nc" id="L49">    return result;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAFunctionCall#getFunction()
+   */
+  @Override
+  public MethodKind getFunction() {
+<span class="nc" id="L59">    return methodCall;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAFunctionCall#getParameter(int)
+   */
+  @Override
+  public JPAOperator getParameter(final int index) {
+<span class="nc" id="L69">    return parameters.get(index);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAFunctionCall#noParameters()
+   */
+  @Override
+  public int noParameters() {
+<span class="nc" id="L79">    return parameters.size();</span>
+  }
+
+  @Override
+  public String getName() {
+<span class="nc" id="L84">    return methodCall.name();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

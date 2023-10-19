@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>OrderImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">OrderImpl.java</span></div><h1>OrderImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.Optional;
+
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Order;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.cb.exeptions.InternalServerError;
+import com.sap.olingo.jpa.processor.cb.joiner.SqlConvertible;
+
+class OrderImpl implements Order, SqlConvertible {
+
+  private static final String SEPARATOR = &quot;, &quot;;
+<span class="nc" id="L15">  private static final int SEPARATOR_LENGTH = SEPARATOR.length();</span>
+  private final boolean isAscending;
+  private final SqlConvertible expression;
+
+  OrderImpl(final boolean isAscending, final SqlConvertible expression) {
+<span class="nc" id="L20">    super();</span>
+<span class="nc" id="L21">    this.isAscending = isAscending;</span>
+<span class="nc" id="L22">    this.expression = expression;</span>
+<span class="nc" id="L23">  }</span>
+
+  @Override
+  public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc bnc" id="L27" title="All 2 branches missed.">    if (expression instanceof FromImpl&lt;?, ?&gt;)</span>
+<span class="nc" id="L28">      return resolveExpression((FromImpl&lt;?, ?&gt;) expression, statement);</span>
+<span class="nc bnc" id="L29" title="All 2 branches missed.">    return expression.asSQL(statement).append(&quot; &quot;).append(isAscending ? SqlKeyWords.ASC : SqlKeyWords.DESC);</span>
+  }
+
+  private StringBuilder resolveExpression(final FromImpl&lt;?, ?&gt; from, final StringBuilder statement) {
+
+    try {
+<span class="nc" id="L35">      from.st</span>
+<span class="nc" id="L36">          .getKey()</span>
+<span class="nc" id="L37">          .forEach(a -&gt; {</span>
+            try {
+<span class="nc" id="L39">              new PathImpl&lt;&gt;(from.st.getPath(a.getExternalName()), Optional.empty(), from.st, from.tableAlias)</span>
+<span class="nc" id="L40">                  .asSQL(statement)</span>
+<span class="nc" id="L41">                  .append(&quot; &quot;)</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">                  .append(isAscending ? SqlKeyWords.ASC : SqlKeyWords.DESC)</span>
+<span class="nc" id="L43">                  .append(SEPARATOR);</span>
+<span class="nc" id="L44">            } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L45">              throw new InternalServerError(e);</span>
+<span class="nc" id="L46">            }</span>
+<span class="nc" id="L47">          });</span>
+<span class="nc" id="L48">      return statement.delete(statement.length() - SEPARATOR_LENGTH, statement.length());</span>
+<span class="nc" id="L49">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L50">      throw new InternalServerError(e);</span>
+    }
+  }
+
+  @Override
+  public Order reverse() {
+<span class="nc bnc" id="L56" title="All 2 branches missed.">    return new OrderImpl(!isAscending, expression);</span>
+  }
+
+  @Override
+  public boolean isAscending() {
+<span class="nc" id="L61">    return isAscending;</span>
+  }
+
+  @Override
+  public Expression&lt;?&gt; getExpression() {
+<span class="nc" id="L66">    return (Expression&lt;?&gt;) expression;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

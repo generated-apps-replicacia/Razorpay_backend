@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PersonDeepProtectedHidden.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.testmodel</a> &gt; <span class="el_source">PersonDeepProtectedHidden.java</span></div><h1>PersonDeepProtectedHidden.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.testmodel;
+
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Embedded;
+import javax.persistence.Entity;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmIgnore;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmProtectedBy;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmProtections;
+
+@EdmIgnore // Only
+@Entity(name = &quot;PersonDeepProtected&quot;)
+@DiscriminatorValue(value = &quot;1&quot;)
+public class PersonDeepProtectedHidden extends BusinessPartnerProtected {// #NOSONAR use equal method from
+                                                                         // BusinessPartner
+
+  @Convert(converter = DateConverter.class)
+  @Column(name = &quot;\&quot;BirthDay\&quot;&quot;)
+  private LocalDate birthDay;
+
+  @Convert(converter = AccessRightsConverter.class)
+  @Column(name = &quot;\&quot;AccessRights\&quot;&quot;)
+  private AccessRights[] accessRights;
+
+  @Embedded
+  private AddressDeepProtected inhouseAddress;
+
+<span class="nc" id="L35">  @Embedded</span>
+  @EdmProtections({
+      @EdmProtectedBy(name = &quot;Creator&quot;, path = &quot;created/by&quot;),
+      @EdmProtectedBy(name = &quot;Updator&quot;, path = &quot;updated/by&quot;)
+  })
+  private final AdministrativeInformation protectedAdminInfo = new AdministrativeInformation();
+
+<span class="nc" id="L42">  public PersonDeepProtectedHidden() {</span>
+<span class="nc" id="L43">    type = &quot;1&quot;;</span>
+<span class="nc" id="L44">  }</span>
+
+  public LocalDate getBirthDay() {
+<span class="nc" id="L47">    return birthDay;</span>
+  }
+
+  public void setBirthDay(final LocalDate birthDay) {
+<span class="nc" id="L51">    this.birthDay = birthDay;</span>
+<span class="nc" id="L52">  }</span>
+
+  public Short getAccessRights() {
+<span class="nc" id="L55">    return new AccessRightsConverter().convertToDatabaseColumn(accessRights);</span>
+  }
+
+  public List&lt;AccessRights&gt; getAccessRightsAsList() {
+<span class="nc bnc" id="L59" title="All 2 branches missed.">    return accessRights == null ? Collections.emptyList() : Arrays.asList(accessRights);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

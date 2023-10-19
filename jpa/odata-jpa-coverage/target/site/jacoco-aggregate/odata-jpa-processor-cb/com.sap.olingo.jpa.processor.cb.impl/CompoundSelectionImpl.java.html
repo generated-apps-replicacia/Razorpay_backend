@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>CompoundSelectionImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">CompoundSelectionImpl.java</span></div><h1>CompoundSelectionImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import static java.util.stream.Collectors.toList;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.CompoundSelection;
+import javax.persistence.criteria.Selection;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.processor.cb.ProcessorSelection;
+import com.sap.olingo.jpa.processor.cb.joiner.StringBuilderCollector;
+
+final class CompoundSelectionImpl&lt;X&gt; implements CompoundSelection&lt;X&gt;, SqlSelection&lt;X&gt; {
+  private Optional&lt;String&gt; alias;
+  private final Class&lt;X&gt; resultType;
+  private final List&lt;Selection&lt;?&gt;&gt; rawSelections;
+<span class="nc" id="L23">  private Optional&lt;List&lt;Map.Entry&lt;String, JPAPath&gt;&gt;&gt; resolvedSelection = Optional.empty();</span>
+<span class="nc" id="L24">  private Optional&lt;List&lt;Selection&lt;?&gt;&gt;&gt; selections = Optional.empty();</span>
+  private final AliasBuilder aliasBuilder;
+
+  public CompoundSelectionImpl(final List&lt;Selection&lt;?&gt;&gt; selections, final Class&lt;X&gt; resultType,
+<span class="nc" id="L28">      final AliasBuilder aliasBuilder) {</span>
+<span class="nc" id="L29">    this.resultType = resultType;</span>
+<span class="nc" id="L30">    this.rawSelections = selections;</span>
+<span class="nc" id="L31">    this.alias = Optional.empty();</span>
+<span class="nc" id="L32">    this.aliasBuilder = aliasBuilder;</span>
+<span class="nc" id="L33">  }</span>
+
+  /**
+   * Assigns an alias to the selection item.
+   * Once assigned, an alias cannot be changed or reassigned.
+   * Returns the same selection item.
+   * @param name alias
+   * @return selection item
+   */
+  @Override
+  public SqlSelection&lt;X&gt; alias(@Nonnull final String name) {
+<span class="nc bnc" id="L44" title="All 2 branches missed.">    if (!alias.isPresent())</span>
+<span class="nc" id="L45">      alias = Optional.of(name);</span>
+<span class="nc" id="L46">    return this;</span>
+  }
+
+  @Override
+  public StringBuilder asSQL(@Nonnull final StringBuilder statement) {
+
+<span class="nc" id="L52">    statement.append(getCompoundSelectionItems().stream()</span>
+<span class="nc" id="L53">        .map(s -&gt; (Selection&lt;?&gt;) s) // NOSONAR</span>
+<span class="nc" id="L54">        .collect(new StringBuilderCollector.SelectionCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L55">    return statement;</span>
+  }
+
+  /**
+   * Return the alias assigned to the tuple element or null,
+   * if no alias has been assigned.
+   * @return alias
+   */
+  @Override
+  public String getAlias() {
+<span class="nc" id="L65">    return alias.orElse(&quot;&quot;);</span>
+  }
+
+  /**
+   * Return the selection items composing a compound selection.
+   * Modifications to the list do not affect the query.
+   * @return list of selection items
+   * @throws IllegalStateException if selection is not a
+   * compound selection
+   */
+  @Override
+  public List&lt;Selection&lt;?&gt;&gt; getCompoundSelectionItems() {
+<span class="nc" id="L77">    return selections.orElseGet(this::asSelectionLate);</span>
+  }
+
+  private List&lt;Selection&lt;?&gt;&gt; asSelectionLate() {
+<span class="nc" id="L81">    final List&lt;Selection&lt;?&gt;&gt; selItems = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">    for (final Selection&lt;?&gt; sel : rawSelections) {</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">      if (sel instanceof PathImpl&lt;?&gt;) {</span>
+<span class="nc" id="L84">        selItems.addAll(((PathImpl&lt;?&gt;) sel)</span>
+<span class="nc" id="L85">            .resolvePathElements()</span>
+<span class="nc" id="L86">            .stream()</span>
+<span class="nc" id="L87">            .map(element -&gt; new SelectionImpl&lt;&gt;(element, element.getJavaType(), aliasBuilder))</span>
+<span class="nc" id="L88">            .collect(toList()));</span>
+      } else {
+<span class="nc" id="L90">        selItems.add(new SelectionImpl&lt;&gt;(sel, sel.getJavaType(), aliasBuilder));</span>
+      }
+<span class="nc" id="L92">    }</span>
+<span class="nc" id="L93">    selections = Optional.of(selItems);</span>
+<span class="nc" id="L94">    return selections.get();</span>
+  }
+
+  @Override
+  public Class&lt;? extends X&gt; getJavaType() {
+<span class="nc" id="L99">    return resultType;</span>
+  }
+
+  @Override
+  public List&lt;Entry&lt;String, JPAPath&gt;&gt; getResolvedSelection() {
+<span class="nc" id="L104">    return resolvedSelection.orElseGet(this::resolveSelectionLate);</span>
+  }
+
+  /**
+   * Whether the selection item is a compound selection.
+   * @return boolean indicating whether the selection is a compound
+   * selection
+   */
+  @Override
+  public boolean isCompoundSelection() {
+<span class="nc" id="L114">    return true;</span>
+  }
+
+  List&lt;Map.Entry&lt;String, JPAPath&gt;&gt; resolveSelectionLate() {
+<span class="nc" id="L118">    final AliasBuilder ab = new AliasBuilder(&quot;S&quot;);</span>
+<span class="nc" id="L119">    final List&lt;Map.Entry&lt;String, JPAPath&gt;&gt; resolved = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">    for (final Selection&lt;?&gt; sel : rawSelections) {</span>
+<span class="nc" id="L121">      resolveSelectionItem(ab, resolved, sel);</span>
+<span class="nc" id="L122">    }</span>
+<span class="nc" id="L123">    resolvedSelection = Optional.of(resolved);</span>
+<span class="nc" id="L124">    return resolvedSelection.get();</span>
+  }
+
+  private void addSelectionList(final AliasBuilder ab, final List&lt;Map.Entry&lt;String, JPAPath&gt;&gt; resolved,
+      final Selection&lt;?&gt; sel) {
+<span class="nc bnc" id="L129" title="All 2 branches missed.">    for (final JPAPath p : ((PathImpl&lt;?&gt;) sel).getPathList()) {</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">      resolved.add(new ProcessorSelection.SelectionItem(sel.getAlias().isEmpty()</span>
+<span class="nc" id="L131">          ? ab.getNext() : (sel.getAlias() + &quot;.&quot; + p.getAlias()), p));</span>
+<span class="nc" id="L132">    }</span>
+<span class="nc" id="L133">  }</span>
+
+  private void addSingleSelectionItem(final AliasBuilder ab, final List&lt;Map.Entry&lt;String, JPAPath&gt;&gt; resolved,
+      final Selection&lt;?&gt; sel, final List&lt;JPAPath&gt; selItems) {
+<span class="nc bnc" id="L137" title="All 2 branches missed.">    resolved.add(new ProcessorSelection.SelectionItem(sel.getAlias().isEmpty()</span>
+<span class="nc" id="L138">        ? ab.getNext() : sel.getAlias(), selItems.get(0)));</span>
+<span class="nc" id="L139">  }</span>
+
+  private void resolveSelectionItem(final AliasBuilder ab, final List&lt;Map.Entry&lt;String, JPAPath&gt;&gt; resolved,
+      final Selection&lt;?&gt; sel) {
+
+<span class="nc bnc" id="L144" title="All 4 branches missed.">    if (sel instanceof PathImpl&lt;?&gt; || sel instanceof SelectionPath&lt;?&gt;) {</span>
+      final List&lt;JPAPath&gt; selItems;
+<span class="nc bnc" id="L146" title="All 2 branches missed.">      if (sel instanceof PathImpl&lt;?&gt;)</span>
+<span class="nc" id="L147">        selItems = ((PathImpl&lt;?&gt;) sel).getPathList();</span>
+      else
+<span class="nc" id="L149">        selItems = ((PathImpl&lt;?&gt;) ((SelectionPath&lt;?&gt;) sel).selection.getSelection()).getPathList();</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">      if (selItems.size() == 1) {</span>
+<span class="nc" id="L151">        addSingleSelectionItem(ab, resolved, sel, selItems);</span>
+      } else {
+<span class="nc" id="L153">        addSelectionList(ab, resolved, sel);</span>
+      }
+<span class="nc" id="L155">    } else {</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">      resolved.add(new ProcessorSelection.SelectionItem(sel.getAlias().isEmpty()</span>
+<span class="nc" id="L157">          ? ab.getNext() : sel.getAlias(), new JPAPathWrapper(sel)));</span>
+    }
+<span class="nc" id="L159">  }</span>
+
+  @Override
+  public Selection&lt;X&gt; getSelection() {
+<span class="nc" id="L163">    return null;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,8 @@
+com\sap\olingo\jpa\processor\core\exception\ODataJPABatchRuntimeException.class
+com\sap\olingo\jpa\processor\core\api\JPAODataParallelBatchProcessorFactory.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataBatchSequentialRequestGroup.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataBatchRequestGroup.class
+com\sap\olingo\jpa\processor\core\exception\ODataJPABatchException.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataParallelBatchProcessor.class
+com\sap\olingo\jpa\processor\core\exception\ODataJPABatchException$MessageKeys.class
+com\sap\olingo\jpa\processor\core\processor\JPAODataBatchParallelRequestGroup.class

@@ -1,0 +1,738 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>EntityManagerWrapper.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">EntityManagerWrapper.java</span></div><h1>EntityManagerWrapper.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.persistence.EntityExistsException;
+import javax.persistence.EntityGraph;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.FlushModeType;
+import javax.persistence.LockModeType;
+import javax.persistence.PersistenceException;
+import javax.persistence.Query;
+import javax.persistence.StoredProcedureQuery;
+import javax.persistence.TransactionRequiredException;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaDelete;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.CriteriaUpdate;
+import javax.persistence.metamodel.Metamodel;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.processor.cb.ProcessorCriteriaBuilder;
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+
+public class EntityManagerWrapper implements EntityManager { // NOSONAR
+<span class="nc" id="L32">  private static final Log LOG = LogFactory.getLog(EntityManagerWrapper.class);</span>
+  private Optional&lt;ProcessorCriteriaBuilder&gt; cb;
+  private final EntityManager em;
+  private final JPAServiceDocument sd;
+  private final ParameterBuffer parameterBuffer;
+
+  public EntityManagerWrapper(final EntityManager em, final JPAServiceDocument sd) {
+<span class="nc" id="L39">    super();</span>
+<span class="nc" id="L40">    this.em = em;</span>
+<span class="nc" id="L41">    this.sd = sd;</span>
+<span class="nc" id="L42">    this.cb = Optional.empty();</span>
+<span class="nc" id="L43">    this.parameterBuffer = new ParameterBuffer();</span>
+<span class="nc" id="L44">  }</span>
+
+  /**
+   * Make an instance managed and persistent.
+   * @param entity entity instance
+   * @throws EntityExistsException if the entity already exists.
+   * (If the entity already exists, the &lt;code&gt;EntityExistsException&lt;/code&gt; may
+   * be thrown when the persist operation is invoked, or the
+   * &lt;code&gt;EntityExistsException&lt;/code&gt; or another &lt;code&gt;PersistenceException&lt;/code&gt; may be
+   * thrown at flush or commit time.)
+   * @throws IllegalArgumentException if the instance is not an
+   * entity
+   * @throws TransactionRequiredException if there is no transaction when
+   * invoked on a container-managed entity manager of that is of type
+   * &lt;code&gt;PersistenceContextType.TRANSACTION&lt;/code&gt;
+   */
+  @Override
+  public void persist(final Object entity) {
+<span class="nc" id="L62">    em.persist(entity);</span>
+<span class="nc" id="L63">  }</span>
+
+  /**
+   * Merge the state of the given entity into the
+   * current persistence context.
+   * @param entity entity instance
+   * @return the managed instance that the state was merged to
+   * @throws IllegalArgumentException if instance is not an
+   * entity or is a removed entity
+   * @throws TransactionRequiredException if there is no transaction when
+   * invoked on a container-managed entity manager of that is of type
+   * &lt;code&gt;PersistenceContextType.TRANSACTION&lt;/code&gt;
+   */
+  @Override
+  public &lt;T&gt; T merge(final T entity) {
+<span class="nc" id="L78">    return em.merge(entity);</span>
+  }
+
+  /**
+   * Remove the entity instance.
+   * @param entity entity instance
+   * @throws IllegalArgumentException if the instance is not an
+   * entity or is a detached entity
+   * @throws TransactionRequiredException if invoked on a
+   * container-managed entity manager of type
+   * &lt;code&gt;PersistenceContextType.TRANSACTION&lt;/code&gt; and there is
+   * no transaction
+   */
+  @Override
+  public void remove(final Object entity) {
+<span class="nc" id="L93">    em.remove(entity);</span>
+<span class="nc" id="L94">  }</span>
+
+  /**
+   * Find by primary key.
+   * Search for an entity of the specified class and primary key.
+   * If the entity instance is contained in the persistence context,
+   * it is returned from there.
+   * @param entityClass entity class
+   * @param primaryKey primary key
+   * @return the found entity instance or null if the entity does
+   * not exist
+   * @throws IllegalArgumentException if the first argument does
+   * not denote an entity type or the second argument is
+   * is not a valid type for that entity's primary key or
+   * is null
+   */
+  @Override
+  public &lt;T&gt; T find(final Class&lt;T&gt; entityClass, final Object primaryKey) {
+<span class="nc" id="L112">    return em.find(entityClass, primaryKey);</span>
+  }
+
+  /**
+   * Find by primary key, using the specified properties.
+   * Search for an entity of the specified class and primary key.
+   * If the entity instance is contained in the persistence
+   * context, it is returned from there.
+   * If a vendor-specific property or hint is not recognized,
+   * it is silently ignored.
+   * @param entityClass entity class
+   * @param primaryKey primary key
+   * @param properties standard and vendor-specific properties
+   * and hints
+   * @return the found entity instance or null if the entity does
+   * not exist
+   * @throws IllegalArgumentException if the first argument does
+   * not denote an entity type or the second argument is
+   * is not a valid type for that entity's primary key or
+   * is null
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public &lt;T&gt; T find(final Class&lt;T&gt; entityClass, final Object primaryKey, final Map&lt;String, Object&gt; properties) {
+<span class="nc" id="L136">    return em.find(entityClass, primaryKey, properties);</span>
+  }
+
+  @Override
+  public &lt;T&gt; T find(final Class&lt;T&gt; entityClass, final Object primaryKey, final LockModeType lockMode) {
+<span class="nc" id="L141">    return em.find(entityClass, primaryKey, lockMode);</span>
+  }
+
+  @Override
+  public &lt;T&gt; T find(final Class&lt;T&gt; entityClass, final Object primaryKey, final LockModeType lockMode,
+      final Map&lt;String, Object&gt; properties) {
+<span class="nc" id="L147">    return em.find(entityClass, primaryKey, lockMode, properties);</span>
+  }
+
+  @Override
+  public &lt;T&gt; T getReference(final Class&lt;T&gt; entityClass, final Object primaryKey) {
+<span class="nc" id="L152">    return em.getReference(entityClass, primaryKey);</span>
+  }
+
+  @Override
+  public void flush() {
+<span class="nc" id="L157">    em.flush();</span>
+<span class="nc" id="L158">  }</span>
+
+  @Override
+  public void setFlushMode(final FlushModeType flushMode) {
+<span class="nc" id="L162">    em.setFlushMode(flushMode);</span>
+<span class="nc" id="L163">  }</span>
+
+  @Override
+  public FlushModeType getFlushMode() {
+<span class="nc" id="L167">    return em.getFlushMode();</span>
+  }
+
+  @Override
+  public void lock(final Object entity, final LockModeType lockMode) {
+<span class="nc" id="L172">    em.lock(entity, lockMode);</span>
+<span class="nc" id="L173">  }</span>
+
+  @Override
+  public void lock(final Object entity, final LockModeType lockMode, final Map&lt;String, Object&gt; properties) {
+<span class="nc" id="L177">    em.lock(entity, lockMode, properties);</span>
+<span class="nc" id="L178">  }</span>
+
+  @Override
+  public void refresh(final Object entity) {
+<span class="nc" id="L182">    em.refresh(entity);</span>
+<span class="nc" id="L183">  }</span>
+
+  @Override
+  public void refresh(final Object entity, final Map&lt;String, Object&gt; properties) {
+<span class="nc" id="L187">    em.refresh(entity, properties);</span>
+<span class="nc" id="L188">  }</span>
+
+  @Override
+  public void refresh(final Object entity, final LockModeType lockMode) {
+<span class="nc" id="L192">    em.refresh(entity, lockMode);</span>
+<span class="nc" id="L193">  }</span>
+
+  @Override
+  public void refresh(final Object entity, final LockModeType lockMode, final Map&lt;String, Object&gt; properties) {
+<span class="nc" id="L197">    em.refresh(entity, lockMode, properties);</span>
+<span class="nc" id="L198">  }</span>
+
+  /**
+   * Clear the persistence context, causing all managed
+   * entities to become detached. Changes made to entities that
+   * have not been flushed to the database will not be
+   * persisted.
+   */
+  @Override
+  public void clear() {
+<span class="nc" id="L208">    em.clear();</span>
+<span class="nc" id="L209">  }</span>
+
+  /**
+   * Remove the given entity from the persistence context, causing
+   * a managed entity to become detached. Unflushed changes made
+   * to the entity if any (including removal of the entity),
+   * will not be synchronized to the database. Entities which
+   * previously referenced the detached entity will continue to
+   * reference it.
+   * @param entity entity instance
+   * @throws IllegalArgumentException if the instance is not an
+   * entity
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public void detach(final Object entity) {
+<span class="nc" id="L225">    em.detach(entity);</span>
+<span class="nc" id="L226">  }</span>
+
+  /**
+   * Check if the instance is a managed entity instance belonging
+   * to the current persistence context.
+   * @param entity entity instance
+   * @return boolean indicating if entity is in persistence context
+   * @throws IllegalArgumentException if not an entity
+   */
+  @Override
+  public boolean contains(final Object entity) {
+<span class="nc" id="L237">    return em.contains(entity);</span>
+  }
+
+  /**
+   * Get the current lock mode for the entity instance.
+   * @param entity entity instance
+   * @return lock mode
+   * @throws TransactionRequiredException if there is no
+   * transaction or if the entity manager has not been
+   * joined to the current transaction
+   * @throws IllegalArgumentException if the instance is not a
+   * managed entity and a transaction is active
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public LockModeType getLockMode(final Object entity) {
+<span class="nc" id="L253">    return em.getLockMode(entity);</span>
+  }
+
+  /**
+   * Set an entity manager property or hint.
+   * If a vendor-specific property or hint is not recognized, it is
+   * silently ignored.
+   * @param propertyName name of property or hint
+   * @param value value for property or hint
+   * @throws IllegalArgumentException if the second argument is
+   * not valid for the implementation
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public void setProperty(final String propertyName, final Object value) {
+<span class="nc" id="L268">    em.setProperty(propertyName, value);</span>
+<span class="nc" id="L269">  }</span>
+
+  /**
+   * Get the properties and hints and associated values that are in effect
+   * for the entity manager. Changing the contents of the map does
+   * not change the configuration in effect.
+   * @return map of properties and hints in effect for entity manager
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public Map&lt;String, Object&gt; getProperties() {
+<span class="nc" id="L280">    return em.getProperties();</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;Query&lt;/code&gt; for executing a
+   * Java Persistence query language statement.
+   * @param qlString a Java Persistence query string
+   * @return the new query instance
+   * @throws IllegalArgumentException if the query string is
+   * found to be invalid
+   */
+  @Override
+  public Query createQuery(final String qlString) {
+<span class="nc" id="L293">    return em.createQuery(qlString);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;TypedQuery&lt;/code&gt; for executing a
+   * criteria query.
+   * @param criteriaQuery a criteria query object
+   * @return the new query instance
+   * @throws IllegalArgumentException if the criteria query is
+   * found to be invalid
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public &lt;T&gt; TypedQuery&lt;T&gt; createQuery(final CriteriaQuery&lt;T&gt; criteriaQuery) {
+<span class="nc" id="L307">    return new TypedQueryImpl&lt;&gt;(criteriaQuery, this, parameterBuffer);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;Query&lt;/code&gt; for executing a criteria
+   * update query.
+   * @param updateQuery a criteria update query object
+   * @return the new query instance
+   * @throws IllegalArgumentException if the update query is
+   * found to be invalid
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public Query createQuery(@SuppressWarnings(&quot;rawtypes&quot;) final CriteriaUpdate updateQuery) {
+<span class="nc" id="L321">    return em.createQuery(updateQuery);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;Query&lt;/code&gt; for executing a criteria
+   * delete query.
+   * @param deleteQuery a criteria delete query object
+   * @return the new query instance
+   * @throws IllegalArgumentException if the delete query is
+   * found to be invalid
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public Query createQuery(@SuppressWarnings(&quot;rawtypes&quot;) final CriteriaDelete deleteQuery) {
+<span class="nc" id="L335">    return em.createQuery(deleteQuery);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;TypedQuery&lt;/code&gt; for executing a
+   * Java Persistence query language statement.
+   * The select list of the query must contain only a single
+   * item, which must be assignable to the type specified by
+   * the &lt;code&gt;resultClass&lt;/code&gt; argument.
+   * @param qlString a Java Persistence query string
+   * @param resultClass the type of the query result
+   * @return the new query instance
+   * @throws IllegalArgumentException if the query string is found
+   * to be invalid or if the query result is found to
+   * not be assignable to the specified type
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public &lt;T&gt; TypedQuery&lt;T&gt; createQuery(final String qlString, final Class&lt;T&gt; resultClass) {
+<span class="nc" id="L354">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;Query&lt;/code&gt; for executing a named query
+   * (in the Java Persistence query language or in native SQL).
+   * @param name the name of a query defined in metadata
+   * @return the new query instance
+   * @throws IllegalArgumentException if a query has not been
+   * defined with the given name or if the query string is
+   * found to be invalid
+   */
+  @Override
+  public Query createNamedQuery(final String name) {
+<span class="nc" id="L368">    LOG.trace(&quot;Create query: &quot; + name);</span>
+<span class="nc" id="L369">    return em.createNamedQuery(name);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;TypedQuery&lt;/code&gt; for executing a
+   * Java Persistence query language named query.
+   * The select list of the query must contain only a single
+   * item, which must be assignable to the type specified by
+   * the &lt;code&gt;resultClass&lt;/code&gt; argument.
+   * @param name the name of a query defined in metadata
+   * @param resultClass the type of the query result
+   * @return the new query instance
+   * @throws IllegalArgumentException if a query has not been
+   * defined with the given name or if the query string is
+   * found to be invalid or if the query result is found to
+   * not be assignable to the specified type
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public &lt;T&gt; TypedQuery&lt;T&gt; createNamedQuery(final String name, final Class&lt;T&gt; resultClass) {
+<span class="nc" id="L389">    LOG.trace(&quot;Create query: &quot; + name);</span>
+<span class="nc" id="L390">    return em.createNamedQuery(name, resultClass);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;Query&lt;/code&gt; for executing
+   * a native SQL statement, e.g., for update or delete.
+   * If the query is not an update or delete query, query
+   * execution will result in each row of the SQL result
+   * being returned as a result of type Object[] (or a result
+   * of type Object if there is only one column in the select
+   * list.) Column values are returned in the order of their
+   * appearance in the select list and default JDBC type
+   * mappings are applied.
+   * @param sqlString a native SQL query string
+   * @return the new query instance
+   */
+  @Override
+  public Query createNativeQuery(final String sqlString) {
+<span class="nc" id="L408">    LOG.trace(sqlString);</span>
+<span class="nc" id="L409">    return em.createNativeQuery(sqlString);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;Query&lt;/code&gt; for executing
+   * a native SQL query.
+   * @param sqlString a native SQL query string
+   * @param resultClass the class of the resulting instance(s)
+   * @return the new query instance
+   */
+  @Override
+  public Query createNativeQuery(final String sqlString, @SuppressWarnings(&quot;rawtypes&quot;) final Class resultClass) {
+<span class="nc" id="L421">    LOG.trace(sqlString);</span>
+<span class="nc" id="L422">    return em.createNativeQuery(sqlString, resultClass);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;Query&lt;/code&gt; for executing
+   * a native SQL query.
+   * @param sqlString a native SQL query string
+   * @param resultSetMapping the name of the result set mapping
+   * @return the new query instance
+   */
+  @Override
+  public Query createNativeQuery(final String sqlString, final String resultSetMapping) {
+<span class="nc" id="L434">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;StoredProcedureQuery&lt;/code&gt; for executing a
+   * stored procedure in the database.
+   * &lt;p&gt;Parameters must be registered before the stored procedure can
+   * be executed.
+   * &lt;p&gt;If the stored procedure returns one or more result sets,
+   * any result set will be returned as a list of type Object[].
+   * @param name name assigned to the stored procedure query
+   * in metadata
+   * @return the new stored procedure query instance
+   * @throws IllegalArgumentException if a query has not been
+   * defined with the given name
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public StoredProcedureQuery createNamedStoredProcedureQuery(final String name) {
+<span class="nc" id="L453">    return em.createNamedStoredProcedureQuery(name);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;StoredProcedureQuery&lt;/code&gt; for executing a
+   * stored procedure in the database.
+   * &lt;p&gt;Parameters must be registered before the stored procedure can
+   * be executed.
+   * &lt;p&gt;If the stored procedure returns one or more result sets,
+   * any result set will be returned as a list of type Object[].
+   * @param procedureName name of the stored procedure in the
+   * database
+   * @return the new stored procedure query instance
+   * @throws IllegalArgumentException if a stored procedure of the
+   * given name does not exist (or the query execution will
+   * fail)
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public StoredProcedureQuery createStoredProcedureQuery(final String procedureName) {
+<span class="nc" id="L473">    return em.createStoredProcedureQuery(procedureName);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;StoredProcedureQuery&lt;/code&gt; for executing a
+   * stored procedure in the database.
+   * &lt;p&gt;Parameters must be registered before the stored procedure can
+   * be executed.
+   * &lt;p&gt;The &lt;code&gt;resultClass&lt;/code&gt; arguments must be specified in the order in
+   * which the result sets will be returned by the stored procedure
+   * invocation.
+   * @param procedureName name of the stored procedure in the
+   * database
+   * @param resultClasses classes to which the result sets
+   * produced by the stored procedure are to
+   * be mapped
+   * @return the new stored procedure query instance
+   * @throws IllegalArgumentException if a stored procedure of the
+   * given name does not exist (or the query execution will
+   * fail)
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public StoredProcedureQuery createStoredProcedureQuery(final String procedureName,
+      final @SuppressWarnings(&quot;rawtypes&quot;) Class... resultClasses) {
+<span class="nc" id="L498">    return em.createStoredProcedureQuery(procedureName, resultClasses);</span>
+  }
+
+  /**
+   * Create an instance of &lt;code&gt;StoredProcedureQuery&lt;/code&gt; for executing a
+   * stored procedure in the database.
+   * &lt;p&gt;Parameters must be registered before the stored procedure can
+   * be executed.
+   * &lt;p&gt;The &lt;code&gt;resultSetMapping&lt;/code&gt; arguments must be specified in the order
+   * in which the result sets will be returned by the stored
+   * procedure invocation.
+   * @param procedureName name of the stored procedure in the
+   * database
+   * @param resultSetMappings the names of the result set mappings
+   * to be used in mapping result sets
+   * returned by the stored procedure
+   * @return the new stored procedure query instance
+   * @throws IllegalArgumentException if a stored procedure or
+   * result set mapping of the given name does not exist
+   * (or the query execution will fail)
+   */
+  @Override
+  public StoredProcedureQuery createStoredProcedureQuery(final String procedureName,
+      final String... resultSetMappings) {
+<span class="nc" id="L522">    return em.createStoredProcedureQuery(procedureName, resultSetMappings);</span>
+  }
+
+  /**
+   * Indicate to the entity manager that a JTA transaction is
+   * active and join the persistence context to it.
+   * &lt;p&gt;This method should be called on a JTA application
+   * managed entity manager that was created outside the scope
+   * of the active transaction or on an entity manager of type
+   * &lt;code&gt;SynchronizationType.UNSYNCHRONIZED&lt;/code&gt; to associate
+   * it with the current JTA transaction.
+   * @throws TransactionRequiredException if there is
+   * no transaction
+   */
+  @Override
+  public void joinTransaction() {
+<span class="nc" id="L538">    em.joinTransaction();</span>
+<span class="nc" id="L539">  }</span>
+
+  /**
+   * Determine whether the entity manager is joined to the
+   * current transaction. Returns false if the entity manager
+   * is not joined to the current transaction or if no
+   * transaction is active
+   * @return boolean
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public boolean isJoinedToTransaction() {
+<span class="nc" id="L551">    return em.isJoinedToTransaction();</span>
+  }
+
+  /**
+   * Return an object of the specified type to allow access to the
+   * provider-specific API. If the provider's &lt;code&gt;EntityManager&lt;/code&gt;
+   * implementation does not support the specified class, the
+   * &lt;code&gt;PersistenceException&lt;/code&gt; is thrown.
+   * @param cls the class of the object to be returned. This is
+   * normally either the underlying &lt;code&gt;EntityManager&lt;/code&gt; implementation
+   * class or an interface that it implements.
+   * @return an instance of the specified class
+   * @throws PersistenceException if the provider does not
+   * support the call
+   * @since Java Persistence 2.0
+   *
+   * @Override
+   * public &lt;T&gt; T unwrap(final Class&lt;T&gt; cls) {
+   * return em.unwrap(cls);
+   * }
+   *
+   * /**
+   * Return the underlying provider object for the &lt;code&gt;EntityManager&lt;/code&gt;,
+   * if available. The result of this method is implementation
+   * specific.
+   * &lt;p&gt;The &lt;code&gt;unwrap&lt;/code&gt; method is to be preferred for new applications.
+   * @return underlying provider object for EntityManager
+   */
+  @Override
+  public Object getDelegate() {
+<span class="nc" id="L581">    return em.getDelegate();</span>
+  }
+
+  /**
+   * Return an object of the specified type to allow access to the
+   * provider-specific API. If the provider's &lt;code&gt;EntityManager&lt;/code&gt;
+   * implementation does not support the specified class, the
+   * &lt;code&gt;PersistenceException&lt;/code&gt; is thrown.
+   * @param cls the class of the object to be returned. This is
+   * normally either the underlying &lt;code&gt;EntityManager&lt;/code&gt; implementation
+   * class or an interface that it implements.
+   * @return an instance of the specified class
+   * @throws PersistenceException if the provider does not
+   * support the call
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public &lt;T&gt; T unwrap(final Class&lt;T&gt; cls) {
+<span class="nc" id="L599">    return em.unwrap(cls);</span>
+  }
+
+  /**
+   * Close an application-managed entity manager.
+   * After the close method has been invoked, all methods
+   * on the &lt;code&gt;EntityManager&lt;/code&gt; instance and any
+   * &lt;code&gt;Query&lt;/code&gt;, &lt;code&gt;TypedQuery&lt;/code&gt;, and
+   * &lt;code&gt;StoredProcedureQuery&lt;/code&gt; objects obtained from
+   * it will throw the &lt;code&gt;IllegalStateException&lt;/code&gt;
+   * except for &lt;code&gt;getProperties&lt;/code&gt;,
+   * &lt;code&gt;getTransaction&lt;/code&gt;, and &lt;code&gt;isOpen&lt;/code&gt; (which will return false).
+   * If this method is called when the entity manager is
+   * joined to an active transaction, the persistence
+   * context remains managed until the transaction completes.
+   * @throws IllegalStateException if the entity manager
+   * is container-managed
+   */
+  @Override
+  public void close() {
+<span class="nc" id="L619">    em.close();</span>
+<span class="nc" id="L620">  }</span>
+
+  /**
+   * Determine whether the entity manager is open.
+   * @return true until the entity manager has been closed
+   */
+  @Override
+  public boolean isOpen() {
+<span class="nc" id="L628">    return em.isOpen();</span>
+  }
+
+  /**
+   * Return the resource-level &lt;code&gt;EntityTransaction&lt;/code&gt; object.
+   * The &lt;code&gt;EntityTransaction&lt;/code&gt; instance may be used serially to
+   * begin and commit multiple transactions.
+   * @return EntityTransaction instance
+   * @throws IllegalStateException if invoked on a JTA
+   * entity manager
+   */
+  @Override
+  public EntityTransaction getTransaction() {
+<span class="nc" id="L641">    return em.getTransaction();</span>
+  }
+
+  /**
+   * Return the entity manager factory for the entity manager.
+   * @return EntityManagerFactory instance
+   * @throws IllegalStateException if the entity manager has
+   * been closed
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public EntityManagerFactory getEntityManagerFactory() {
+<span class="nc" id="L653">    return em.getEntityManagerFactory();</span>
+  }
+
+  /**
+   * Return an instance of &lt;code&gt;CriteriaBuilder&lt;/code&gt; for the creation of
+   * &lt;code&gt;CriteriaQuery&lt;/code&gt; objects.
+   * @return CriteriaBuilder instance
+   * @throws IllegalStateException if the entity manager has
+   * been closed
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public ProcessorCriteriaBuilder getCriteriaBuilder() {
+<span class="nc bnc" id="L666" title="All 2 branches missed.">    if (!em.isOpen())</span>
+<span class="nc" id="L667">      throw new IllegalStateException(&quot;Entity Manager had been closed&quot;);</span>
+<span class="nc" id="L668">    return cb.orElseGet(() -&gt; {</span>
+<span class="nc" id="L669">      cb = Optional.of(new CriteriaBuilderImpl(sd, parameterBuffer));</span>
+<span class="nc" id="L670">      return cb.get();</span>
+    });
+  }
+
+  /**
+   * Return an instance of &lt;code&gt;Metamodel&lt;/code&gt; interface for access to the
+   * metamodel of the persistence unit.
+   * @return Metamodel instance
+   * @throws IllegalStateException if the entity manager has
+   * been closed
+   * @since Java Persistence 2.0
+   */
+  @Override
+  public Metamodel getMetamodel() {
+<span class="nc" id="L684">    return em.getMetamodel();</span>
+  }
+
+  /**
+   * Return a mutable EntityGraph that can be used to dynamically create an
+   * EntityGraph.
+   * @param rootType class of entity graph
+   * @return entity graph
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;T&gt; EntityGraph&lt;T&gt; createEntityGraph(final Class&lt;T&gt; rootType) {
+<span class="nc" id="L696">    return em.createEntityGraph(rootType);</span>
+  }
+
+  /**
+   * Return a mutable copy of the named EntityGraph. If there
+   * is no entity graph with the specified name, null is returned.
+   * @param graphName name of an entity graph
+   * @return entity graph
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public EntityGraph&lt;?&gt; createEntityGraph(final String graphName) {
+<span class="nc" id="L708">    return em.createEntityGraph(graphName);</span>
+  }
+
+  /**
+   * Return a named EntityGraph. The returned EntityGraph
+   * should be considered immutable.
+   * @param graphName name of an existing entity graph
+   * @return named entity graph
+   * @throws IllegalArgumentException if there is no EntityGraph of
+   * the given name
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public EntityGraph&lt;?&gt; getEntityGraph(final String graphName) {
+<span class="nc" id="L722">    return em.getEntityGraph(graphName);</span>
+  }
+
+  /**
+   * Return all named EntityGraphs that have been defined for the provided
+   * class type.
+   * @param entityClass entity class
+   * @return list of all entity graphs defined for the entity
+   * @throws IllegalArgumentException if the class is not an entity
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;T&gt; List&lt;EntityGraph&lt;? super T&gt;&gt; getEntityGraphs(final Class&lt;T&gt; entityClass) {
+<span class="nc" id="L735">    return em.getEntityGraphs(entityClass);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

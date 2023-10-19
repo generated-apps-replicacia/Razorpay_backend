@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPALambdaOperation.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPALambdaOperation.java</span></div><h1>JPALambdaOperation.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.criteria.Subquery;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.UriResourceLambdaAll;
+import org.apache.olingo.server.api.uri.UriResourceLambdaAny;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+import org.apache.olingo.server.api.uri.queryoption.expression.Expression;
+import org.apache.olingo.server.api.uri.queryoption.expression.Member;
+
+import com.sap.olingo.jpa.processor.core.query.JPAAbstractQuery;
+import com.sap.olingo.jpa.processor.core.query.JPAAbstractSubQuery;
+import com.sap.olingo.jpa.processor.core.query.JPACollectionFilterQuery;
+import com.sap.olingo.jpa.processor.core.query.JPANavigationFilterQuery;
+import com.sap.olingo.jpa.processor.core.query.JPANavigationPropertyInfo;
+
+abstract class JPALambdaOperation extends JPAExistsOperation {
+
+  protected final UriInfoResource member;
+
+  JPALambdaOperation(final JPAFilterComplierAccess jpaComplier, final UriInfoResource member) {
+<span class="nc" id="L29">    super(jpaComplier);</span>
+<span class="nc" id="L30">    this.member = member;</span>
+<span class="nc" id="L31">  }</span>
+
+  JPALambdaOperation(final JPAFilterComplierAccess jpaComplier, final Member member) {
+<span class="nc" id="L34">    super(jpaComplier);</span>
+<span class="nc" id="L35">    this.member = member.getResourcePath();</span>
+<span class="nc" id="L36">  }</span>
+
+  @Override
+  protected Subquery&lt;?&gt; getExistsQuery() throws ODataApplicationException {
+<span class="nc" id="L40">    return getSubQuery(determineExpression());</span>
+  }
+
+  protected final Subquery&lt;?&gt; getSubQuery(final Expression expression) throws ODataApplicationException {
+<span class="nc" id="L44">    final List&lt;UriResource&gt; allUriResourceParts = new ArrayList&lt;&gt;(uriResourceParts);</span>
+<span class="nc" id="L45">    allUriResourceParts.addAll(member.getUriResourceParts());</span>
+
+    // 1. Determine all relevant associations
+<span class="nc" id="L48">    final List&lt;JPANavigationPropertyInfo&gt; naviPathList = determineAssociations(sd, allUriResourceParts);</span>
+<span class="nc" id="L49">    JPAAbstractQuery parent = root;</span>
+<span class="nc" id="L50">    final List&lt;JPAAbstractSubQuery&gt; queryList = new ArrayList&lt;&gt;();</span>
+
+    // 2. Create the queries and roots
+<span class="nc bnc" id="L53" title="All 2 branches missed.">    for (int i = naviPathList.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc" id="L54">      final JPANavigationPropertyInfo naviInfo = naviPathList.get(i);</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">      if (i == 0) {</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if (naviInfo.getUriResource() instanceof UriResourceProperty)</span>
+<span class="nc" id="L57">          queryList.add(new JPACollectionFilterQuery(odata, sd, em, parent, member.getUriResourceParts(), expression,</span>
+              from, groups));
+        else
+<span class="nc" id="L60">          queryList.add(new JPANavigationFilterQuery(odata, sd, naviInfo.getUriResource(), parent, em, naviInfo</span>
+<span class="nc" id="L61">              .getAssociationPath(), expression, from, claimsProvider, groups));</span>
+      } else {
+<span class="nc" id="L63">        queryList.add(new JPANavigationFilterQuery(odata, sd, naviInfo.getUriResource(), parent, em, naviInfo</span>
+<span class="nc" id="L64">            .getAssociationPath(), from, claimsProvider));</span>
+      }
+<span class="nc" id="L66">      parent = queryList.get(queryList.size() - 1);</span>
+    }
+    // 3. Create select statements
+<span class="nc" id="L69">    Subquery&lt;?&gt; childQuery = null;</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">    for (int i = queryList.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc" id="L71">      childQuery = queryList.get(i).getSubQuery(childQuery);</span>
+    }
+<span class="nc" id="L73">    return childQuery;</span>
+  }
+
+  Expression determineExpression() {
+<span class="nc bnc" id="L77" title="All 2 branches missed.">    for (final UriResource uriResource : member.getUriResourceParts()) {</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">      if (uriResource.getKind() == UriResourceKind.lambdaAny)</span>
+<span class="nc" id="L79">        return ((UriResourceLambdaAny) uriResource).getExpression();</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">      else if (uriResource.getKind() == UriResourceKind.lambdaAll)</span>
+<span class="nc" id="L81">        return ((UriResourceLambdaAll) uriResource).getExpression();</span>
+<span class="nc" id="L82">    }</span>
+<span class="nc" id="L83">    return null;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

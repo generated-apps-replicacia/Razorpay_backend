@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>InheritanceInfo.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">InheritanceInfo.java</span></div><h1>InheritanceInfo.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.Optional;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.persistence.DiscriminatorColumn;
+import javax.persistence.Entity;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+
+class InheritanceInfo {
+<span class="nc" id="L18">  private static final Log LOGGER = LogFactory.getLog(InheritanceInfo.class);</span>
+  private final Optional&lt;InheritanceType&gt; inType;
+  private final Optional&lt;Class&lt;?&gt;&gt; baseClass;
+  private final Optional&lt;String&gt; discriminatorColumn;
+
+<span class="nc" id="L23">  InheritanceInfo(final JPAEntityType type) {</span>
+<span class="nc" id="L24">    baseClass = Optional.ofNullable(determineBaseClass(type));</span>
+<span class="nc" id="L25">    inType = Optional.ofNullable(baseClass.map(this::determineInType).orElse(null));</span>
+<span class="nc" id="L26">    discriminatorColumn = Optional.ofNullable(baseClass.map(this::determineColumn).orElse(null));</span>
+<span class="nc" id="L27">  }</span>
+
+  Optional&lt;Class&lt;?&gt;&gt; getBaseClass() {
+<span class="nc" id="L30">    return baseClass;</span>
+  }
+
+  Optional&lt;String&gt; getDiscriminatorColumn() {
+<span class="nc" id="L34">    return discriminatorColumn;</span>
+  }
+
+  Optional&lt;InheritanceType&gt; getInheritanceType() {
+<span class="nc" id="L38">    return inType;</span>
+  }
+
+  boolean hasInheritance() {
+<span class="nc" id="L42">    return inType.isPresent();</span>
+  }
+
+  @CheckForNull
+  private Class&lt;?&gt; determineBaseClass(final JPAEntityType et) {
+<span class="nc bnc" id="L47" title="All 4 branches missed.">    if (et != null &amp;&amp; et.getTypeClass().getSuperclass() != null) {</span>
+<span class="nc" id="L48">      final Class&lt;?&gt; superClass = et.getTypeClass().getSuperclass();</span>
+<span class="nc" id="L49">      return determineInheritanceByClass(et, superClass);</span>
+    }
+<span class="nc" id="L51">    return null;</span>
+  }
+
+  private String determineColumn(@Nonnull final Class&lt;?&gt; clazz) {
+<span class="nc" id="L55">    return inType.filter(t -&gt; t.equals(InheritanceType.SINGLE_TABLE))</span>
+<span class="nc" id="L56">        .map(t -&gt; clazz.getDeclaredAnnotation(DiscriminatorColumn.class).name())</span>
+<span class="nc" id="L57">        .orElse(null);</span>
+  }
+
+  @CheckForNull
+  private Class&lt;?&gt; determineInheritanceByClass(final JPAEntityType et, final Class&lt;?&gt; clazz) {
+<span class="nc" id="L62">    final Entity jpaEntity = clazz.getDeclaredAnnotation(Entity.class);</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">    if (jpaEntity != null) {</span>
+<span class="nc" id="L64">      final Inheritance inheritance = clazz.getDeclaredAnnotation(Inheritance.class);</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">      if (inheritance != null) {</span>
+<span class="nc" id="L66">        return clazz;</span>
+      } else {
+<span class="nc" id="L68">        final Class&lt;?&gt; superClass = clazz.getSuperclass();</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        if (superClass != null) {</span>
+<span class="nc" id="L70">          return determineInheritanceByClass(et, superClass);</span>
+        } else {
+<span class="nc" id="L72">          LOGGER.debug(&quot;Cloud not find InheritanceType for &quot; + et.getInternalName());</span>
+        }
+      }
+    }
+<span class="nc" id="L76">    return null;</span>
+  }
+
+  private InheritanceType determineInType(@Nonnull final Class&lt;?&gt; baseClass) {
+<span class="nc" id="L80">    final Inheritance inheritance = baseClass.getDeclaredAnnotation(Inheritance.class);</span>
+<span class="nc" id="L81">    return inheritance.strategy();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>SqlStringFunctions.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">SqlStringFunctions.java</span></div><h1>SqlStringFunctions.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+<span class="nc" id="L3">enum SqlStringFunctions {</span>
+
+<span class="nc" id="L5">  LOWER(&quot;LOWER&quot;),</span>
+<span class="nc" id="L6">  UPPER(&quot;UPPER&quot;),</span>
+<span class="nc" id="L7">  LENGTH(&quot;LENGTH&quot;),</span>
+<span class="nc" id="L8">  TRIM(&quot;TRIM&quot;),</span>
+<span class="nc" id="L9">  SUBSTRING(&quot;SUBSTRING&quot;),</span>
+<span class="nc" id="L10">  CONCAT(&quot;CONCAT&quot;),</span>
+<span class="nc" id="L11">  LOCATE(&quot;LOCATE&quot;);</span>
+
+  private String keyWord;
+
+<span class="nc" id="L15">  private SqlStringFunctions(final String keyWord) {</span>
+<span class="nc" id="L16">    this.keyWord = keyWord;</span>
+<span class="nc" id="L17">  }</span>
+
+  @Override
+  public String toString() {
+<span class="nc" id="L21">    return keyWord;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

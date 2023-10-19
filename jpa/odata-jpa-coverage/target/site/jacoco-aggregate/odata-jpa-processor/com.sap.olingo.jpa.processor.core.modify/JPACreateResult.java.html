@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPACreateResult.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.modify</a> &gt; <span class="el_source">JPACreateResult.java</span></div><h1>JPACreateResult.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.modify;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPADescriptionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.converter.JPAExpandResult;
+import com.sap.olingo.jpa.processor.core.converter.JPATuple;
+import com.sap.olingo.jpa.processor.core.converter.JPATupleChildConverter;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.query.ExpressionUtil;
+
+abstract class JPACreateResult implements JPAExpandResult {
+
+  protected final JPAEntityType et;
+  protected final Map&lt;JPAAssociationPath, JPAExpandResult&gt; children;
+  protected final List&lt;JPAPath&gt; pathList;
+  protected final Locale locale;
+  protected final JPAConversionHelper helper;
+  protected final Map&lt;String, List&lt;String&gt;&gt; requestHeaders;
+
+  JPACreateResult(final JPAEntityType et, final Map&lt;String, List&lt;String&gt;&gt; requestHeaders)
+<span class="nc" id="L34">      throws ODataJPAModelException {</span>
+
+<span class="nc" id="L36">    this.et = et;</span>
+<span class="nc" id="L37">    this.helper = new JPAConversionHelper();</span>
+<span class="nc" id="L38">    this.children = new HashMap&lt;&gt;(0);</span>
+<span class="nc" id="L39">    this.pathList = et.getPathList();</span>
+<span class="nc" id="L40">    this.locale = ExpressionUtil.determineFallbackLocale(requestHeaders);</span>
+<span class="nc" id="L41">    this.requestHeaders = requestHeaders;</span>
+<span class="nc" id="L42">  }</span>
+
+  @Override
+  public void convert(final JPATupleChildConverter converter) throws ODataApplicationException {
+    // No implementation required for CUD operations
+<span class="nc" id="L47">  }</span>
+
+  @Override
+  public JPAExpandResult getChild(final JPAAssociationPath associationPath) {
+<span class="nc" id="L51">    return children.get(associationPath);</span>
+  }
+
+  @Override
+  public Map&lt;JPAAssociationPath, JPAExpandResult&gt; getChildren() {
+<span class="nc" id="L56">    return children;</span>
+  }
+
+  @Override
+  public Long getCount(final String key) {
+<span class="nc" id="L61">    return null;</span>
+  }
+
+  @Override
+  public JPAEntityType getEntityType() {
+<span class="nc" id="L66">    return et;</span>
+  }
+
+  @Override
+  public boolean hasCount() {
+<span class="nc" id="L71">    return false;</span>
+  }
+
+  protected void addValueToTuple(final JPATuple tuple, final JPAPath path, final int index, final Object value)
+      throws ODataJPAProcessorException {
+<span class="nc bnc" id="L76" title="All 2 branches missed.">    if (path.getPath().get(index) instanceof JPADescriptionAttribute) {</span>
+      @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L78">      final Collection&lt;Object&gt; desc = (Collection&lt;Object&gt;) value;</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">      if (desc != null) {</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        for (final Object entry : desc) {</span>
+<span class="nc" id="L81">          final Map&lt;String, Object&gt; descGetterMap = entryAsMap(entry);</span>
+<span class="nc" id="L82">          final JPADescriptionAttribute jpaAttribute = (JPADescriptionAttribute) path.getPath().get(index);</span>
+<span class="nc" id="L83">          final String providedLocale = determineLocale(descGetterMap, jpaAttribute);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">          if (locale.getLanguage().equals(providedLocale)</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">              || locale.toString().equals(providedLocale)) {</span>
+<span class="nc" id="L86">            final Object description = descGetterMap.get(jpaAttribute.getDescriptionAttribute().getInternalName());</span>
+<span class="nc" id="L87">            tuple.addElement(path.getAlias(), path.getLeaf().getType(), description);</span>
+<span class="nc" id="L88">            break;</span>
+          }
+<span class="nc" id="L90">        }</span>
+      } else {
+<span class="nc" id="L92">        tuple.addElement(path.getAlias(), path.getLeaf().getType(), null);</span>
+      }
+<span class="nc" id="L94">    } else {</span>
+<span class="nc" id="L95">      tuple.addElement(path.getAlias(), path.getLeaf().getType(), value);</span>
+    }
+<span class="nc" id="L97">  }</span>
+
+  protected void convertPathToTuple(final JPATuple tuple, final Map&lt;String, Object&gt; jpaEntity, final JPAPath path,
+      final int index) throws ODataJPAProcessorException {
+
+<span class="nc" id="L102">    final Object value = jpaEntity.get(path.getPath().get(index).getInternalName());</span>
+<span class="nc bnc" id="L103" title="All 4 branches missed.">    if (path.getPath().size() == index + 1 || value == null) {</span>
+<span class="nc" id="L104">      addValueToTuple(tuple, path, index, value);</span>
+    } else {
+<span class="nc" id="L106">      final Map&lt;String, Object&gt; embeddedGetterMap = entryAsMap(value);</span>
+<span class="nc" id="L107">      convertPathToTuple(tuple, embeddedGetterMap, path, index + 1);</span>
+    }
+<span class="nc" id="L109">  }</span>
+
+  protected abstract String determineLocale(final Map&lt;String, Object&gt; descGetterMap,
+      JPAPath localeAttribute, final int index) throws ODataJPAProcessorException;
+
+  protected abstract Map&lt;String, Object&gt; entryAsMap(final Object entry) throws ODataJPAProcessorException;
+
+  protected boolean notContainsCollection(final JPAPath path) {
+<span class="nc bnc" id="L117" title="All 2 branches missed.">    for (final JPAElement e : path.getPath())</span>
+<span class="nc bnc" id="L118" title="All 4 branches missed.">      if (e instanceof JPAAttribute &amp;&amp; ((JPAAttribute) e).isCollection())</span>
+<span class="nc" id="L119">        return false;</span>
+<span class="nc" id="L120">    return true;</span>
+  }
+
+  private String determineLocale(final Map&lt;String, Object&gt; descGetterMap,
+      final JPADescriptionAttribute descAttribute) throws ODataJPAProcessorException {
+<span class="nc" id="L125">    return determineLocale(descGetterMap, descAttribute.getLocaleFieldName(), 0);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

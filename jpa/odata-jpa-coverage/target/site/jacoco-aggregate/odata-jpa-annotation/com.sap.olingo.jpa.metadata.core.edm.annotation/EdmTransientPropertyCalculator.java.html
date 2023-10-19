@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>EdmTransientPropertyCalculator.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-annotation</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.annotation</a> &gt; <span class="el_source">EdmTransientPropertyCalculator.java</span></div><h1>EdmTransientPropertyCalculator.java</h1><pre class="source lang-java linenums">/**
+ *
+ */
+package com.sap.olingo.jpa.metadata.core.edm.annotation;
+
+import java.util.Collections;
+import java.util.List;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.Tuple;
+
+/**
+ * Transient property converter.&lt;p&gt;
+ * A converter take a row returned from the database and calculates, based on its values, either one additional value or
+ * a collection of values.&lt;br&gt;
+ * The converter is mentioned in the {@link EdmTransient} annotation at a POJO attribute. E.g.:&lt;p&gt;
+ * &lt;code&gt;
+ * {@literal @}EdmTransient(requiredAttributes = { &quot;lastName&quot;, &quot;firstName&quot; }, calculator = FullNameCalculator.class)&lt;br&gt;
+ * {@literal @}Transient&lt;br&gt;
+ * private String fullName;&lt;br&gt;
+ * &lt;/code&gt;&lt;p&gt;
+ *
+ * An instance of the converter is created once per OData request. That is, it could be created multiple times per http
+ * request in case of $batch requests. &lt;p&gt;
+ * An implementing class may provide &lt;b&gt;one&lt;/b&gt; constructor having no parameter or a combination of the following:
+ * &lt;ul&gt;
+ * &lt;li&gt;An Entity Manager: javax.persistence.EntityManager&lt;/li&gt;
+ * &lt;li&gt;All header: com.sap.olingo.jpa.metadata.api.JPAHttpHeaderMap&lt;/li&gt;
+ * &lt;li&gt;Access to own request parameter: com.sap.olingo.jpa.metadata.api.JPARequestParameterMap&lt;/li&gt;
+ * &lt;/ul&gt;
+ * @author Oliver Grande&lt;br&gt;
+ * Created: 14.03.2020
+ *
+ */
+public interface EdmTransientPropertyCalculator&lt;I&gt; {
+  /**
+   * This method is called in case the transient property is a primitive, simple property.
+   * @param row One row read from the database
+   * @return Calculated value for the property
+   */
+  default @Nullable I calculateProperty(@Nonnull final Tuple row) {
+<span class="nc" id="L43">    return null;</span>
+  }
+
+  /**
+   * This method is called in case the transient property is a collection property.
+   * @param row One row read from the database
+   * @return List of calculated values for the collection property
+   */
+  default @Nonnull List&lt;I&gt; calculateCollectionProperty(@Nonnull final Tuple row) {
+<span class="nc" id="L52">    return Collections.emptyList();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

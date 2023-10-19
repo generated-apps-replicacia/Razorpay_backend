@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAAbstractCUDRequestHandler.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAAbstractCUDRequestHandler.java</span></div><h1>JPAAbstractCUDRequestHandler.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import javax.persistence.EntityManager;
+
+import org.apache.olingo.commons.api.http.HttpMethod;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.modify.JPAUpdateResult;
+import com.sap.olingo.jpa.processor.core.processor.JPARequestEntity;
+
+<span class="nc" id="L13">public abstract class JPAAbstractCUDRequestHandler implements JPACUDRequestHandler {</span>
+
+  @Override
+  public void deleteEntity(final JPARequestEntity requestEntity, final EntityManager em)
+      throws ODataJPAProcessException {
+
+<span class="nc" id="L19">    throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_DELETE,</span>
+        HttpStatusCode.NOT_IMPLEMENTED);
+  }
+
+  @Override
+  public Object createEntity(final JPARequestEntity requestEntity, final EntityManager em)
+      throws ODataJPAProcessException {
+
+<span class="nc" id="L27">    throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_CREATE,</span>
+        HttpStatusCode.NOT_IMPLEMENTED);
+
+  }
+
+  @Override
+  public JPAUpdateResult updateEntity(final JPARequestEntity requestEntity, final EntityManager em,
+      final HttpMethod httpMethod) throws ODataJPAProcessException {
+
+<span class="nc" id="L36">    throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_UPDATE,</span>
+        HttpStatusCode.NOT_IMPLEMENTED);
+  }
+
+  @Override
+  public void validateChanges(final EntityManager em) throws ODataJPAProcessException {
+    // Do nothing. If needed override method.
+<span class="nc" id="L43">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateActionFactory.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateActionFactory.java</span></div><h1>IntermediateActionFactory.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.lang.reflect.Method;
+import java.util.Map;
+
+import org.reflections8.Reflections;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmAction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.ODataAction;
+
+<span class="nc" id="L13">class IntermediateActionFactory extends IntermediateOperationFactory&lt;IntermediateJavaAction&gt; {</span>
+//Description
+  @Override
+  IntermediateJavaAction createOperation(final JPAEdmNameBuilder nameBuilder, final IntermediateSchema schema,
+      final Method m,
+      final Object functionDescription) throws ODataJPAModelException {
+<span class="nc" id="L19">    return new IntermediateJavaAction(nameBuilder, (EdmAction) functionDescription, m, schema);</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  &lt;F extends IntermediateJavaAction&gt; Map&lt;String, F&gt; create(final JPAEdmNameBuilder nameBuilder,
+      final Reflections reflections, final IntermediateSchema schema) throws ODataJPAModelException {
+
+<span class="nc" id="L26">    return (Map&lt;String, F&gt;) createOperationMap(nameBuilder, reflections,</span>
+        schema, ODataAction.class, EdmAction.class);
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

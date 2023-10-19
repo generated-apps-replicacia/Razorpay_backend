@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateProperty.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateProperty.java</span></div><h1>IntermediateProperty.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.COMPLEX_PROPERTY_MISSING_PROTECTION_PATH;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.PROPERTY_PRECISION_NOT_IN_RANGE;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.TRANSIENT_CALCULATOR_TOO_MANY_CONSTRUCTORS;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.TRANSIENT_KEY_NOT_SUPPORTED;
+
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.EntityManager;
+import javax.persistence.Lob;
+import javax.persistence.metamodel.Attribute;
+import javax.persistence.metamodel.Attribute.PersistentAttributeType;
+import javax.persistence.metamodel.ManagedType;
+import javax.persistence.metamodel.Type.PersistenceType;
+
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.geo.SRID;
+import org.apache.olingo.commons.api.edm.provider.CsdlAnnotation;
+import org.apache.olingo.commons.api.edm.provider.CsdlMapping;
+import org.apache.olingo.commons.api.edm.provider.CsdlProperty;
+
+import com.sap.olingo.jpa.metadata.api.JPAHttpHeaderMap;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmGeospatial;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmIgnore;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmProtectedBy;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmProtections;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmSearchable;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransient;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransientPropertyCalculator;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmVisibleFor;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAParameter;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediatePropertyAccess;
+
+/**
+ * Properties can be classified by two different aspects:
+ * &lt;ol&gt;
+ * &lt;li&gt; If they are complex, so are structured, or primitive&lt;/li&gt;
+ * &lt;li&gt; If they are a collection of instances or if they are simple and can have up to one instance&lt;/li&gt;
+ * &lt;/ol&gt;
+ * So properties maybe e.g. a complex collection property or a simple primitive property
+ * @author Oliver Grande
+ *
+ */
+public abstract class IntermediateProperty extends IntermediateModelElement implements IntermediatePropertyAccess,
+    JPAAttribute {
+
+  private static final int UPPER_LIMIT_PRECISION_TEMP = 12;
+  private static final int LOWER_LIMIT_PRECISION_TEMP = 0;
+  private static final String DB_FIELD_NAME_PATTERN = &quot;\&quot;&amp;1\&quot;&quot;;
+  protected final Attribute&lt;?, ?&gt; jpaAttribute;
+  protected final IntermediateSchema schema;
+  protected CsdlProperty edmProperty;
+  protected JPAStructuredType type;
+  protected AttributeConverter&lt;?, ?&gt; valueConverter;
+  protected String dbFieldName;
+  protected Class&lt;?&gt; dbType;
+  protected Class&lt;?&gt; entityType;
+  protected final ManagedType&lt;?&gt; managedType;
+  protected boolean isVersion;
+  protected boolean searchable;
+  protected boolean conversionRequired;
+  private boolean isEnum;
+
+  private final Map&lt;String, JPAProtectionInfo&gt; externalProtectedPathNames;
+  private List&lt;String&gt; fieldGroups;
+  protected List&lt;String&gt; requiredAttributes;
+  private Constructor&lt;? extends EdmTransientPropertyCalculator&lt;?&gt;&gt; transientCalculatorConstructor;
+
+  public IntermediateProperty(final JPAEdmNameBuilder nameBuilder, final Attribute&lt;?, ?&gt; jpaAttribute,
+      final IntermediateSchema schema) throws ODataJPAModelException {
+<span class="nc" id="L96">    super(nameBuilder, IntNameBuilder.buildAttributeName(jpaAttribute));</span>
+<span class="nc" id="L97">    this.jpaAttribute = jpaAttribute;</span>
+<span class="nc" id="L98">    this.schema = schema;</span>
+<span class="nc" id="L99">    this.managedType = jpaAttribute.getDeclaringType();</span>
+<span class="nc" id="L100">    this.externalProtectedPathNames = new HashMap&lt;&gt;(1);</span>
+<span class="nc" id="L101">    buildProperty(nameBuilder);</span>
+<span class="nc" id="L102">  }</span>
+
+  @Override
+  public void addAnnotations(final List&lt;CsdlAnnotation&gt; annotations) {
+<span class="nc" id="L106">    edmAnnotations.addAll(annotations);</span>
+<span class="nc" id="L107">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;T extends EdmTransientPropertyCalculator&lt;?&gt;&gt; Constructor&lt;T&gt; getCalculatorConstructor()
+      throws ODataJPAModelException {
+<span class="nc bnc" id="L113" title="All 2 branches missed.">    if (this.edmProperty == null) {</span>
+<span class="nc" id="L114">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L116">    return (Constructor&lt;T&gt;) transientCalculatorConstructor;</span>
+  }
+
+  @Override
+  public &lt;X, Y extends Object&gt; AttributeConverter&lt;X, Y&gt; getConverter() {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">    return conversionRequired ? getRawConverter() : null;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;X, Y extends Object&gt; AttributeConverter&lt;X, Y&gt; getRawConverter() {
+<span class="nc" id="L127">    return (AttributeConverter&lt;X, Y&gt;) valueConverter;</span>
+  }
+
+  @Override
+  public EdmPrimitiveTypeKind getEdmType() throws ODataJPAModelException {
+<span class="nc" id="L132">    return JPATypeConverter.convertToEdmSimpleType(entityType);</span>
+  }
+
+  @Override
+  public CsdlProperty getProperty() throws ODataJPAModelException {
+<span class="nc" id="L137">    return getEdmItem();</span>
+  }
+
+  @Override
+  public Set&lt;String&gt; getProtectionClaimNames() {
+<span class="nc" id="L142">    return externalProtectedPathNames.keySet();</span>
+  }
+
+  @Override
+  public List&lt;String&gt; getProtectionPath(final String claimName) throws ODataJPAModelException {
+<span class="nc bnc" id="L147" title="All 2 branches missed.">    if (externalProtectedPathNames.containsKey(claimName))</span>
+<span class="nc" id="L148">      return externalProtectedPathNames.get(claimName).getPath();</span>
+<span class="nc" id="L149">    return new ArrayList&lt;&gt;(0);</span>
+  }
+
+  /**
+   * @return
+   */
+  @Override
+  public List&lt;String&gt; getRequiredProperties() {
+<span class="nc" id="L157">    return requiredAttributes;</span>
+  }
+
+  @Override
+  public JPAStructuredType getStructuredType() {
+<span class="nc bnc" id="L162" title="All 2 branches missed.">    return type == null ? null : type;</span>
+  }
+
+  @Override
+  public Class&lt;?&gt; getType() {
+<span class="nc bnc" id="L167" title="All 2 branches missed.">    if (conversionRequired)</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">      return dbType.isPrimitive() ? boxPrimitive(dbType) : dbType;</span>
+    else
+<span class="nc bnc" id="L170" title="All 2 branches missed.">      return entityType.isPrimitive() ? boxPrimitive(entityType) : entityType;</span>
+  }
+
+  @Override
+  public Class&lt;?&gt; getDbType() {
+<span class="nc bnc" id="L175" title="All 2 branches missed.">    return dbType.isPrimitive() ? boxPrimitive(dbType) : dbType;</span>
+  }
+
+  @Override
+  public boolean hasProtection() {
+<span class="nc bnc" id="L180" title="All 2 branches missed.">    return !externalProtectedPathNames.isEmpty();</span>
+  }
+
+  @Override
+  public boolean isEnum() {
+<span class="nc" id="L185">    return isEnum;</span>
+
+  }
+
+  private void determineIsEnum() {
+<span class="nc bnc" id="L190" title="All 2 branches missed.">    isEnum = schema.getEnumerationType(entityType) != null;</span>
+<span class="nc" id="L191">  }</span>
+
+  @Override
+  public boolean isEtag() {
+<span class="nc" id="L195">    return isVersion;</span>
+  }
+
+  @Override
+  public boolean isSearchable() {
+<span class="nc" id="L200">    return searchable;</span>
+  }
+
+  @Override
+  public boolean isTransient() {
+<span class="nc bnc" id="L205" title="All 2 branches missed.">    return requiredAttributes != null;</span>
+  }
+
+  protected void buildProperty(final JPAEdmNameBuilder nameBuilder) throws ODataJPAModelException {
+    // Set element specific attributes of super type
+<span class="nc" id="L210">    this.setExternalName(nameBuilder.buildPropertyName(internalName));</span>
+<span class="nc" id="L211">    entityType = dbType = determinePropertyType();</span>
+
+<span class="nc bnc" id="L213" title="All 2 branches missed.">    if (this.jpaAttribute.getJavaMember() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L214">      determineIgnore();</span>
+<span class="nc" id="L215">      determineStructuredType();</span>
+<span class="nc" id="L216">      determineInternalTypesFromConverter();</span>
+<span class="nc" id="L217">      determineDBFieldName();</span>
+<span class="nc" id="L218">      determineTransient();</span>
+<span class="nc" id="L219">      determineSearchable();</span>
+<span class="nc" id="L220">      determineStreamInfo();</span>
+<span class="nc" id="L221">      determineIsVersion();</span>
+<span class="nc" id="L222">      determineProtection();</span>
+<span class="nc" id="L223">      determineFieldGroups();</span>
+<span class="nc" id="L224">      determineIsEnum();</span>
+<span class="nc" id="L225">      checkConsistency();</span>
+    }
+<span class="nc" id="L227">    postProcessor.processProperty(this, jpaAttribute.getDeclaringType().getJavaType().getCanonicalName());</span>
+    // Process annotations after post processing, as external name it could
+    // have been changed
+<span class="nc" id="L230">    getAnnotations(edmAnnotations, this.jpaAttribute.getJavaMember(), internalName);</span>
+<span class="nc" id="L231">  }</span>
+
+  protected FullQualifiedName determineTypeByPersistenceType(final Enum&lt;?&gt; persistanceType)
+      throws ODataJPAModelException {
+<span class="nc bnc" id="L235" title="All 4 branches missed.">    if (PersistentAttributeType.BASIC.equals(persistanceType) || PersistenceType.BASIC.equals(persistanceType)) {</span>
+<span class="nc" id="L236">      final IntermediateModelElement odataType = getODataPrimitiveType();</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">      if (odataType == null)</span>
+<span class="nc" id="L238">        return getSimpleType();</span>
+      else
+<span class="nc" id="L240">        return odataType.getExternalFQN();</span>
+    }
+<span class="nc bnc" id="L242" title="All 4 branches missed.">    if (PersistentAttributeType.EMBEDDED.equals(persistanceType) || PersistenceType.EMBEDDABLE.equals(persistanceType))</span>
+<span class="nc" id="L243">      return buildFQN(type.getExternalName());</span>
+    else
+<span class="nc" id="L245">      return EdmPrimitiveTypeKind.Boolean.getFullQualifiedName();</span>
+  }
+
+  protected String getDBFieldName() {
+<span class="nc" id="L249">    return dbFieldName;</span>
+  }
+
+  @Override
+  protected CsdlProperty getEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L254" title="All 2 branches missed.">    if (this.edmProperty == null) {</span>
+<span class="nc" id="L255">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L257">    return edmProperty;</span>
+  }
+
+  @Override
+  protected synchronized void lazyBuildEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L262" title="All 2 branches missed.">    if (edmProperty == null) {</span>
+<span class="nc" id="L263">      edmProperty = new CsdlProperty();</span>
+<span class="nc" id="L264">      edmProperty.setName(this.getExternalName());</span>
+<span class="nc" id="L265">      edmProperty.setType(determineType());</span>
+<span class="nc" id="L266">      setFacet();</span>
+<span class="nc" id="L267">      edmProperty.setMapping(createMapper());</span>
+<span class="nc" id="L268">      edmProperty.setAnnotations(edmAnnotations);</span>
+    }
+<span class="nc" id="L270">  }</span>
+
+  /**
+   * Check consistency of provided attribute e.g. check id attribute was annotated with unsupported annotations
+   * @throws ODataJPAModelException
+   */
+  abstract void checkConsistency() throws ODataJPAModelException;
+
+  CsdlMapping createMapper() {
+<span class="nc bnc" id="L279" title="All 6 branches missed.">    if (!isLob() &amp;&amp; !(getConverter() == null &amp;&amp; isEnum())) {</span>
+<span class="nc" id="L280">      final CsdlMapping mapping = new CsdlMapping();</span>
+<span class="nc" id="L281">      mapping.setInternalName(this.getExternalName());</span>
+<span class="nc bnc" id="L282" title="All 2 branches missed.">      if(dbType.isAssignableFrom(Duration.class)) {</span>
+<span class="nc" id="L283">         mapping.setMappedJavaClass(Long.class);</span>
+<span class="nc bnc" id="L284" title="All 2 branches missed.">      } else if(entityType.isAssignableFrom(UUID.class)) {</span>
+<span class="nc" id="L285">         mapping.setMappedJavaClass(UUID.class);</span>
+      } else {
+<span class="nc" id="L287">        mapping.setMappedJavaClass(dbType);</span>
+      }
+<span class="nc" id="L289">      return mapping;</span>
+    }
+<span class="nc" id="L291">    return null;</span>
+  }
+
+  abstract Class&lt;?&gt; determinePropertyType();
+
+  abstract void determineIsVersion();
+
+  void determineProtection() throws ODataJPAModelException {
+<span class="nc" id="L299">    final EdmProtections jpaProtections = ((AnnotatedElement) this.jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L300">        .getAnnotation(EdmProtections.class);</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">    if (jpaProtections != null) {</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">      for (final EdmProtectedBy jpaProtectedBy : jpaProtections.value()) {</span>
+<span class="nc" id="L303">        determineOneProtection(jpaProtectedBy);</span>
+      }
+    } else {
+<span class="nc" id="L306">      final EdmProtectedBy jpaProtectedBy = ((AnnotatedElement) this.jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L307">          .getAnnotation(EdmProtectedBy.class);</span>
+<span class="nc bnc" id="L308" title="All 2 branches missed.">      if (jpaProtectedBy != null) {</span>
+<span class="nc" id="L309">        determineOneProtection(jpaProtectedBy);</span>
+      }
+    }
+<span class="nc" id="L312">  }</span>
+
+  void determineSearchable() {
+<span class="nc" id="L315">    final EdmSearchable jpaSearchable = ((AnnotatedElement) this.jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L316">        .getAnnotation(EdmSearchable.class);</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">    if (jpaSearchable != null)</span>
+<span class="nc" id="L318">      searchable = true;</span>
+<span class="nc" id="L319">  }</span>
+
+  abstract void determineStreamInfo() throws ODataJPAModelException;
+
+  abstract void determineStructuredType();
+
+  abstract FullQualifiedName determineType() throws ODataJPAModelException;
+
+  abstract String getDefaultValue() throws ODataJPAModelException;
+
+  /**
+   * @return
+   */
+  List&lt;String&gt; getGroups() {
+<span class="nc" id="L333">    return fieldGroups;</span>
+  }
+
+  IntermediateModelElement getODataPrimitiveType() {
+<span class="nc" id="L337">    return schema.getEnumerationType(entityType);</span>
+  }
+
+  FullQualifiedName getSimpleType() throws ODataJPAModelException {
+
+<span class="nc" id="L342">    return JPATypeConverter.convertToEdmSimpleType(getType(), jpaAttribute)</span>
+<span class="nc" id="L343">        .getFullQualifiedName();</span>
+  }
+
+  SRID getSRID() {
+<span class="nc" id="L347">    SRID result = null;</span>
+<span class="nc bnc" id="L348" title="All 2 branches missed.">    if (jpaAttribute.getJavaMember() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L349">      final AnnotatedElement annotatedElement = (AnnotatedElement) jpaAttribute.getJavaMember();</span>
+<span class="nc" id="L350">      final EdmGeospatial spatialDetails = annotatedElement.getAnnotation(EdmGeospatial.class);</span>
+<span class="nc bnc" id="L351" title="All 2 branches missed.">      if (spatialDetails != null) {</span>
+<span class="nc" id="L352">        final String srid = spatialDetails.srid();</span>
+<span class="nc bnc" id="L353" title="All 2 branches missed.">        if (srid.isEmpty())</span>
+<span class="nc" id="L354">          result = SRID.valueOf(null);</span>
+        else
+<span class="nc" id="L356">          result = SRID.valueOf(srid);</span>
+<span class="nc" id="L357">        result.setDimension(spatialDetails.dimension());</span>
+      }
+    }
+<span class="nc" id="L360">    return result;</span>
+  }
+
+  boolean isPartOfGroup() {
+<span class="nc bnc" id="L364" title="All 2 branches missed.">    return !fieldGroups.isEmpty();</span>
+  }
+
+  abstract boolean isStream();
+
+  /**
+   * Determines if wildcards are supported. In case a complex type is annotated this depends on the type of the target
+   * attribute. To prevent deed locks during metadata generation the determination is done late.
+   * @param &lt;T&gt;
+   * @param claimName
+   * @param clazz
+   * @return
+   */
+  &lt;T&gt; boolean protectionWithWildcard(final String claimName, final Class&lt;T&gt; clazz) {
+<span class="nc bnc" id="L378" title="All 2 branches missed.">    if (externalProtectedPathNames.containsKey(claimName))</span>
+<span class="nc" id="L379">      return externalProtectedPathNames.get(claimName).supportsWildcards(clazz);</span>
+<span class="nc" id="L380">    return true;</span>
+  }
+
+  void setFacet() throws ODataJPAModelException {
+<span class="nc bnc" id="L384" title="All 2 branches missed.">    if (jpaAttribute.getJavaMember() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L385">      final Column jpaColumn = ((AnnotatedElement) jpaAttribute.getJavaMember()).getAnnotation(Column.class);</span>
+<span class="nc bnc" id="L386" title="All 2 branches missed.">      if (jpaColumn != null) {</span>
+<span class="nc" id="L387">        edmProperty.setNullable(jpaColumn.nullable());</span>
+<span class="nc" id="L388">        edmProperty.setSrid(getSRID());</span>
+<span class="nc" id="L389">        edmProperty.setDefaultValue(getDefaultValue());</span>
+<span class="nc" id="L390">        edmProperty.setMaxLength(determineMaxLength(jpaColumn));</span>
+<span class="nc" id="L391">        determinePrecisionScale(jpaColumn);</span>
+        // TODO Attribute Unicode
+      }
+    }
+<span class="nc" id="L395">  }</span>
+
+  private void determinePrecisionScale(final Column jpaColumn) throws ODataJPAModelException {
+<span class="nc" id="L398">    if (edmProperty.getType()</span>
+<span class="nc bnc" id="L399" title="All 2 branches missed.">        .equals(EdmPrimitiveTypeKind.Decimal.getFullQualifiedName().toString())) {</span>
+<span class="nc" id="L400">      setPrecisionScale(jpaColumn);</span>
+    } else {
+<span class="nc" id="L402">      setPrecisionScaleTemporal(jpaColumn);</span>
+    }
+<span class="nc" id="L404">  }</span>
+
+  private Integer determineMaxLength(final Column jpaColumn) {
+
+<span class="nc bnc" id="L408" title="All 2 branches missed.">    if ((edmProperty.getTypeAsFQNObject().equals(EdmPrimitiveTypeKind.String.getFullQualifiedName())</span>
+<span class="nc bnc" id="L409" title="All 2 branches missed.">        || edmProperty.getTypeAsFQNObject().equals(EdmPrimitiveTypeKind.Binary.getFullQualifiedName()))</span>
+<span class="nc bnc" id="L410" title="All 2 branches missed.">        &amp;&amp; !isLob()</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">        &amp;&amp; jpaColumn.length() &gt; 0) {</span>
+
+<span class="nc" id="L413">      return jpaColumn.length();</span>
+    }
+<span class="nc" id="L415">    return null;</span>
+  }
+
+  /**
+   * For a temporal property the value of this attribute specifies the number of decimal
+   * places allowed in the seconds portion of the property's value; it MUST be a non-negative integer between
+   * zero and twelve. If no value is specified, the temporal property has a precision of zero.&lt;br&gt;
+   * See: &lt;a href=&quot;https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#_Toc38530360&quot;&gt;7.2.3
+   * Precision&lt;/a&gt;
+   * @param jpaColumn
+   * @throws ODataJPAModelException
+   */
+  private void setPrecisionScaleTemporal(final Column jpaColumn) throws ODataJPAModelException {
+<span class="nc" id="L428">    if (edmProperty.getType()</span>
+<span class="nc bnc" id="L429" title="All 2 branches missed.">        .equals(EdmPrimitiveTypeKind.DateTimeOffset.getFullQualifiedName().toString())</span>
+<span class="nc" id="L430">        || edmProperty.getType()</span>
+<span class="nc bnc" id="L431" title="All 2 branches missed.">            .equals(EdmPrimitiveTypeKind.TimeOfDay.getFullQualifiedName().toString())</span>
+<span class="nc" id="L432">        || edmProperty.getType()</span>
+<span class="nc bnc" id="L433" title="All 2 branches missed.">            .equals(EdmPrimitiveTypeKind.Duration.getFullQualifiedName().toString())) {</span>
+<span class="nc bnc" id="L434" title="All 4 branches missed.">      if (jpaColumn.precision() &lt; LOWER_LIMIT_PRECISION_TEMP || jpaColumn.precision() &gt; UPPER_LIMIT_PRECISION_TEMP) {</span>
+        // The type of property '%1$s' requires a precision between 0 and 12, but was '%2$s'.
+<span class="nc" id="L436">        throw new ODataJPAModelException(PROPERTY_PRECISION_NOT_IN_RANGE, jpaAttribute.getName(), Integer.toString(</span>
+<span class="nc" id="L437">            jpaColumn.precision()));</span>
+      } else {
+<span class="nc" id="L439">        edmProperty.setPrecision(jpaColumn.precision());</span>
+      }
+    }
+<span class="nc" id="L442">  }</span>
+
+  /**
+   * Sets Precision and Scale for a Decimal:&lt;br&gt;
+   * For a decimal property the value of this attribute specifies the maximum number of digits allowed in the
+   * properties value; it MUST be a positive integer. If no value is specified, the decimal property has
+   * unspecified precision. &lt;br&gt;
+   * See: &lt;a href=&quot;https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#_Toc38530360&quot;&gt;7.2.3
+   * Precision&lt;/a&gt;
+   * @param jpaColumn
+   * @throws ODataJPAModelException
+   */
+  private void setPrecisionScale(final Column jpaColumn) {
+<span class="nc bnc" id="L455" title="All 2 branches missed.">    if (jpaColumn.precision() &gt; 0)</span>
+<span class="nc" id="L456">      edmProperty.setPrecision(jpaColumn.precision());</span>
+<span class="nc bnc" id="L457" title="All 2 branches missed.">    if (edmProperty.getType().equals(EdmPrimitiveTypeKind.Decimal.getFullQualifiedName().toString())</span>
+<span class="nc bnc" id="L458" title="All 2 branches missed.">        &amp;&amp; jpaColumn.scale() &gt; 0)</span>
+<span class="nc" id="L459">      edmProperty.setScale(jpaColumn.scale());</span>
+
+<span class="nc" id="L461">  }</span>
+
+  /**
+   * Converts an internal path into an external path
+   * @param internalPath
+   * @return
+   */
+  private String convertPath(final String internalPath) {
+
+<span class="nc" id="L470">    final String[] pathSegments = internalPath.split(JPAPath.PATH_SEPARATOR);</span>
+<span class="nc" id="L471">    final StringBuilder externalPath = new StringBuilder();</span>
+<span class="nc bnc" id="L472" title="All 2 branches missed.">    for (final String segment : pathSegments) {</span>
+<span class="nc" id="L473">      externalPath.append(nameBuilder.buildPropertyName(segment));</span>
+<span class="nc" id="L474">      externalPath.append(JPAPath.PATH_SEPARATOR);</span>
+    }
+<span class="nc" id="L476">    externalPath.deleteCharAt(externalPath.length() - 1);</span>
+
+<span class="nc" id="L478">    return externalPath.toString();</span>
+  }
+
+  /**
+   * @param calculator
+   * @return
+   * @throws ODataJPAModelException
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private Constructor&lt;? extends EdmTransientPropertyCalculator&lt;?&gt;&gt; determineCalculatorConstructor(
+      final Class&lt;? extends EdmTransientPropertyCalculator&lt;?&gt;&gt; calculator) throws ODataJPAModelException {
+
+<span class="nc bnc" id="L490" title="All 2 branches missed.">    if (calculator.getConstructors().length &gt; 1)</span>
+<span class="nc" id="L491">      throw new ODataJPAModelException(TRANSIENT_CALCULATOR_TOO_MANY_CONSTRUCTORS,</span>
+<span class="nc" id="L492">          calculator.getName(), jpaAttribute.getName(),</span>
+<span class="nc" id="L493">          jpaAttribute.getJavaMember().getDeclaringClass().getName());</span>
+<span class="nc" id="L494">    final Constructor&lt;?&gt; c = calculator.getConstructors()[0];</span>
+<span class="nc bnc" id="L495" title="All 2 branches missed.">    if (c.getParameters() != null) {</span>
+<span class="nc bnc" id="L496" title="All 2 branches missed.">      for (final Parameter p : c.getParameters()) {</span>
+<span class="nc bnc" id="L497" title="All 2 branches missed.">        if (!(p.getType().isAssignableFrom(EntityManager.class)</span>
+<span class="nc bnc" id="L498" title="All 2 branches missed.">            || p.getType().isAssignableFrom(JPAParameter.class)</span>
+<span class="nc bnc" id="L499" title="All 2 branches missed.">            || p.getType().isAssignableFrom(JPAHttpHeaderMap.class)))</span>
+<span class="nc" id="L500">          throw new ODataJPAModelException(MessageKeys.TRANSIENT_CALCULATOR_WRONG_PARAMETER,</span>
+<span class="nc" id="L501">              calculator.getName(), jpaAttribute.getName(),</span>
+<span class="nc" id="L502">              jpaAttribute.getJavaMember().getDeclaringClass().getName());</span>
+      }
+    }
+<span class="nc" id="L505">    return (Constructor&lt;? extends EdmTransientPropertyCalculator&lt;?&gt;&gt;) c;</span>
+  }
+
+  private void determineDBFieldName() {
+<span class="nc" id="L509">    final Column jpaColumnDetails = ((AnnotatedElement) this.jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L510">        .getAnnotation(Column.class);</span>
+<span class="nc bnc" id="L511" title="All 2 branches missed.">    if (jpaColumnDetails != null) {</span>
+      // TODO allow default name
+<span class="nc" id="L513">      dbFieldName = jpaColumnDetails.name();</span>
+<span class="nc bnc" id="L514" title="All 2 branches missed.">      if (dbFieldName.isEmpty()) {</span>
+<span class="nc" id="L515">        final StringBuilder s = new StringBuilder(DB_FIELD_NAME_PATTERN);</span>
+<span class="nc" id="L516">        s.replace(1, 3, internalName);</span>
+<span class="nc" id="L517">        dbFieldName = s.toString();</span>
+<span class="nc" id="L518">      }</span>
+    } else {
+<span class="nc" id="L520">      dbFieldName = internalName;</span>
+    }
+<span class="nc" id="L522">  }</span>
+
+  /**
+   *
+   */
+  private void determineFieldGroups() {
+<span class="nc" id="L528">    final EdmVisibleFor jpaFieldGroups = ((AnnotatedElement) this.jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L529">        .getAnnotation(EdmVisibleFor.class);</span>
+<span class="nc bnc" id="L530" title="All 2 branches missed.">    if (jpaFieldGroups != null)</span>
+<span class="nc" id="L531">      fieldGroups = Arrays.stream(jpaFieldGroups.value()).collect(Collectors.toList());</span>
+    else
+<span class="nc" id="L533">      fieldGroups = new ArrayList&lt;&gt;(0);</span>
+<span class="nc" id="L534">  }</span>
+
+  private void determineIgnore() {
+<span class="nc" id="L537">    final EdmIgnore jpaIgnore = ((AnnotatedElement) this.jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L538">        .getAnnotation(EdmIgnore.class);</span>
+<span class="nc bnc" id="L539" title="All 2 branches missed.">    if (jpaIgnore != null) {</span>
+<span class="nc" id="L540">      this.setIgnore(true);</span>
+    }
+<span class="nc" id="L542">  }</span>
+
+  private void determineInternalTypesFromConverter() throws ODataJPAModelException {
+<span class="nc" id="L545">    final Convert jpaConverter = ((AnnotatedElement) this.jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L546">        .getAnnotation(Convert.class);</span>
+<span class="nc bnc" id="L547" title="All 2 branches missed.">    if (jpaConverter != null) {</span>
+      try {
+<span class="nc" id="L549">        final Type[] converterType = jpaConverter.converter().getGenericInterfaces();</span>
+<span class="nc" id="L550">        final Type[] types = ((ParameterizedType) converterType[0]).getActualTypeArguments();</span>
+<span class="nc" id="L551">        entityType = (Class&lt;?&gt;) types[0];</span>
+<span class="nc" id="L552">        dbType = (Class&lt;?&gt;) types[1];</span>
+<span class="nc bnc" id="L553" title="All 2 branches missed.">        conversionRequired = !JPATypeConverter.isSupportedByOlingo(entityType);</span>
+<span class="nc" id="L554">        valueConverter = (AttributeConverter&lt;?, ?&gt;) jpaConverter.converter().newInstance();</span>
+<span class="nc" id="L555">      } catch (InstantiationException | IllegalAccessException e) {</span>
+<span class="nc" id="L556">        throw new ODataJPAModelException(</span>
+            ODataJPAModelException.MessageKeys.TYPE_MAPPER_COULD_NOT_INSTANTIATED, e);
+<span class="nc" id="L558">      }</span>
+    }
+<span class="nc" id="L560">  }</span>
+
+  private void determineOneProtection(final EdmProtectedBy jpaProtectedBy) throws ODataJPAModelException {
+
+    List&lt;String&gt; externalNames;
+<span class="nc" id="L565">    final String protectionClaimName = jpaProtectedBy.name();</span>
+<span class="nc bnc" id="L566" title="All 2 branches missed.">    if (externalProtectedPathNames.containsKey(protectionClaimName))</span>
+<span class="nc" id="L567">      externalNames = externalProtectedPathNames.get(protectionClaimName).getPath();</span>
+    else
+<span class="nc" id="L569">      externalNames = new ArrayList&lt;&gt;(2);</span>
+<span class="nc bnc" id="L570" title="All 2 branches missed.">    if (jpaAttribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.EMBEDDED) {</span>
+<span class="nc" id="L571">      final String internalProtectedPath = jpaProtectedBy.path();</span>
+<span class="nc bnc" id="L572" title="All 2 branches missed.">      if (internalProtectedPath.length() == 0) {</span>
+<span class="nc" id="L573">        throw new ODataJPAModelException(COMPLEX_PROPERTY_MISSING_PROTECTION_PATH, this.managedType.getJavaType()</span>
+<span class="nc" id="L574">            .getCanonicalName(), this.internalName);</span>
+      }
+<span class="nc" id="L576">      externalNames.add(getExternalName() + JPAPath.PATH_SEPARATOR + convertPath(jpaProtectedBy.path()));</span>
+<span class="nc" id="L577">    } else {</span>
+<span class="nc" id="L578">      externalNames.add(getExternalName());</span>
+    }
+<span class="nc" id="L580">    externalProtectedPathNames.put(protectionClaimName, new JPAProtectionInfo(externalNames, jpaProtectedBy</span>
+<span class="nc" id="L581">        .wildcardSupported()));</span>
+<span class="nc" id="L582">  }</span>
+
+  private List&lt;String&gt; determineRequiredAttributesTransient(final EdmTransient jpaTransient) {
+<span class="nc bnc" id="L585" title="All 2 branches missed.">    return jpaTransient.requiredAttributes() == null ? Collections.emptyList() : Arrays.asList(</span>
+<span class="nc" id="L586">        jpaTransient.requiredAttributes());</span>
+  }
+
+  /**
+   * @throws ODataJPAModelException
+   *
+   */
+  void determineTransient() throws ODataJPAModelException {
+<span class="nc" id="L594">    final EdmTransient jpaTransient = ((AnnotatedElement) this.jpaAttribute.getJavaMember())</span>
+<span class="nc" id="L595">        .getAnnotation(EdmTransient.class);</span>
+<span class="nc bnc" id="L596" title="All 2 branches missed.">    if (jpaTransient != null) {</span>
+<span class="nc bnc" id="L597" title="All 2 branches missed.">      if (isKey())</span>
+<span class="nc" id="L598">        throw new ODataJPAModelException(TRANSIENT_KEY_NOT_SUPPORTED,</span>
+<span class="nc" id="L599">            jpaAttribute.getJavaMember().getDeclaringClass().getName());</span>
+<span class="nc" id="L600">      requiredAttributes = determineRequiredAttributesTransient(jpaTransient);</span>
+<span class="nc" id="L601">      transientCalculatorConstructor = determineCalculatorConstructor(jpaTransient.calculator());</span>
+    }
+<span class="nc" id="L603">  }</span>
+
+  private boolean isLob() {
+<span class="nc bnc" id="L606" title="All 4 branches missed.">    if (jpaAttribute != null &amp;&amp; jpaAttribute.getJavaMember() instanceof AnnotatedElement) {</span>
+<span class="nc" id="L607">      final AnnotatedElement annotatedElement = (AnnotatedElement) jpaAttribute.getJavaMember();</span>
+<span class="nc bnc" id="L608" title="All 4 branches missed.">      if (annotatedElement != null &amp;&amp; annotatedElement.getAnnotation(Lob.class) != null) {</span>
+<span class="nc" id="L609">        return true;</span>
+      }
+    }
+<span class="nc" id="L612">    return false;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

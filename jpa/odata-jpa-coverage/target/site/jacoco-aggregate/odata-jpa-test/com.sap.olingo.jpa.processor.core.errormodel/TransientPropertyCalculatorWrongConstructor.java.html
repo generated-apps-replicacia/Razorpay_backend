@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>TransientPropertyCalculatorWrongConstructor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.errormodel</a> &gt; <span class="el_source">TransientPropertyCalculatorWrongConstructor.java</span></div><h1>TransientPropertyCalculatorWrongConstructor.java</h1><pre class="source lang-java linenums">/**
+ * 
+ */
+package com.sap.olingo.jpa.processor.core.errormodel;
+
+import javax.persistence.EntityManager;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransientPropertyCalculator;
+
+/**
+ * @author Oliver Grande
+ * Created: 17.03.2020
+ *
+ */
+public class TransientPropertyCalculatorWrongConstructor implements EdmTransientPropertyCalculator&lt;String&gt; {
+
+  private final EntityManager em;
+  private final String dummy;
+
+  public TransientPropertyCalculatorWrongConstructor(final EntityManager em, final String dummy) {
+<span class="nc" id="L21">    super();</span>
+<span class="nc" id="L22">    this.em = em;</span>
+<span class="nc" id="L23">    this.dummy = dummy;</span>
+<span class="nc" id="L24">  }</span>
+
+  public EntityManager getEntityManager() {
+<span class="nc" id="L27">    return em;</span>
+  }
+
+  String getDummy() {
+<span class="nc" id="L31">    return dummy;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

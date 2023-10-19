@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAMemberVisitor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAMemberVisitor.java</span></div><h1>JPAMemberVisitor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.olingo.commons.api.edm.EdmEnumType;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.BinaryOperatorKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitor;
+import org.apache.olingo.server.api.uri.queryoption.expression.Literal;
+import org.apache.olingo.server.api.uri.queryoption.expression.Member;
+import org.apache.olingo.server.api.uri.queryoption.expression.MethodKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.UnaryOperatorKind;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException;
+import com.sap.olingo.jpa.processor.core.query.Util;
+
+final class JPAMemberVisitor implements ExpressionVisitor&lt;JPAPath&gt; {
+<span class="nc" id="L26">  private final ArrayList&lt;JPAPath&gt; pathList = new ArrayList&lt;&gt;();</span>
+  private final JPAEntityType jpaEntityType;
+
+  public JPAMemberVisitor(final JPAEntityType jpaEntityType) {
+<span class="nc" id="L30">    super();</span>
+<span class="nc" id="L31">    this.jpaEntityType = jpaEntityType;</span>
+<span class="nc" id="L32">  }</span>
+
+  public List&lt;JPAPath&gt; get() {
+<span class="nc" id="L35">    return pathList;</span>
+  }
+
+  @Override
+  public JPAPath visitBinaryOperator(final BinaryOperatorKind operator, final JPAPath left, final JPAPath right)
+      throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L41">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitBinaryOperator(final BinaryOperatorKind operator, final JPAPath left, final List&lt;JPAPath&gt; right)
+      throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L47">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitUnaryOperator(final UnaryOperatorKind operator, final JPAPath operand)
+      throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L53">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitMethodCall(final MethodKind methodCall, final List&lt;JPAPath&gt; parameters)
+      throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L59">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitLambdaExpression(final String lambdaFunction, final String lambdaVariable,
+      final org.apache.olingo.server.api.uri.queryoption.expression.Expression expression)
+      throws ExpressionVisitException,
+      ODataApplicationException {
+<span class="nc" id="L67">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitLiteral(final Literal literal) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L72">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitMember(final Member member) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L77">    final UriResourceKind uriResourceKind = member.getResourcePath().getUriResourceParts().get(0).getKind();</span>
+
+<span class="nc bnc" id="L79" title="All 4 branches missed.">    if ((uriResourceKind == UriResourceKind.primitiveProperty || uriResourceKind == UriResourceKind.complexProperty)</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        &amp;&amp; !Util.hasNavigation(member.getResourcePath().getUriResourceParts())) {</span>
+<span class="nc" id="L81">      final String path = Util.determinePropertyNavigationPath(member.getResourcePath().getUriResourceParts());</span>
+<span class="nc" id="L82">      JPAPath selectItemPath = null;</span>
+      try {
+<span class="nc" id="L84">        selectItemPath = jpaEntityType.getPath(path);</span>
+<span class="nc" id="L85">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L86">        throw new ODataJPAFilterException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L87">      }</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">      if (selectItemPath != null) {</span>
+<span class="nc" id="L89">        pathList.add(selectItemPath);</span>
+<span class="nc" id="L90">        return selectItemPath;</span>
+      }
+    }
+<span class="nc" id="L93">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitAlias(final String aliasName) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L98">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitTypeLiteral(final EdmType type) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L103">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitLambdaReference(final String variableName) throws ExpressionVisitException,
+      ODataApplicationException {
+<span class="nc" id="L109">    return null;</span>
+  }
+
+  @Override
+  public JPAPath visitEnum(final EdmEnumType type, final List&lt;String&gt; enumValues) throws ExpressionVisitException,
+      ODataApplicationException {
+<span class="nc" id="L115">    return null;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

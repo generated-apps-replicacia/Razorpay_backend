@@ -1,0 +1,593 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ExpressionImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">ExpressionImpl.java</span></div><h1>ExpressionImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.AttributeConverter;
+import javax.persistence.Parameter;
+import javax.persistence.criteria.CriteriaBuilder.Coalesce;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Order;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Selection;
+import javax.persistence.criteria.Subquery;
+import javax.persistence.metamodel.Bindable;
+import javax.persistence.metamodel.MapAttribute;
+import javax.persistence.metamodel.PluralAttribute;
+import javax.persistence.metamodel.SingularAttribute;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.cb.ProcessorCriteriaBuilder.WindowFunction;
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+import com.sap.olingo.jpa.processor.cb.joiner.SqlConvertible;
+import com.sap.olingo.jpa.processor.cb.joiner.StringBuilderCollector;
+
+<span class="nc" id="L35">abstract class ExpressionImpl&lt;T&gt; implements Expression&lt;T&gt;, SqlConvertible {</span>
+
+  public static final String OPENING_BRACKET = &quot;(&quot;;
+  public static final String CLOSING_BRACKET = &quot;)&quot;;
+  public static final String DOT = &quot;.&quot;;
+  public static final String SELECTION_REPLACEMENT = &quot;_&quot;;
+  public static final String SELECTION_REPLACEMENT_REGEX = &quot;\\.|/&quot;;
+<span class="nc" id="L42">  protected Optional&lt;String&gt; alias = Optional.empty();</span>
+
+  /**
+   * Assigns an alias to the selection item.
+   * Once assigned, an alias cannot be changed or reassigned.
+   * Returns the same selection item.
+   * @param name alias
+   * @return selection item
+   */
+  @Override
+  public Selection&lt;T&gt; alias(final String name) {
+<span class="nc bnc" id="L53" title="All 2 branches missed.">    if (alias.isPresent())</span>
+<span class="nc" id="L54">      throw new IllegalAccessError(&quot;Alias can only be set once&quot;);</span>
+<span class="nc" id="L55">    alias = Optional.of(name);</span>
+<span class="nc" id="L56">    return this;</span>
+  }
+
+  /**
+   * Perform a typecast upon the expression, returning a new
+   * expression object.
+   * This method does not cause type conversion:
+   * the runtime type is not changed.
+   * Warning: may result in a runtime failure.
+   * @param type intended type of the expression
+   * @return new expression of the given type
+   */
+  @Override
+  public &lt;X&gt; Expression&lt;X&gt; as(final Class&lt;X&gt; type) {
+<span class="nc" id="L70">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public String getAlias() {
+<span class="nc" id="L75">    return alias.orElse(&quot;&quot;);</span>
+  }
+
+  @Override
+  public List&lt;Selection&lt;?&gt;&gt; getCompoundSelectionItems() {
+<span class="nc" id="L80">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Class&lt;? extends T&gt; getJavaType() {
+<span class="nc" id="L85">    return null;</span>
+  }
+
+  @Override
+  public Predicate in(final Collection&lt;?&gt; values) {
+<span class="nc" id="L90">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(final Expression&lt;?&gt;... values) {
+<span class="nc" id="L95">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(final Expression&lt;Collection&lt;?&gt;&gt; values) {
+<span class="nc" id="L100">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate in(final Object... values) {
+<span class="nc" id="L105">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public boolean isCompoundSelection() {
+<span class="nc" id="L110">    return false;</span>
+  }
+
+  /**
+   * Create a predicate to test whether the expression is not null.
+   * @return predicate testing whether the expression is not null
+   */
+  @Override
+  public Predicate isNotNull() {
+<span class="nc" id="L119">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate to test whether the expression is null.
+   * @return predicate testing whether the expression is null
+   */
+  @Override
+  public Predicate isNull() {
+<span class="nc" id="L128">    throw new NotImplementedException();</span>
+  }
+
+  static class AggregationExpression&lt;N extends Number&gt; extends ExpressionImpl&lt;N&gt; {
+
+    private final SqlAggregation function;
+    private final SqlConvertible expression;
+
+<span class="nc" id="L136">    AggregationExpression(@Nonnull final SqlAggregation function, @Nonnull final Expression&lt;?&gt; x) {</span>
+<span class="nc" id="L137">      this.function = Objects.requireNonNull(function);</span>
+<span class="nc" id="L138">      this.expression = Objects.requireNonNull((SqlConvertible) x);</span>
+<span class="nc" id="L139">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L143">      statement.append(function)</span>
+<span class="nc" id="L144">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L145">      return expression(statement)</span>
+<span class="nc" id="L146">          .append(CLOSING_BRACKET);</span>
+    }
+
+    private StringBuilder expression(final StringBuilder statement) {
+<span class="nc bnc" id="L150" title="All 2 branches missed.">      if (expression instanceof FromImpl&lt;?, ?&gt;) {</span>
+<span class="nc" id="L151">        final FromImpl&lt;?, ?&gt; from = (FromImpl&lt;?, ?&gt;) expression;</span>
+<span class="nc" id="L152">        final String tableAlias = from.tableAlias.orElseThrow(IllegalStateException::new);</span>
+        try {
+<span class="nc" id="L154">          final List&lt;JPAAttribute&gt; keys = from.st.getKey();</span>
+<span class="nc" id="L155">          statement</span>
+<span class="nc" id="L156">              .append(tableAlias)</span>
+<span class="nc" id="L157">              .append(DOT)</span>
+<span class="nc" id="L158">              .append(from.st.getPath(keys.get(0).getExternalName()).getDBFieldName());</span>
+<span class="nc" id="L159">        } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L160">          throw new IllegalArgumentException(e);</span>
+<span class="nc" id="L161">        }</span>
+<span class="nc" id="L162">        return statement;</span>
+      } else {
+<span class="nc" id="L164">        return expression.asSQL(statement);</span>
+      }
+    }
+
+    SqlConvertible getExpression() {
+<span class="nc" id="L169">      return expression;</span>
+    }
+  }
+
+  static class ArithmeticExpression&lt;N extends Number&gt; extends ExpressionImpl&lt;N&gt; {
+
+    private final SqlConvertible left;
+    private final SqlConvertible right;
+    private final SqlArithmetic operation;
+
+    ArithmeticExpression(@Nonnull final Expression&lt;? extends N&gt; x, @Nonnull final Expression&lt;? extends N&gt; y,
+<span class="nc" id="L180">        @Nonnull final SqlArithmetic operation) {</span>
+
+<span class="nc" id="L182">      this.left = (SqlConvertible) Objects.requireNonNull(x);</span>
+<span class="nc" id="L183">      this.right = (SqlConvertible) Objects.requireNonNull(y);</span>
+<span class="nc" id="L184">      this.operation = Objects.requireNonNull(operation);</span>
+<span class="nc" id="L185">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L189">      left.asSQL(statement.append(OPENING_BRACKET))</span>
+<span class="nc" id="L190">          .append(&quot; &quot;)</span>
+<span class="nc" id="L191">          .append(operation)</span>
+<span class="nc" id="L192">          .append(&quot; &quot;);</span>
+<span class="nc" id="L193">      return right.asSQL(statement)</span>
+<span class="nc" id="L194">          .append(CLOSING_BRACKET);</span>
+    }
+
+  }
+
+  static class CoalesceExpression&lt;T&gt; extends ExpressionImpl&lt;T&gt; implements Coalesce&lt;T&gt; {
+    private final List&lt;Expression&lt;T&gt;&gt; values;
+
+    CoalesceExpression() {
+<span class="nc" id="L203">      super();</span>
+<span class="nc" id="L204">      this.values = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L205">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+
+<span class="nc" id="L210">      statement.append(SqlKeyWords.COALESCE)</span>
+<span class="nc" id="L211">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L212">      statement.append(values.stream().collect(new StringBuilderCollector.ExpressionCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L213">      return statement.append(CLOSING_BRACKET);</span>
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Override
+    public Coalesce&lt;T&gt; value(@Nonnull final Expression&lt;? extends T&gt; value) {
+<span class="nc" id="L219">      values.add((Expression&lt;T&gt;) value);</span>
+<span class="nc" id="L220">      return this;</span>
+    }
+
+    @Override
+    public Coalesce&lt;T&gt; value(@Nonnull final T value) {
+<span class="nc" id="L225">      throw new NotImplementedException();</span>
+    }
+  }
+
+  static class ConcatExpression extends ExpressionImpl&lt;String&gt; {
+    private final SqlConvertible first;
+    private final SqlConvertible second;
+
+<span class="nc" id="L233">    ConcatExpression(@Nonnull final Expression&lt;String&gt; first, @Nonnull final Expression&lt;String&gt; second) {</span>
+<span class="nc" id="L234">      this.first = (SqlConvertible) Objects.requireNonNull(first);</span>
+<span class="nc" id="L235">      this.second = (SqlConvertible) Objects.requireNonNull(second);</span>
+<span class="nc" id="L236">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L240">      statement.append(SqlStringFunctions.CONCAT)</span>
+<span class="nc" id="L241">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L242">      first.asSQL(statement)</span>
+<span class="nc" id="L243">          .append(&quot;, &quot;);</span>
+<span class="nc" id="L244">      second.asSQL(statement);</span>
+<span class="nc" id="L245">      return statement.append(CLOSING_BRACKET);</span>
+    }
+  }
+
+  static class DistinctExpression&lt;T&gt; extends ExpressionImpl&lt;T&gt; {
+    private final SqlConvertible left;
+
+<span class="nc" id="L252">    DistinctExpression(@Nonnull final Expression&lt;?&gt; x) {</span>
+<span class="nc" id="L253">      this.left = (SqlConvertible) Objects.requireNonNull(x);</span>
+<span class="nc" id="L254">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+
+<span class="nc bnc" id="L259" title="All 2 branches missed.">      if (left instanceof FromImpl&lt;?, ?&gt;) {</span>
+        try {
+<span class="nc" id="L261">          final FromImpl&lt;?, ?&gt; from = ((FromImpl&lt;?, ?&gt;) left);</span>
+<span class="nc" id="L262">          statement.append(SqlKeyWords.DISTINCT)</span>
+<span class="nc" id="L263">              .append(OPENING_BRACKET);</span>
+<span class="nc" id="L264">          statement.append(from.st.getKey().stream()</span>
+<span class="nc" id="L265">              .map(a -&gt; from.get(a.getInternalName()))</span>
+<span class="nc" id="L266">              .collect(new StringBuilderCollector.ExpressionCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L267">          return statement.append(CLOSING_BRACKET);</span>
+<span class="nc" id="L268">        } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L269">          throw new IllegalStateException(e);</span>
+        }
+
+      }
+<span class="nc" id="L273">      return left.asSQL(statement.append(SqlKeyWords.DISTINCT).append(OPENING_BRACKET)).append(CLOSING_BRACKET);</span>
+    }
+  }
+
+  static class FunctionExpression&lt;T&gt; extends ExpressionImpl&lt;T&gt; {
+
+    private final String functionName;
+    private final Class&lt;T&gt; type;
+    private final List&lt;Expression&lt;Object&gt;&gt; args;
+
+<span class="nc" id="L283">    FunctionExpression(@Nonnull final String name, @Nonnull final Class&lt;T&gt; type, final List&lt;Expression&lt;Object&gt;&gt; args) {</span>
+<span class="nc" id="L284">      this.functionName = Objects.requireNonNull(name);</span>
+<span class="nc" id="L285">      this.type = Objects.requireNonNull(type);</span>
+<span class="nc" id="L286">      this.args = Objects.requireNonNull(args);</span>
+<span class="nc" id="L287">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L291">      statement.append(functionName).append(OPENING_BRACKET);</span>
+<span class="nc" id="L292">      statement.append(args.stream().collect(new StringBuilderCollector.ExpressionCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L293">      return statement.append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public Class&lt;? extends T&gt; getJavaType() {
+<span class="nc" id="L298">      return type;</span>
+    }
+
+  }
+
+  static class LocateExpression extends ExpressionImpl&lt;Integer&gt; {
+    private final SqlConvertible expression;
+    private final SqlConvertible pattern;
+    private final Optional&lt;SqlConvertible&gt; from;
+
+    LocateExpression(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern,
+<span class="nc" id="L309">        final Expression&lt;Integer&gt; from) {</span>
+<span class="nc" id="L310">      this.expression = (SqlConvertible) Objects.requireNonNull(x);</span>
+<span class="nc" id="L311">      this.pattern = (SqlConvertible) Objects.requireNonNull(pattern);</span>
+<span class="nc" id="L312">      this.from = Optional.ofNullable((SqlConvertible) from);</span>
+<span class="nc" id="L313">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+      // LOCATE(&lt;pattern&gt;, &lt;string&gt;, &lt;from&gt;)
+<span class="nc" id="L318">      statement.append(SqlStringFunctions.LOCATE)</span>
+<span class="nc" id="L319">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L320">      pattern.asSQL(statement)</span>
+<span class="nc" id="L321">          .append(&quot;, &quot;);</span>
+<span class="nc" id="L322">      expression.asSQL(statement);</span>
+<span class="nc" id="L323">      from.ifPresent(l -&gt; l.asSQL(statement.append(&quot;, &quot;)));</span>
+<span class="nc" id="L324">      return statement.append(CLOSING_BRACKET);</span>
+    }
+  }
+
+  static final class ParameterExpression&lt;T, S&gt; extends ExpressionImpl&lt;T&gt; implements Parameter&lt;T&gt; {
+    private final Integer index;
+    private final S value;
+    private Optional&lt;AttributeConverter&lt;S, T&gt;&gt; converter;
+    private Optional&lt;JPAPath&gt; jpaPath;
+
+<span class="nc" id="L334">    ParameterExpression(final Integer i, final S value) {</span>
+<span class="nc" id="L335">      this.index = i;</span>
+<span class="nc" id="L336">      this.value = value;</span>
+<span class="nc" id="L337">      this.converter = Optional.empty();</span>
+<span class="nc" id="L338">      this.jpaPath = Optional.empty();</span>
+<span class="nc" id="L339">    }</span>
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    T getValue() {
+<span class="nc bnc" id="L343" title="All 2 branches missed.">      if (converter.isPresent())</span>
+<span class="nc" id="L344">        return converter.get().convertToDatabaseColumn(value);</span>
+<span class="nc bnc" id="L345" title="All 4 branches missed.">      if (jpaPath.isPresent() &amp;&amp; jpaPath.get().getLeaf().isEnum())</span>
+<span class="nc" id="L346">        return (T) ((Number) ((Enum&lt;?&gt;) value).ordinal());</span>
+<span class="nc" id="L347">      return (T) value;</span>
+    }
+
+    void setPath(@Nullable final Expression&lt;?&gt; x) {
+<span class="nc bnc" id="L351" title="All 4 branches missed.">      if (x instanceof PathImpl &amp;&amp; ((PathImpl&lt;?&gt;) x).path.isPresent()) {</span>
+<span class="nc" id="L352">        jpaPath = Optional.of(((PathImpl&lt;?&gt;) x).path.get()); // NOSONAR</span>
+<span class="nc" id="L353">        converter = Optional.ofNullable(jpaPath.get().getLeaf().getConverter());</span>
+      }
+<span class="nc" id="L355">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L359">      return statement.append(&quot;?&quot;).append(index.toString());</span>
+    }
+
+    @Override
+    public String getName() {
+<span class="nc" id="L364">      return null;</span>
+    }
+
+    @Override
+    public Integer getPosition() {
+<span class="nc" id="L369">      return index;</span>
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Override
+    public Class&lt;T&gt; getParameterType() {
+<span class="nc" id="L375">      return (Class&lt;T&gt;) value.getClass();</span>
+    }
+
+    @Override
+    public Class&lt;? extends T&gt; getJavaType() {
+<span class="nc" id="L380">      return getParameterType();</span>
+    }
+  }
+
+  static final class SubQuery&lt;X&gt; extends ExpressionImpl&lt;X&gt; {
+
+    private final SqlConvertible query;
+    private final SqlSubQuery operator;
+
+<span class="nc" id="L389">    SubQuery(@Nonnull final Subquery&lt;?&gt; subquery, @Nonnull final SqlSubQuery operator) {</span>
+<span class="nc" id="L390">      this.query = (SqlConvertible) Objects.requireNonNull(subquery);</span>
+<span class="nc" id="L391">      this.operator = operator;</span>
+<span class="nc" id="L392">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L396">      statement.append(operator)</span>
+<span class="nc" id="L397">          .append(&quot; &quot;)</span>
+<span class="nc" id="L398">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L399">      return query.asSQL(statement).append(CLOSING_BRACKET);</span>
+    }
+
+  }
+
+  static class SubstringExpression extends ExpressionImpl&lt;String&gt; {
+    private final SqlConvertible expression;
+    private final SqlConvertible from;
+    private final Optional&lt;SqlConvertible&gt; len;
+
+    SubstringExpression(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;Integer&gt; from,
+<span class="nc" id="L410">        final Expression&lt;Integer&gt; len) {</span>
+<span class="nc" id="L411">      this.expression = (SqlConvertible) Objects.requireNonNull(x);</span>
+<span class="nc" id="L412">      this.from = (SqlConvertible) Objects.requireNonNull(from);</span>
+<span class="nc" id="L413">      this.len = Optional.ofNullable((SqlConvertible) len);</span>
+<span class="nc" id="L414">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L418">      statement.append(SqlStringFunctions.SUBSTRING)</span>
+<span class="nc" id="L419">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L420">      expression.asSQL(statement)</span>
+<span class="nc" id="L421">          .append(&quot;, &quot;);</span>
+<span class="nc" id="L422">      from.asSQL(statement);</span>
+<span class="nc" id="L423">      len.ifPresent(l -&gt; l.asSQL(statement.append(&quot;, &quot;)));</span>
+<span class="nc" id="L424">      return statement.append(CLOSING_BRACKET);</span>
+    }
+  }
+
+  static class TimeExpression&lt;T&gt; extends ExpressionImpl&lt;T&gt; {
+
+    private final SqlTimeFunctions function;
+
+<span class="nc" id="L432">    TimeExpression(@Nonnull final SqlTimeFunctions function) {</span>
+<span class="nc" id="L433">      this.function = Objects.requireNonNull(function);</span>
+<span class="nc" id="L434">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L438">      return statement.append(function);</span>
+    }
+
+  }
+
+  static class UnaryFunctionalExpression&lt;T&gt; extends ExpressionImpl&lt;T&gt; {
+    private final SqlConvertible left;
+    private final SqlStringFunctions function;
+
+<span class="nc" id="L447">    UnaryFunctionalExpression(@Nonnull final Expression&lt;?&gt; x, @Nonnull final SqlStringFunctions function) {</span>
+<span class="nc" id="L448">      this.left = (SqlConvertible) Objects.requireNonNull(x);</span>
+<span class="nc" id="L449">      this.function = Objects.requireNonNull(function);</span>
+<span class="nc" id="L450">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L454">      statement.append(function).append(OPENING_BRACKET);</span>
+<span class="nc" id="L455">      return left.asSQL(statement).append(CLOSING_BRACKET);</span>
+    }
+
+  }
+
+  static class WindowFunctionExpression&lt;T&gt; extends ExpressionImpl&lt;T&gt; implements WindowFunction&lt;T&gt; {
+    private final SqlWindowFunctions function;
+    private Optional&lt;List&lt;Order&gt;&gt; orderBy;
+    private Optional&lt;List&lt;Path&lt;?&gt;&gt;&gt; partitionBy;
+
+<span class="nc" id="L465">    WindowFunctionExpression(@Nonnull final SqlWindowFunctions function) {</span>
+<span class="nc" id="L466">      this.function = function;</span>
+<span class="nc" id="L467">      this.orderBy = Optional.empty();</span>
+<span class="nc" id="L468">      this.partitionBy = Optional.empty();</span>
+<span class="nc" id="L469">    }</span>
+    // https://www.h2database.com/html/functions-window.html
+
+    // window_function_name ( expression ) OVER (
+    // partition_clause
+    // order_clause
+    // frame_clause
+    // )
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L480">      statement.append(function)</span>
+<span class="nc" id="L481">          .append(OPENING_BRACKET)</span>
+<span class="nc" id="L482">          .append(CLOSING_BRACKET)</span>
+<span class="nc" id="L483">          .append(&quot; OVER&quot;)</span>
+<span class="nc" id="L484">          .append(OPENING_BRACKET);</span>
+<span class="nc" id="L485">      partitionBy.ifPresent(p -&gt; {</span>
+<span class="nc" id="L486">        statement</span>
+<span class="nc" id="L487">            .append(&quot; &quot;)</span>
+<span class="nc" id="L488">            .append(SqlKeyWords.PARTITION)</span>
+<span class="nc" id="L489">            .append(&quot; &quot;);</span>
+<span class="nc" id="L490">        statement.append(p.stream().collect(new StringBuilderCollector.ExpressionCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L491">      });</span>
+<span class="nc" id="L492">      orderBy.ifPresent(o -&gt; {</span>
+<span class="nc" id="L493">        statement</span>
+<span class="nc" id="L494">            .append(&quot; &quot;)</span>
+<span class="nc" id="L495">            .append(SqlKeyWords.ORDERBY)</span>
+<span class="nc" id="L496">            .append(&quot; &quot;);</span>
+<span class="nc" id="L497">        statement.append(o.stream().collect(new StringBuilderCollector.OrderCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L498">      });</span>
+<span class="nc" id="L499">      return statement.append(CLOSING_BRACKET);</span>
+    }
+
+    @Override
+    public WindowFunction&lt;T&gt; orderBy(final Order... o) {
+<span class="nc" id="L504">      this.orderBy = Optional.ofNullable(Arrays.asList(o));</span>
+<span class="nc" id="L505">      return this;</span>
+    }
+
+    @Override
+    public WindowFunction&lt;T&gt; orderBy(final List&lt;Order&gt; o) {
+<span class="nc" id="L510">      this.orderBy = Optional.ofNullable(o);</span>
+<span class="nc" id="L511">      return this;</span>
+    }
+
+    @Override
+    public WindowFunction&lt;T&gt; partitionBy(final Path&lt;?&gt;... p) {
+<span class="nc" id="L516">      this.partitionBy = Optional.ofNullable(Arrays.asList(p));</span>
+<span class="nc" id="L517">      return this;</span>
+    }
+
+    @Override
+    public WindowFunction&lt;T&gt; partitionBy(final List&lt;Path&lt;?&gt;&gt; p) {
+<span class="nc" id="L522">      this.partitionBy = Optional.ofNullable(p);</span>
+<span class="nc" id="L523">      return this;</span>
+    }
+
+    @Override
+    public Path&lt;T&gt; asPath(final String tableAlias) {
+<span class="nc" id="L528">      return new ExpressionPath&lt;&gt;(alias, tableAlias);</span>
+    }
+  }
+
+  static class ExpressionPath&lt;T&gt; extends ExpressionImpl&lt;T&gt; implements Path&lt;T&gt; {
+
+    private final Optional&lt;String&gt; dbFieldName;
+    private final Optional&lt;String&gt; tableAlias;
+
+<span class="nc" id="L537">    ExpressionPath(final Optional&lt;String&gt; dbFieldName, final String tableAlias) {</span>
+<span class="nc" id="L538">      this.dbFieldName = dbFieldName;</span>
+<span class="nc" id="L539">      this.tableAlias = Optional.of(tableAlias);</span>
+<span class="nc" id="L540">    }</span>
+
+<span class="nc" id="L542">    ExpressionPath(final String dbFieldName, final Optional&lt;String&gt; tableAlias) {</span>
+<span class="nc" id="L543">      this.dbFieldName = Optional.of(dbFieldName);</span>
+<span class="nc" id="L544">      this.tableAlias = tableAlias;</span>
+<span class="nc" id="L545">    }</span>
+
+    @Override
+    public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L549">      tableAlias.ifPresent(p -&gt; {</span>
+<span class="nc" id="L550">        statement.append(p);</span>
+<span class="nc" id="L551">        statement.append(DOT);</span>
+<span class="nc" id="L552">      });</span>
+<span class="nc" id="L553">      statement.append(dbFieldName.orElseThrow(() -&gt; new IllegalStateException(&quot;Missing name&quot;)));</span>
+<span class="nc" id="L554">      return statement;</span>
+    }
+
+    @Override
+    public Bindable&lt;T&gt; getModel() {
+<span class="nc" id="L559">      throw new NotImplementedException();</span>
+    }
+
+    @Override
+    public Path&lt;?&gt; getParentPath() {
+<span class="nc" id="L564">      throw new NotImplementedException();</span>
+    }
+
+    @Override
+    public &lt;Y&gt; Path&lt;Y&gt; get(final SingularAttribute&lt;? super T, Y&gt; attribute) {
+<span class="nc" id="L569">      throw new NotImplementedException();</span>
+    }
+
+    @Override
+    public &lt;E, C extends Collection&lt;E&gt;&gt; Expression&lt;C&gt; get(final PluralAttribute&lt;T, C, E&gt; collection) {
+<span class="nc" id="L574">      throw new NotImplementedException();</span>
+    }
+
+    @Override
+    public &lt;K, V, M extends Map&lt;K, V&gt;&gt; Expression&lt;M&gt; get(final MapAttribute&lt;T, K, V&gt; map) {
+<span class="nc" id="L579">      throw new NotImplementedException();</span>
+    }
+
+    @Override
+    public Expression&lt;Class&lt;? extends T&gt;&gt; type() {
+<span class="nc" id="L584">      throw new NotImplementedException();</span>
+    }
+
+    @Override
+    public &lt;Y&gt; Path&lt;Y&gt; get(final String attributeName) {
+<span class="nc" id="L589">      throw new NotImplementedException();</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

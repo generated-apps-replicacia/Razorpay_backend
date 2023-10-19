@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>EdmEnumeration.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-annotation</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.annotation</a> &gt; <span class="el_source">EdmEnumeration.java</span></div><h1>EdmEnumeration.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.annotation;
+
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Enumerated;
+
+/**
+ * Annotation to tag Java enumerations that shall be provided via an OData service. For details about OData Enumerations
+ * see: &lt;a
+ * href=&quot;http://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part3-csdl/odata-v4.0-errata03-os-part3-csdl-complete.html#_Toc453752565&quot;&gt;10
+ * Enumeration Type&lt;/a&gt;.
+ * The following conversion rule have been established:
+ * &lt;ul&gt;
+ * &lt;li&gt;Name is taken from the enumeration name&lt;/li&gt;
+ * &lt;li&gt;UnderlyingType is derived from the converter, if no converter is provided Edm.Int32 is taken and a
+ * field in an entity pojo needed to be annotated with &lt;code&gt;@Enumerated&lt;/code&gt;.&lt;/li&gt;
+ * &lt;li&gt;Member&lt;/li&gt;
+ * &lt;ul&gt;
+ * &lt;li&gt;Name is the name of a constant&lt;/li&gt;
+ * &lt;li&gt;Value is determined via the converter, if no converter is provided the value is determined via the method
+ * ordinal&lt;/li&gt;
+ * &lt;/ul&gt;
+ * &lt;/ul&gt;
+ * @author Oliver Grande
+ *
+ */
+
+@Retention(RUNTIME)
+@Target(TYPE)
+public @interface EdmEnumeration {
+
+  /**
+   * Converter to convert enumeration value into a number. If no converter is provided, the ordinal is taken.
+   */
+  Class&lt;? extends AttributeConverter&lt;? extends Enum&lt;?&gt;[], ? extends Number&gt;&gt; converter() default DummyConverter.class;
+
+  boolean isFlags() default false;
+
+  /**
+   * Converter shall be optional, as java does not support &lt;code&gt;default null&lt;/code&gt; a
+   * dummy converter implementation is needed.
+   */
+<span class="nc" id="L48">  static class DummyConverter implements AttributeConverter&lt;Enum&lt;?&gt;[], Integer&gt; {</span>
+
+    @Override
+    public Integer convertToDatabaseColumn(final Enum&lt;?&gt;[] attributes) {
+<span class="nc bnc" id="L52" title="All 4 branches missed.">      if (attributes == null || attributes.length == 0)</span>
+<span class="nc" id="L53">        return null;</span>
+<span class="nc" id="L54">      return attributes[0].ordinal();</span>
+    }
+
+    @Enumerated
+    @Override
+    public Enum&lt;?&gt;[] convertToEntityAttribute(final Integer dbData) {
+<span class="nc" id="L60">      return null; // NOSONAR</span>
+    }
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

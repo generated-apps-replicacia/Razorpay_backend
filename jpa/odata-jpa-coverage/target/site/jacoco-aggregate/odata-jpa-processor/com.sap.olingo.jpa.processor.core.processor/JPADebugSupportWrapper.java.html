@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPADebugSupportWrapper.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPADebugSupportWrapper.java</span></div><h1>JPADebugSupportWrapper.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import java.util.LinkedList;
+import java.util.List;
+
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.debug.DebugInformation;
+import org.apache.olingo.server.api.debug.DebugSupport;
+import org.apache.olingo.server.api.debug.RuntimeMeasurement;
+
+import com.sap.olingo.jpa.processor.core.api.JPAServiceDebugger;
+
+public class JPADebugSupportWrapper implements DebugSupport {
+  private final DebugSupport debugSupport;
+  private final List&lt;JPAServiceDebugger&gt; debuggers;
+
+  public JPADebugSupportWrapper(final DebugSupport debugSupport) {
+<span class="nc" id="L19">    super();</span>
+<span class="nc" id="L20">    this.debugSupport = debugSupport;</span>
+<span class="nc" id="L21">    this.debuggers = new LinkedList&lt;&gt;();</span>
+<span class="nc" id="L22">  }</span>
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see org.apache.olingo.server.api.debug.DebugSupport#createDebugResponse(java.lang.String,
+   * org.apache.olingo.server.api.debug.DebugInformation)
+   */
+  @Override
+  public ODataResponse createDebugResponse(final String debugFormat, final DebugInformation debugInfo) {
+<span class="nc" id="L32">    joinRuntimeInfo(debugInfo);</span>
+<span class="nc" id="L33">    return debugSupport.createDebugResponse(debugFormat, debugInfo);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see org.apache.olingo.server.api.debug.DebugSupport#init(org.apache.olingo.server.api.OData)
+   */
+  @Override
+  public void init(final OData odata) {
+<span class="nc" id="L43">    debugSupport.init(odata);</span>
+<span class="nc" id="L44">  }</span>
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see org.apache.olingo.server.api.debug.DebugSupport#isUserAuthorized()
+   */
+  @Override
+  public boolean isUserAuthorized() {
+<span class="nc" id="L53">    return debugSupport.isUserAuthorized();</span>
+  }
+
+  synchronized void addDebugger(final JPAServiceDebugger debugger) {
+<span class="nc" id="L57">    this.debuggers.add(debugger);</span>
+<span class="nc" id="L58">  }</span>
+
+  private void joinRuntimeInfo(final DebugInformation debugInfo) {
+    // Olingo create a tree for runtime measurement in DebugTabRuntime.add(final RuntimeMeasurement
+    // runtimeMeasurement). The current algorithm (V4.3.0) not working well for batch requests if the own runtime info
+    // is just appended (addAll), so insert sorted.
+    // Additional remark: In case parts run in parallel the start time based ordering will fail completely ;-)
+<span class="nc" id="L65">    final List&lt;RuntimeMeasurement&gt; olingoInfo = debugInfo.getRuntimeInformation();</span>
+<span class="nc" id="L66">    int startIndex = 0;</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">    for (final JPAServiceDebugger debugger : debuggers) {</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">      for (final RuntimeMeasurement m : debugger.getRuntimeInformation()) {</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        for (; startIndex &lt; olingoInfo.size(); startIndex++) {</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">          if (olingoInfo.get(startIndex).getTimeStarted() &gt; m.getTimeStarted()) {</span>
+<span class="nc" id="L71">            break;</span>
+          }
+        }
+<span class="nc" id="L74">        olingoInfo.add(startIndex, m);</span>
+<span class="nc" id="L75">        startIndex += 1;</span>
+<span class="nc" id="L76">      }</span>
+<span class="nc" id="L77">    }</span>
+<span class="nc" id="L78">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAFilterElementComplier.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAFilterElementComplier.java</span></div><h1>JPAFilterElementComplier.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import java.util.List;
+import java.util.Optional;
+
+import javax.persistence.EntityManager;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.From;
+
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitor;
+import org.apache.olingo.server.api.uri.queryoption.expression.VisitableExpression;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.processor.core.api.JPAODataClaimProvider;
+import com.sap.olingo.jpa.processor.core.api.JPAServiceDebugger;
+import com.sap.olingo.jpa.processor.core.query.JPAAbstractQuery;
+
+/**
+ * Compiles just one Expression. Mainly build for filter on navigation
+ * @author Oliver Grande
+ *
+ */
+//TODO handle $it ...
+public final class JPAFilterElementComplier extends JPAAbstractFilter {
+  final JPAOperationConverter converter;
+  final EntityManager em;
+  final OData odata;
+  final JPAServiceDocument sd;
+  final List&lt;UriResource&gt; uriResourceParts;
+  final JPAAbstractQuery parent;
+  final List&lt;String&gt; groups;
+
+  public JPAFilterElementComplier(final OData odata, final JPAServiceDocument sd, final EntityManager em,
+      final JPAEntityType jpaEntityType, final JPAOperationConverter converter,
+      final List&lt;UriResource&gt; uriResourceParts, final JPAAbstractQuery parent, final VisitableExpression expression,
+      final JPAAssociationPath association, final List&lt;String&gt; groups) {
+
+<span class="nc" id="L44">    super(jpaEntityType, expression, association);</span>
+<span class="nc" id="L45">    this.converter = converter;</span>
+<span class="nc" id="L46">    this.em = em;</span>
+<span class="nc" id="L47">    this.odata = odata;</span>
+<span class="nc" id="L48">    this.sd = sd;</span>
+<span class="nc" id="L49">    this.uriResourceParts = uriResourceParts;</span>
+<span class="nc" id="L50">    this.parent = parent;</span>
+<span class="nc" id="L51">    this.groups = groups;</span>
+
+<span class="nc" id="L53">  }</span>
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAFilterComplier#compile()
+   */
+  @Override
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public Expression&lt;Boolean&gt; compile() throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L63">    final int handle = parent.getDebugger().startRuntimeMeasurement(&quot;JPAFilterCrossComplier&quot;, &quot;compile&quot;);</span>
+
+<span class="nc" id="L65">    final ExpressionVisitor&lt;JPAOperator&gt; visitor = new JPAVisitor(this);</span>
+<span class="nc" id="L66">    final Expression&lt;Boolean&gt; finalExpression = (Expression&lt;Boolean&gt;) expression.accept(visitor).get();</span>
+
+<span class="nc" id="L68">    parent.getDebugger().stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L69">    return finalExpression;</span>
+  }
+
+  @Override
+  public JPAOperationConverter getConverter() {
+<span class="nc" id="L74">    return converter;</span>
+  }
+
+  @Override
+  public JPAEntityType getJpaEntityType() {
+<span class="nc" id="L79">    return jpaEntityType;</span>
+  }
+
+  @Override
+  public EntityManager getEntityManager() {
+<span class="nc" id="L84">    return em;</span>
+  }
+
+  @Override
+  public OData getOdata() {
+<span class="nc" id="L89">    return odata;</span>
+  }
+
+  @Override
+  public JPAServiceDocument getSd() {
+<span class="nc" id="L94">    return sd;</span>
+  }
+
+  @Override
+  public List&lt;UriResource&gt; getUriResourceParts() {
+<span class="nc" id="L99">    return uriResourceParts;</span>
+  }
+
+  @Override
+  public JPAAbstractQuery getParent() {
+<span class="nc" id="L104">    return parent;</span>
+  }
+
+  public VisitableExpression getExpressionMember() {
+<span class="nc" id="L108">    return expression;</span>
+  }
+
+  @Override
+  public From&lt;?, ?&gt; getRoot() {
+<span class="nc" id="L113">    return parent.getRoot();</span>
+  }
+
+  @Override
+  public JPAServiceDebugger getDebugger() {
+<span class="nc" id="L118">    return parent.getDebugger();</span>
+  }
+
+  @Override
+  public Optional&lt;JPAODataClaimProvider&gt; getClaimsProvider() {
+<span class="nc" id="L123">    return Optional.empty();</span>
+  }
+
+  @Override
+  public List&lt;String&gt; getGroups() {
+<span class="nc" id="L128">    return groups;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

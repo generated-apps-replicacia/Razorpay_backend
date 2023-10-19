@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ODataJPAProcessException.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.exception</a> &gt; <span class="el_source">ODataJPAProcessException.java</span></div><h1>ODataJPAProcessException.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.exception;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAMessageBufferRead;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAMessageTextBuffer;
+
+public abstract class ODataJPAProcessException extends ODataApplicationException {
+
+  /**
+   *
+   */
+  private static final long serialVersionUID = -3178033271311091314L;
+  private static final String UNKNOWN_MESSAGE = &quot;No message text found&quot;;
+
+  protected final String id;
+  protected final String[] parameter;
+  protected final String messageText;
+
+  protected ODataJPAProcessException(final String id, final HttpStatusCode statusCode) {
+<span class="nc" id="L26">    this(id, null, statusCode, new String[] {});</span>
+<span class="nc" id="L27">  }</span>
+
+  protected ODataJPAProcessException(final Throwable cause, final HttpStatusCode statusCode) {
+<span class="nc" id="L30">    this(null, null, statusCode, cause, new String[] {});</span>
+<span class="nc" id="L31">  }</span>
+
+  protected ODataJPAProcessException(final String id, final HttpStatusCode statusCode, final Throwable cause) {
+<span class="nc" id="L34">    this(id, null, statusCode, cause, new String[] {});</span>
+<span class="nc" id="L35">  }</span>
+
+  protected ODataJPAProcessException(final String id, final HttpStatusCode statusCode, final Throwable cause,
+      final String[] params) {
+<span class="nc" id="L39">    this(id, null, statusCode, cause, params);</span>
+<span class="nc" id="L40">  }</span>
+
+  protected ODataJPAProcessException(final String id, final HttpStatusCode statusCode, final String[] params) {
+<span class="nc" id="L43">    this(id, null, statusCode, params);</span>
+<span class="nc" id="L44">  }</span>
+
+  /**
+   *
+   * @param id
+   * @param messageText
+   * @param statusCode
+   * @param params
+   */
+  protected ODataJPAProcessException(final String id, final String messageText, final HttpStatusCode statusCode,
+      final String[] params) {
+<span class="nc" id="L55">    this(id, messageText, statusCode, null, params);</span>
+<span class="nc" id="L56">  }</span>
+
+  /**
+   *
+   * @param id
+   * @param messageText
+   * @param statusCode
+   * @param cause
+   * @param params
+   */
+  protected ODataJPAProcessException(final String id, final String messageText, final HttpStatusCode statusCode,
+      final Throwable cause, final String[] params) {
+
+<span class="nc" id="L69">    super(&quot;&quot;, statusCode.getStatusCode(), Locale.ENGLISH, cause);</span>
+<span class="nc" id="L70">    this.id = id;</span>
+<span class="nc" id="L71">    this.parameter = params;</span>
+<span class="nc" id="L72">    this.messageText = messageText;</span>
+<span class="nc" id="L73">  }</span>
+
+  protected ODataJPAMessageTextBuffer getTextBundle() {
+<span class="nc bnc" id="L76" title="All 2 branches missed.">    if (getBundleName() != null)</span>
+<span class="nc" id="L77">      return new ODataJPAMessageTextBuffer(getBundleName(), getLocale());</span>
+    else
+<span class="nc" id="L79">      return null;</span>
+  }
+
+  @Override
+  public String getLocalizedMessage() {
+<span class="nc" id="L84">    return getMessage();</span>
+  }
+
+  @Override
+  public String getMessage() {
+<span class="nc" id="L89">    final ODataJPAMessageBufferRead messageBuffer = getTextBundle();</span>
+
+<span class="nc bnc" id="L91" title="All 4 branches missed.">    if (messageBuffer != null &amp;&amp; id != null) {</span>
+<span class="nc" id="L92">      final String message = messageBuffer.getText(this, id, parameter);</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">      if (message != null) {</span>
+<span class="nc" id="L94">        return message;</span>
+      }
+<span class="nc" id="L96">      return messageText;</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">    } else if (getCause() != null) {</span>
+<span class="nc" id="L98">      return getCause().getLocalizedMessage();</span>
+<span class="nc bnc" id="L99" title="All 4 branches missed.">    } else if (messageText != null &amp;&amp; !messageText.isEmpty()) {</span>
+<span class="nc" id="L100">      return messageText;</span>
+    } else {
+<span class="nc" id="L102">      return UNKNOWN_MESSAGE;</span>
+    }
+  }
+
+  public List&lt;String&gt; getParameter() {
+<span class="nc" id="L107">    return Arrays.asList(parameter);</span>
+  }
+
+  public String getId() {
+<span class="nc" id="L111">    return id;</span>
+  }
+
+  protected abstract String getBundleName();
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

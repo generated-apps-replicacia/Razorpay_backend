@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateJavaAction.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateJavaAction.java</span></div><h1>IntermediateJavaAction.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.ACTION_PARAM_ANNOTATION_MISSING;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.ACTION_PARAM_BINDING_NOT_FOUND;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.ACTION_PARAM_ONLY_PRIMITIVE;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.ACTION_RETURN_TYPE_EXP;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.ACTION_UNBOUND_ENTITY_SET;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.CheckForNull;
+
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.geo.SRID;
+import org.apache.olingo.commons.api.edm.provider.CsdlAction;
+import org.apache.olingo.commons.api.edm.provider.CsdlMapping;
+import org.apache.olingo.commons.api.edm.provider.CsdlParameter;
+import org.apache.olingo.commons.api.edm.provider.CsdlReturnType;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmAction;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunction.ReturnType;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmParameter;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAOperationResultParameter;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAParameter;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+class IntermediateJavaAction extends IntermediateOperation implements JPAAction {
+
+  private CsdlAction edmAction;
+  final EdmAction jpaAction;
+  private final IntermediateSchema schema;
+  private final Method javaAction;
+  private final Constructor&lt;?&gt; javaConstructor;
+  private List&lt;JPAParameter&gt; parameterList;
+
+  IntermediateJavaAction(final JPAEdmNameBuilder nameBuilder, final EdmAction jpaAction, final Method javaAction,
+      final IntermediateSchema schema) throws ODataJPAModelException {
+
+<span class="nc bnc" id="L46" title="All 2 branches missed.">    super(nameBuilder, IntNameBuilder.buildActionName(jpaAction).isEmpty() ? javaAction.getName() : IntNameBuilder</span>
+<span class="nc" id="L47">        .buildActionName(jpaAction));</span>
+
+<span class="nc" id="L49">    this.schema = schema;</span>
+<span class="nc" id="L50">    this.jpaAction = jpaAction;</span>
+<span class="nc" id="L51">    this.setExternalName(nameBuilder.buildOperationName(internalName));</span>
+<span class="nc" id="L52">    this.javaAction = javaAction;</span>
+<span class="nc" id="L53">    this.javaConstructor = IntermediateOperationHelper.determineConstructor(javaAction);</span>
+<span class="nc" id="L54">  }</span>
+
+  @Override
+  public Constructor&lt;?&gt; getConstructor() {
+<span class="nc" id="L58">    return javaConstructor;</span>
+  }
+
+  @Override
+  public Method getMethod() {
+<span class="nc" id="L63">    return javaAction;</span>
+  }
+
+  public List&lt;JPAParameter&gt; getParameter() throws ODataJPAModelException {
+<span class="nc bnc" id="L67" title="All 2 branches missed.">    if (parameterList == null) {</span>
+<span class="nc" id="L68">      parameterList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L69">      final Class&lt;?&gt;[] types = javaAction.getParameterTypes();</span>
+<span class="nc" id="L70">      final Parameter[] declaredParameters = javaAction.getParameters();</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">      for (int i = 0; i &lt; declaredParameters.length; i++) {</span>
+<span class="nc" id="L72">        final Parameter declaredParameter = declaredParameters[i];</span>
+<span class="nc" id="L73">        final EdmParameter definedParameter = declaredParameter.getAnnotation(EdmParameter.class);</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (definedParameter == null)</span>
+          // Function parameter %1$s of method %2$s at class %3$s without required annotation
+<span class="nc" id="L76">          throw new ODataJPAModelException(ACTION_PARAM_ANNOTATION_MISSING,</span>
+<span class="nc" id="L77">              declaredParameter.getName(), javaAction.getName(), javaAction</span>
+<span class="nc" id="L78">                  .getDeclaringClass().getName());</span>
+<span class="nc" id="L79">        final JPAParameter parameter = new IntermediateOperationParameter(</span>
+            nameBuilder,
+            definedParameter,
+<span class="nc" id="L82">            nameBuilder.buildPropertyName(definedParameter.name()),</span>
+<span class="nc" id="L83">            declaredParameter.getName(),</span>
+            types[i]);
+<span class="nc" id="L85">        parameterList.add(parameter);</span>
+      }
+    }
+<span class="nc" id="L88">    return parameterList;</span>
+  }
+
+  @Override
+  @CheckForNull
+  public JPAParameter getParameter(final Parameter declaredParameter) throws ODataJPAModelException {
+<span class="nc bnc" id="L94" title="All 2 branches missed.">    for (final JPAParameter param : getParameter()) {</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">      if (param.getInternalName().equals(declaredParameter.getName()))</span>
+<span class="nc" id="L96">        return param;</span>
+<span class="nc" id="L97">    }</span>
+<span class="nc" id="L98">    return null;</span>
+  }
+
+  @Override
+  public JPAOperationResultParameter getResultParameter() {
+<span class="nc" id="L103">    return new IntermediateOperationResultParameter(this, jpaAction.returnType(), javaAction.getReturnType(),</span>
+<span class="nc" id="L104">        IntermediateOperationHelper.isCollection(javaAction.getReturnType()));</span>
+  }
+
+  @Override
+  public CsdlReturnType getReturnType() {
+<span class="nc" id="L109">    return edmAction.getReturnType();</span>
+  }
+
+  protected List&lt;CsdlParameter&gt; determineEdmInputParameter() throws ODataJPAModelException {
+<span class="nc" id="L113">    final List&lt;CsdlParameter&gt; parameters = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L114">    final List&lt;JPAParameter&gt; jpaParameterList = getParameter();</span>
+<span class="nc" id="L115">    final BindingPosition bindingPosition = new BindingPosition();</span>
+
+<span class="nc bnc" id="L117" title="All 2 branches missed.">    for (int i = 0; i &lt; jpaParameterList.size(); i++) {</span>
+<span class="nc" id="L118">      final JPAParameter jpaParameter = jpaParameterList.get(i);</span>
+<span class="nc" id="L119">      final CsdlParameter parameter = new CsdlParameter();</span>
+<span class="nc" id="L120">      parameter.setName(jpaParameter.getName());</span>
+<span class="nc" id="L121">      parameter.setType(determineParameterType(bindingPosition, i, jpaParameter));</span>
+<span class="nc" id="L122">      parameter.setPrecision(nullIfNotSet(jpaParameter.getPrecision()));</span>
+<span class="nc" id="L123">      parameter.setScale(nullIfNotSet(jpaParameter.getScale()));</span>
+<span class="nc" id="L124">      parameter.setMaxLength(nullIfNotSet(jpaParameter.getMaxLength()));</span>
+<span class="nc" id="L125">      parameter.setSrid(jpaParameter.getSrid());</span>
+<span class="nc" id="L126">      parameter.setMapping(new CsdlMapping()</span>
+<span class="nc" id="L127">          .setInternalName(getInternalName())</span>
+<span class="nc" id="L128">          .setMappedJavaClass(jpaParameter.getType()));</span>
+<span class="nc" id="L129">      parameters.add(parameter);</span>
+    }
+<span class="nc bnc" id="L131" title="All 4 branches missed.">    if (jpaAction.isBound() &amp;&amp; bindingPosition.getPos() != 1)</span>
+      // Binding parameter not found within in interface of method %1$s of class %2$s. Binding parameter must be the
+      // first parameter.
+<span class="nc" id="L134">      throw new ODataJPAModelException(ACTION_PARAM_BINDING_NOT_FOUND,</span>
+<span class="nc" id="L135">          javaAction.getName(), javaAction.getDeclaringClass().getName());</span>
+<span class="nc" id="L136">    return parameters;</span>
+  }
+
+  private FullQualifiedName determineParameterType(final BindingPosition bindingPosition, final int i,
+      final JPAParameter jpaParameter) throws ODataJPAModelException {
+
+<span class="nc" id="L142">    final EdmPrimitiveTypeKind edmType = JPATypeConverter.convertToEdmSimpleType(jpaParameter.getType());</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">    if (edmType != null)</span>
+<span class="nc" id="L144">      return edmType.getFullQualifiedName();</span>
+<span class="nc" id="L145">    final IntermediateEnumerationType enumType = schema.getEnumerationType(jpaParameter.getType());</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">    if (enumType != null) {</span>
+<span class="nc" id="L147">      return enumType.getExternalFQN();</span>
+    } else {
+<span class="nc" id="L149">      final IntermediateStructuredType&lt;?&gt; structuredType = schema.getEntityType(jpaParameter.getType());</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">      if (structuredType != null) {</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        if (bindingPosition.getPos() == 0)</span>
+<span class="nc" id="L152">          bindingPosition.setPos(i + 1);</span>
+<span class="nc" id="L153">        return structuredType.getExternalFQN();</span>
+      } else {
+        // The type of %1$s of action of method %2$s of class %1$s could not be converted
+<span class="nc" id="L156">        throw new ODataJPAModelException(ACTION_PARAM_ONLY_PRIMITIVE,</span>
+<span class="nc" id="L157">            jpaParameter.getInternalName(), javaAction.getName(), javaAction.getDeclaringClass().getName());</span>
+      }
+    }
+  }
+
+  @Override
+  protected boolean hasImport() {
+    // 13.5 Element edm:ActionImport:
+    // The edm:ActionImport element allows exposing an unbound action as a top-level element in an entity container.
+    // Action imports are never advertised in the service document.
+<span class="nc bnc" id="L167" title="All 2 branches missed.">    return !jpaAction.isBound();</span>
+  }
+
+  @Override
+  protected synchronized void lazyBuildEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L172" title="All 2 branches missed.">    if (edmAction == null) {</span>
+      // TODO handle annotations
+<span class="nc" id="L174">      edmAction = new CsdlAction();</span>
+<span class="nc" id="L175">      edmAction.setBound(jpaAction.isBound());</span>
+<span class="nc" id="L176">      edmAction.setName(getExternalName());</span>
+<span class="nc" id="L177">      edmAction.setParameters(returnNullIfEmpty(determineEdmInputParameter()));</span>
+<span class="nc" id="L178">      edmAction.setReturnType(determineEdmResultType(jpaAction.returnType(), javaAction));</span>
+<span class="nc" id="L179">      edmAction.setEntitySetPath(setEntitySetPath());</span>
+    }
+<span class="nc" id="L181">  }</span>
+
+  @Override
+  CsdlAction getEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L185" title="All 2 branches missed.">    if (edmAction == null) {</span>
+<span class="nc" id="L186">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L188">    return edmAction;</span>
+  }
+
+  @Override
+  boolean isBound() throws ODataJPAModelException {
+<span class="nc" id="L193">    return getEdmItem().isBound();</span>
+  }
+
+  private CsdlReturnType determineEdmResultType(final ReturnType definedReturnType, final Method javaOperation)
+      throws ODataJPAModelException {
+<span class="nc" id="L198">    final Class&lt;?&gt; declaredReturnType = javaOperation.getReturnType();</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">    if (declaredReturnType == void.class)</span>
+<span class="nc" id="L200">      return null;</span>
+
+<span class="nc" id="L202">    final CsdlReturnType edmResultType = new CsdlReturnType();</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">    if (IntermediateOperationHelper.isCollection(declaredReturnType)) {</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">      if (definedReturnType.type() == Object.class)</span>
+        // Type parameter expected for %1$s
+<span class="nc" id="L206">        throw new ODataJPAModelException(ACTION_RETURN_TYPE_EXP, javaOperation.getName(), javaOperation</span>
+<span class="nc" id="L207">            .getName());</span>
+<span class="nc" id="L208">      edmResultType.setCollection(true);</span>
+<span class="nc" id="L209">      edmResultType.setType(IntermediateOperationHelper.determineReturnType(definedReturnType, definedReturnType.type(),</span>
+<span class="nc" id="L210">          schema, javaOperation.getName()));</span>
+    } else {
+<span class="nc" id="L212">      edmResultType.setCollection(false);</span>
+<span class="nc" id="L213">      edmResultType.setType(IntermediateOperationHelper.determineReturnType(definedReturnType, declaredReturnType,</span>
+<span class="nc" id="L214">          schema, javaOperation.getName()));</span>
+    }
+<span class="nc" id="L216">    edmResultType.setNullable(definedReturnType.isNullable());</span>
+<span class="nc" id="L217">    edmResultType.setPrecision(nullIfNotSet(definedReturnType.precision()));</span>
+<span class="nc" id="L218">    edmResultType.setScale(nullIfNotSet(definedReturnType.scale()));</span>
+<span class="nc" id="L219">    edmResultType.setMaxLength(nullIfNotSet(definedReturnType.maxLength()));</span>
+<span class="nc bnc" id="L220" title="All 4 branches missed.">    if (definedReturnType.srid() != null &amp;&amp; !definedReturnType.srid().srid().isEmpty()) {</span>
+<span class="nc" id="L221">      final SRID srid = SRID.valueOf(definedReturnType.srid().srid());</span>
+<span class="nc" id="L222">      srid.setDimension(definedReturnType.srid().dimension());</span>
+<span class="nc" id="L223">      edmResultType.setSrid(srid);</span>
+    }
+<span class="nc" id="L225">    return edmResultType;</span>
+  }
+
+  private String setEntitySetPath() throws ODataJPAModelException {
+<span class="nc bnc" id="L229" title="All 4 branches missed.">    if (jpaAction.entitySetPath() == null || jpaAction.entitySetPath().isEmpty())</span>
+<span class="nc" id="L230">      return null;</span>
+<span class="nc bnc" id="L231" title="All 2 branches missed.">    if (!jpaAction.isBound())</span>
+      // Entity Set Path shall only provided for bound actions. Action method %1$s of class %2$s is unbound.
+<span class="nc" id="L233">      throw new ODataJPAModelException(ACTION_UNBOUND_ENTITY_SET,</span>
+<span class="nc" id="L234">          javaAction.getName(), javaAction.getDeclaringClass().getName());</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">    if (schema.getEntityType(javaAction.getReturnType()) == null)</span>
+<span class="nc" id="L236">      throw new ODataJPAModelException(ACTION_UNBOUND_ENTITY_SET,</span>
+<span class="nc" id="L237">          javaAction.getName(), javaAction.getDeclaringClass().getName());</span>
+<span class="nc" id="L238">    return jpaAction.entitySetPath();</span>
+  }
+
+<span class="nc" id="L241">  private static class BindingPosition {</span>
+<span class="nc" id="L242">    private Integer pos = 0;</span>
+
+    Integer getPos() {
+<span class="nc" id="L245">      return pos;</span>
+    }
+
+    void setPos(final Integer pos) {
+<span class="nc" id="L249">      this.pos = pos;</span>
+<span class="nc" id="L250">    }</span>
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

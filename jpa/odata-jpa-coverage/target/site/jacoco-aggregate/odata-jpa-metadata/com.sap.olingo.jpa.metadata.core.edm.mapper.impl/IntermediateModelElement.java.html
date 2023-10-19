@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateModelElement.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateModelElement.java</span></div><h1>IntermediateModelElement.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Member;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmItem;
+import org.apache.olingo.commons.api.edm.provider.CsdlAnnotation;
+import org.apache.olingo.commons.api.edm.provider.annotation.CsdlConstantExpression;
+import org.apache.olingo.commons.api.edm.provider.annotation.CsdlConstantExpression.ConstantExpressionType;
+
+import com.sap.olingo.jpa.metadata.api.JPAEdmMetadataPostProcessor;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmAnnotation;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateModelItemAccess;
+
+abstract class IntermediateModelElement implements IntermediateModelItemAccess {
+
+<span class="nc" id="L25">  protected static JPAEdmMetadataPostProcessor postProcessor = new DefaultEdmPostProcessor();</span>
+<span class="nc" id="L26">  protected static final JPANameBuilder IntNameBuilder = new JPANameBuilder();</span>
+  protected final JPAEdmNameBuilder nameBuilder;
+  protected final String internalName;
+  protected final List&lt;CsdlAnnotation&gt; edmAnnotations;
+  private boolean toBeIgnored;
+  private String externalName;
+
+  static void setPostProcessor(final JPAEdmMetadataPostProcessor pP) {
+<span class="nc" id="L34">    postProcessor = pP;</span>
+<span class="nc" id="L35">  }</span>
+
+  IntermediateModelElement(final JPAEdmNameBuilder nameBuilder, final String internalName) {
+<span class="nc" id="L38">    super();</span>
+<span class="nc" id="L39">    this.nameBuilder = nameBuilder;</span>
+<span class="nc" id="L40">    this.internalName = internalName;</span>
+<span class="nc" id="L41">    this.edmAnnotations = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L42">  }</span>
+
+  @Override
+  public String getExternalName() {
+<span class="nc" id="L46">    return externalName;</span>
+  }
+
+  @Override
+  public FullQualifiedName getExternalFQN() {
+<span class="nc" id="L51">    return buildFQN(getExternalName());</span>
+  }
+
+  @Override
+  public String getInternalName() {
+<span class="nc" id="L56">    return internalName;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.extention.IntermediateModelItemAccess#ignore()
+   */
+  @Override
+  public boolean ignore() {
+<span class="nc" id="L66">    return toBeIgnored;</span>
+  }
+
+  protected void setExternalName(final String externalName) {
+<span class="nc" id="L70">    this.externalName = externalName;</span>
+<span class="nc" id="L71">  }</span>
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.extention.IntermediateModelItemAccess#setIgnore(boolean)
+   */
+  @Override
+  public void setIgnore(final boolean ignore) {
+<span class="nc" id="L80">    this.toBeIgnored = ignore;</span>
+<span class="nc" id="L81">  }</span>
+
+  protected abstract void lazyBuildEdmItem() throws ODataJPAModelException;
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  protected &lt;T extends CsdlAbstractEdmItem&gt; List&lt;? extends CsdlAbstractEdmItem&gt; extractEdmModelElements(
+      final Map&lt;String, ? extends IntermediateModelElement&gt; mappingBuffer)
+      throws ODataJPAModelException {
+<span class="nc" id="L89">    final List&lt;T&gt; extractionTarget = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L91" title="All 2 branches missed.">    for (final Entry&lt;String, ? extends IntermediateModelElement&gt; bufferItem : mappingBuffer.entrySet()) {</span>
+
+<span class="nc bnc" id="L93" title="All 2 branches missed.">      if (!((IntermediateModelElement) bufferItem.getValue()).toBeIgnored) { // NOSONAR</span>
+<span class="nc" id="L94">        final IntermediateModelElement element = bufferItem.getValue();</span>
+<span class="nc" id="L95">        final CsdlAbstractEdmItem edmItem = element.getEdmItem();</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (!element.ignore())</span>
+<span class="nc" id="L97">          extractionTarget.add((T) edmItem);</span>
+      }
+<span class="nc" id="L99">    }</span>
+<span class="nc" id="L100">    return extractionTarget;</span>
+  }
+
+  protected IntermediateModelElement findModelElementByEdmItem(final String edmEntityItemName,
+      final Map&lt;String, ? extends IntermediateModelElement&gt; buffer) {
+
+<span class="nc bnc" id="L106" title="All 2 branches missed.">    for (final Entry&lt;String, ?&gt; bufferItem : buffer.entrySet()) {</span>
+<span class="nc" id="L107">      final IntermediateModelElement modelElement = (IntermediateModelElement) bufferItem.getValue();</span>
+
+<span class="nc bnc" id="L109" title="All 2 branches missed.">      if (edmEntityItemName.equals(modelElement.getExternalName())) {</span>
+<span class="nc" id="L110">        return modelElement;</span>
+      }
+<span class="nc" id="L112">    }</span>
+<span class="nc" id="L113">    return null;</span>
+  }
+
+  protected &lt;T&gt; List&lt;T&gt; returnNullIfEmpty(final List&lt;T&gt; list) {
+<span class="nc bnc" id="L117" title="All 2 branches missed.">    return list == null ? Collections.emptyList() : list;</span>
+  }
+
+  abstract CsdlAbstractEdmItem getEdmItem() throws ODataJPAModelException;
+
+  /**
+   * Convert annotations at an annotatable element into OData annotations
+   * {@link com.sap.olingo.jpa.metadata.core.edm.annotation.EdmAnnotation}
+   *
+   * @param edmAnnotations
+   * @param member
+   * @param internalName
+   * @param property
+   * @throws ODataJPAModelException
+   */
+  protected void getAnnotations(final List&lt;CsdlAnnotation&gt; edmAnnotations, final Member member,
+      final String internalName) throws ODataJPAModelException {
+<span class="nc bnc" id="L134" title="All 2 branches missed.">    if (member instanceof AnnotatedElement) {</span>
+<span class="nc" id="L135">      extractAnnotations(edmAnnotations, (AnnotatedElement) member, internalName);</span>
+    }
+<span class="nc" id="L137">  }</span>
+
+  protected void getAnnotations(final List&lt;CsdlAnnotation&gt; edmAnnotations, final Class&lt;?&gt; clazz,
+      final String internalName)
+      throws ODataJPAModelException {
+<span class="nc bnc" id="L142" title="All 2 branches missed.">    if (clazz instanceof AnnotatedElement) {</span>
+<span class="nc" id="L143">      extractAnnotations(edmAnnotations, clazz, internalName);</span>
+    }
+<span class="nc" id="L145">  }</span>
+
+  /**
+   * @param t
+   * @return
+   */
+  protected final String buildFQTableName(final String schema, final String name) {
+<span class="nc" id="L152">    final StringBuilder fqt = new StringBuilder();</span>
+<span class="nc bnc" id="L153" title="All 4 branches missed.">    if (schema != null &amp;&amp; !schema.isEmpty()) {</span>
+<span class="nc" id="L154">      fqt.append(schema);</span>
+<span class="nc" id="L155">      fqt.append(&quot;.&quot;);</span>
+    }
+<span class="nc" id="L157">    fqt.append(name);</span>
+<span class="nc" id="L158">    return fqt.toString();</span>
+  }
+
+  private void extractAnnotations(final List&lt;CsdlAnnotation&gt; edmAnnotations, final AnnotatedElement element,
+      final String internalName)
+      throws ODataJPAModelException {
+<span class="nc" id="L164">    final EdmAnnotation jpaAnnotation = element.getAnnotation(EdmAnnotation.class);</span>
+
+<span class="nc bnc" id="L166" title="All 2 branches missed.">    if (jpaAnnotation != null) {</span>
+<span class="nc" id="L167">      final CsdlAnnotation edmAnnotation = new CsdlAnnotation();</span>
+<span class="nc" id="L168">      final String qualifier = jpaAnnotation.qualifier();</span>
+<span class="nc" id="L169">      edmAnnotation.setTerm(jpaAnnotation.term());</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">      edmAnnotation.setQualifier(qualifier.isEmpty() ? null : qualifier);</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">      if (!(jpaAnnotation.constantExpression().type() == ConstantExpressionType.Int</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">          &amp;&amp; jpaAnnotation.constantExpression().value().equals(&quot;default&quot;))</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">          &amp;&amp; !(jpaAnnotation.dynamicExpression().path().isEmpty())) {</span>
+<span class="nc" id="L174">        throw new ODataJPAModelException(</span>
+            ODataJPAModelException.MessageKeys.ODATA_ANNOTATION_TWO_EXPRESSIONS, internalName);
+<span class="nc bnc" id="L176" title="All 2 branches missed.">      } else if (jpaAnnotation.constantExpression() != null) {</span>
+<span class="nc" id="L177">        edmAnnotation.setExpression(new CsdlConstantExpression(jpaAnnotation.constantExpression().type(),</span>
+<span class="nc" id="L178">            jpaAnnotation.constantExpression().value()));</span>
+      }
+<span class="nc" id="L180">      edmAnnotations.add(edmAnnotation);</span>
+    }
+<span class="nc" id="L182">  }</span>
+
+  /**
+   * https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html
+   * @param javaType
+   *
+   * @return
+   */
+  protected Class&lt;?&gt; boxPrimitive(final Class&lt;?&gt; javaType) {// NOSONAR
+
+<span class="nc bnc" id="L192" title="All 4 branches missed.">    if (javaType == int.class || javaType == Integer.class)</span>
+<span class="nc" id="L193">      return Integer.class;</span>
+<span class="nc bnc" id="L194" title="All 4 branches missed.">    else if (javaType == long.class || javaType == Long.class)</span>
+<span class="nc" id="L195">      return Long.class;</span>
+<span class="nc bnc" id="L196" title="All 4 branches missed.">    else if (javaType == boolean.class || javaType == Boolean.class)</span>
+<span class="nc" id="L197">      return Boolean.class;</span>
+<span class="nc bnc" id="L198" title="All 4 branches missed.">    else if (javaType == byte.class || javaType == Byte.class)</span>
+<span class="nc" id="L199">      return Byte.class;</span>
+<span class="nc bnc" id="L200" title="All 4 branches missed.">    else if (javaType == char.class || javaType == Character.class)</span>
+<span class="nc" id="L201">      return Character.class;</span>
+<span class="nc bnc" id="L202" title="All 4 branches missed.">    else if (javaType == float.class || javaType == Float.class)</span>
+<span class="nc" id="L203">      return Float.class;</span>
+<span class="nc bnc" id="L204" title="All 4 branches missed.">    else if (javaType == short.class || javaType == Short.class)</span>
+<span class="nc" id="L205">      return Short.class;</span>
+<span class="nc bnc" id="L206" title="All 4 branches missed.">    else if (javaType == double.class || javaType == Double.class)</span>
+<span class="nc" id="L207">      return Double.class;</span>
+
+<span class="nc" id="L209">    return null;</span>
+  }
+
+  /**
+   *
+   * @param name
+   * @return
+   */
+  protected final FullQualifiedName buildFQN(final String name) {
+<span class="nc" id="L218">    return new FullQualifiedName(nameBuilder.getNamespace(), name);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L223">    return &quot;IntermediateModelElement [internalName=&quot; + internalName + &quot;, externalName=&quot;</span>
+        + externalName + &quot;, toBeIgnored=&quot; + toBeIgnored + &quot;]&quot;;
+  }
+
+  /**
+   * @param value
+   * @return true if string value is null or empty
+   */
+  protected final boolean emptyString(final String value) {
+<span class="nc bnc" id="L232" title="All 4 branches missed.">    return value == null || value.isEmpty();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

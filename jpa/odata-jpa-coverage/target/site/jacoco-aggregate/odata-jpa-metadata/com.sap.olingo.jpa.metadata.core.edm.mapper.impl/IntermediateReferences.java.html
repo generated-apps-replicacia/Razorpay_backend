@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateReferences.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateReferences.java</span></div><h1>IntermediateReferences.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.ANNOTATION_PARSE_ERROR;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.ANNOTATION_PATH_NOT_FOUND;
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.MISSING_TERM_NAMESPACE;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import javax.annotation.Nonnull;
+
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.provider.CsdlSchema;
+import org.apache.olingo.commons.api.edm.provider.CsdlTerm;
+import org.apache.olingo.commons.api.edmx.EdmxReference;
+import org.apache.olingo.commons.api.edmx.EdmxReferenceInclude;
+import org.apache.olingo.commons.api.edmx.EdmxReferenceIncludeAnnotation;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.annotation.CsdlDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.annotation.CsdlDocumentReader;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateReferenceList;
+
+<span class="nc" id="L31">final class IntermediateReferences implements IntermediateReferenceList {</span>
+
+<span class="nc" id="L33">  final List&lt;IntermediateReference&gt; references = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L34">  private List&lt;EdmxReference&gt; edmxReferences = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L35">  final Map&lt;String, Map&lt;String, CsdlTerm&gt;&gt; terms = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L36">  final Map&lt;String, CsdlSchema&gt; schemas = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L37">  final Map&lt;String, String&gt; aliasDirectory = new HashMap&lt;&gt;();</span>
+
+  @Override
+  public IntermediateReferenceAccess addReference(final String uri) throws ODataJPAModelException {
+
+    try {
+<span class="nc" id="L43">      final URI sourceURI = new URI(uri);</span>
+<span class="nc" id="L44">      final CsdlDocument vocabulary = new CsdlDocumentReader().readFromURI(sourceURI);</span>
+<span class="nc" id="L45">      return createReference(sourceURI, &quot;&quot;, vocabulary);</span>
+<span class="nc" id="L46">    } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L47">      throw new ODataJPAModelException(e);</span>
+<span class="nc" id="L48">    } catch (final IOException e) {</span>
+<span class="nc" id="L49">      throw new ODataJPAModelException(ANNOTATION_PARSE_ERROR, e, uri, e.getMessage());</span>
+    }
+  }
+
+  @Override
+  public IntermediateReferenceAccess addReference(@Nonnull final String uri, @Nonnull final String path,
+      @Nonnull final Charset charset) throws ODataJPAModelException {
+
+    try {
+<span class="nc" id="L58">      final URI sourceURI = new URI(uri);</span>
+<span class="nc" id="L59">      final CsdlDocument vocabulary = new CsdlDocumentReader().readFromResource(path, charset);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">      if (vocabulary == null)</span>
+        // Path '%1$s' to read the file containing vocabulary '%2$s' is wrong
+<span class="nc" id="L62">        throw new ODataJPAModelException(ANNOTATION_PATH_NOT_FOUND, path, uri);</span>
+<span class="nc" id="L63">      return createReference(sourceURI, path, vocabulary);</span>
+<span class="nc" id="L64">    } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L65">      throw new ODataJPAModelException(e);</span>
+<span class="nc" id="L66">    } catch (final IOException e) {</span>
+      // Parsing of %1$s failed with message %2$s
+<span class="nc" id="L68">      throw new ODataJPAModelException(ANNOTATION_PARSE_ERROR, e, path, e.getMessage());</span>
+    }
+  }
+
+  @Override
+  public IntermediateReferenceAccess addReference(@Nonnull final String uri, @Nonnull final String path)
+      throws ODataJPAModelException {
+
+<span class="nc" id="L76">    return addReference(uri, path, Charset.defaultCharset());</span>
+  }
+
+  public CsdlTerm getTerm(final FullQualifiedName termName) {
+<span class="nc" id="L80">    Map&lt;String, CsdlTerm&gt; schema = terms.get(termName.getNamespace());</span>
+<span class="nc bnc" id="L81" title="All 4 branches missed.">    if (schema == null) for (final IntermediateReference r : references) {</span>
+<span class="nc" id="L82">      final String namespace = r.convertAlias(termName.getNamespace());</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">      if (namespace != null) schema = terms.get(namespace);</span>
+<span class="nc" id="L84">    }</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">    if (schema == null)</span>
+<span class="nc" id="L86">      return null;</span>
+<span class="nc" id="L87">    return schema.get(termName.getName());</span>
+  }
+
+  public List&lt;CsdlSchema&gt; getSchemas() {
+<span class="nc" id="L91">    final List&lt;CsdlSchema&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">    for (final Entry&lt;String, CsdlSchema&gt; schema : schemas.entrySet())</span>
+<span class="nc" id="L93">      result.add(schema.getValue());</span>
+<span class="nc" id="L94">    return result;</span>
+  }
+
+  List&lt;EdmxReference&gt; getEdmReferences() {
+<span class="nc bnc" id="L98" title="All 2 branches missed.">    if (references.size() != edmxReferences.size()) {</span>
+<span class="nc" id="L99">      edmxReferences = new ArrayList&lt;&gt;(references.size());</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">      for (final IntermediateReference r : references)</span>
+<span class="nc" id="L101">        edmxReferences.add(r.getEdmReference());</span>
+    }
+<span class="nc" id="L103">    return edmxReferences;</span>
+  }
+
+  private IntermediateReference createReference(final URI sourceURI, final String path, final CsdlDocument vocabulary) {
+
+<span class="nc" id="L108">    final IntermediateReference reference = new IntermediateReference(sourceURI, path);</span>
+<span class="nc" id="L109">    schemas.putAll(vocabulary.getSchemas());</span>
+<span class="nc" id="L110">    terms.putAll(vocabulary.getTerms());</span>
+<span class="nc" id="L111">    references.add(reference);</span>
+<span class="nc" id="L112">    return reference;</span>
+  }
+
+  private class IntermediateReference implements IntermediateReferenceList.IntermediateReferenceAccess {
+    private final URI uri;
+    private final String path;
+    final EdmxReference edmxReference;
+<span class="nc" id="L119">    private final List&lt;IntermediateReferenceInclude&gt; includes = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L120">    private final List&lt;IntermediateReferenceAnnotationInclude&gt; annotation = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L122">    public IntermediateReference(final URI uri, final String path) {</span>
+<span class="nc" id="L123">      super();</span>
+<span class="nc" id="L124">      this.uri = uri;</span>
+<span class="nc" id="L125">      this.path = path;</span>
+<span class="nc" id="L126">      edmxReference = new EdmxReference(uri);</span>
+<span class="nc" id="L127">    }</span>
+
+    String convertAlias(final String alias) {
+<span class="nc" id="L130">      return aliasDirectory.get(alias);</span>
+    }
+
+    @Override
+    public void addInclude(final String namespace) {
+<span class="nc" id="L135">      addInclude(namespace, null);</span>
+<span class="nc" id="L136">    }</span>
+
+    @Override
+    public void addInclude(final String namespace, final String alias) {
+<span class="nc" id="L140">      final IntermediateReferenceInclude include = new IntermediateReferenceInclude(namespace, alias);</span>
+<span class="nc" id="L141">      this.includes.add(include);</span>
+<span class="nc" id="L142">      edmxReference.addInclude(include.getEdmInclude());</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">      if (alias != null)</span>
+<span class="nc" id="L144">        aliasDirectory.put(alias, namespace);</span>
+<span class="nc" id="L145">    }</span>
+
+    @Override
+    public void addIncludeAnnotation(final String termNamespace) throws ODataJPAModelException {
+<span class="nc" id="L149">      addIncludeAnnotation(termNamespace, null, null);</span>
+<span class="nc" id="L150">    }</span>
+
+    @Override
+    public void addIncludeAnnotation(@Nonnull final String termNamespace, final String qualifier,
+        final String targetNamespace) throws ODataJPAModelException {
+
+<span class="nc" id="L156">      final IntermediateReferenceAnnotationInclude include = new IntermediateReferenceAnnotationInclude(termNamespace,</span>
+          qualifier, targetNamespace);
+<span class="nc" id="L158">      this.annotation.add(include);</span>
+<span class="nc" id="L159">      edmxReference.addIncludeAnnotation(include.getEdmIncludeAnnotation());</span>
+<span class="nc" id="L160">    }</span>
+
+    @Override
+    public String getPath() {
+<span class="nc" id="L164">      return path;</span>
+    }
+
+    @Override
+    public URI getURI() {
+<span class="nc" id="L169">      return uri;</span>
+    }
+
+    EdmxReference getEdmReference() {
+<span class="nc" id="L173">      return edmxReference;</span>
+    }
+
+    private class IntermediateReferenceInclude {
+
+      private final String namespace;
+      private final String alias;
+
+<span class="nc" id="L181">      public IntermediateReferenceInclude(final String namespace, final String alias) {</span>
+
+<span class="nc" id="L183">        this.namespace = namespace;</span>
+<span class="nc" id="L184">        this.alias = alias;</span>
+<span class="nc" id="L185">      }</span>
+
+      EdmxReferenceInclude getEdmInclude() {
+<span class="nc" id="L188">        return new EdmxReferenceInclude(namespace, alias);</span>
+      }
+    }
+
+    private class IntermediateReferenceAnnotationInclude {
+
+      private final String termNamespace;
+      private final String qualifier;
+      private final String targetNamespace;
+
+      public IntermediateReferenceAnnotationInclude(final String termNamespace, final String qualifier,
+<span class="nc" id="L199">          final String targetNamespace) throws ODataJPAModelException {</span>
+
+<span class="nc" id="L201">        super();</span>
+<span class="nc bnc" id="L202" title="All 4 branches missed.">        if (termNamespace == null || termNamespace.isEmpty())</span>
+<span class="nc" id="L203">          throw new ODataJPAModelException(MISSING_TERM_NAMESPACE);</span>
+<span class="nc" id="L204">        this.termNamespace = termNamespace;</span>
+<span class="nc" id="L205">        this.qualifier = qualifier;</span>
+<span class="nc" id="L206">        this.targetNamespace = targetNamespace;</span>
+<span class="nc" id="L207">      }</span>
+
+      EdmxReferenceIncludeAnnotation getEdmIncludeAnnotation() {
+<span class="nc" id="L210">        return new EdmxReferenceIncludeAnnotation(termNamespace, qualifier, targetNamespace);</span>
+      }
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateJavaFunction.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateJavaFunction.java</span></div><h1>IntermediateJavaFunction.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.geo.SRID;
+import org.apache.olingo.commons.api.edm.provider.CsdlMapping;
+import org.apache.olingo.commons.api.edm.provider.CsdlParameter;
+import org.apache.olingo.commons.api.edm.provider.CsdlReturnType;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunction;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunction.ReturnType;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunctionType;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmParameter;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAJavaFunction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAOperationResultParameter;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAParameter;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys;
+
+class IntermediateJavaFunction extends IntermediateFunction implements JPAJavaFunction {
+  private final Method javaFunction;
+  private final Constructor&lt;?&gt; javaConstructor;
+  private List&lt;JPAParameter&gt; parameterList;
+
+  IntermediateJavaFunction(final JPAEdmNameBuilder nameBuilder, final EdmFunction jpaFunction,
+      final Method javaFunction, final IntermediateSchema schema) throws ODataJPAModelException {
+
+<span class="nc" id="L35">    super(nameBuilder, jpaFunction, schema,</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        IntNameBuilder.buildFunctionName(jpaFunction).isEmpty() ? javaFunction.getName() : IntNameBuilder</span>
+<span class="nc" id="L37">            .buildFunctionName(jpaFunction));</span>
+
+<span class="nc bnc" id="L39" title="All 2 branches missed.">    this.setExternalName(jpaFunction.name().isEmpty()</span>
+<span class="nc" id="L40">        ? nameBuilder.buildOperationName(internalName)</span>
+<span class="nc" id="L41">        : jpaFunction.name());</span>
+<span class="nc" id="L42">    this.javaFunction = javaFunction;</span>
+<span class="nc" id="L43">    this.javaConstructor = IntermediateOperationHelper.determineConstructor(javaFunction);</span>
+<span class="nc" id="L44">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;X&gt; Constructor&lt;X&gt; getConstructor() {
+<span class="nc" id="L49">    return (Constructor&lt;X&gt;) javaConstructor;</span>
+  }
+
+  @Override
+  public EdmFunctionType getFunctionType() {
+<span class="nc" id="L54">    return EdmFunctionType.JavaClass;</span>
+  }
+
+  @Override
+  public Method getMethod() {
+<span class="nc" id="L59">    return javaFunction;</span>
+  }
+
+  @Override
+  public List&lt;JPAParameter&gt; getParameter() throws ODataJPAModelException {
+<span class="nc bnc" id="L64" title="All 2 branches missed.">    if (parameterList == null) {</span>
+<span class="nc" id="L65">      parameterList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L66">      final Class&lt;?&gt;[] types = javaFunction.getParameterTypes();</span>
+<span class="nc" id="L67">      final Parameter[] declaredParameters = javaFunction.getParameters();</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">      for (int i = 0; i &lt; declaredParameters.length; i++) {</span>
+<span class="nc" id="L69">        final Parameter declaredParameter = declaredParameters[i];</span>
+<span class="nc" id="L70">        final EdmParameter definedParameter = declaredParameter.getAnnotation(EdmParameter.class);</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        if (definedParameter == null)</span>
+          // Function parameter %1$s of method %2$s at class %3$s without required annotation
+<span class="nc" id="L73">          throw new ODataJPAModelException(ODataJPAModelException.MessageKeys.FUNC_PARAM_ANNOTATION_MISSING,</span>
+<span class="nc" id="L74">              declaredParameter.getName(), javaFunction.getName(), javaFunction</span>
+<span class="nc" id="L75">                  .getDeclaringClass().getName());</span>
+<span class="nc" id="L76">        final JPAParameter parameter = new IntermediateFunctionParameter(definedParameter, nameBuilder</span>
+<span class="nc" id="L77">            .buildPropertyName(definedParameter.name()), declaredParameter.getName(), types[i]);</span>
+<span class="nc" id="L78">        parameterList.add(parameter);</span>
+      }
+    }
+<span class="nc" id="L81">    return parameterList;</span>
+  }
+
+  @Override
+  public JPAParameter getParameter(final String internalName) throws ODataJPAModelException {
+<span class="nc bnc" id="L86" title="All 2 branches missed.">    for (final JPAParameter parameter : getParameter()) {</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">      if (parameter.getInternalName().equals(internalName))</span>
+<span class="nc" id="L88">        return parameter;</span>
+<span class="nc" id="L89">    }</span>
+<span class="nc" id="L90">    return null;</span>
+  }
+
+  @Override
+  public JPAOperationResultParameter getResultParameter() {
+<span class="nc" id="L95">    return new IntermediateOperationResultParameter(this, jpaFunction.returnType(), javaFunction.getReturnType(),</span>
+<span class="nc" id="L96">        IntermediateOperationHelper.isCollection(javaFunction.getReturnType()));</span>
+  }
+
+  @Override
+  public CsdlReturnType getReturnType() {
+<span class="nc" id="L101">    return edmFunction.getReturnType();</span>
+  }
+
+  @Override
+  protected List&lt;CsdlParameter&gt; determineEdmInputParameter() throws ODataJPAModelException {
+<span class="nc" id="L106">    final List&lt;CsdlParameter&gt; parameters = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L107">    final List&lt;JPAParameter&gt; jpaParameterList = getParameter();</span>
+
+<span class="nc bnc" id="L109" title="All 2 branches missed.">    for (int i = 0; i &lt; jpaParameterList.size(); i++) {</span>
+<span class="nc" id="L110">      final JPAParameter jpaParameter = jpaParameterList.get(i);</span>
+<span class="nc" id="L111">      final CsdlParameter parameter = new CsdlParameter();</span>
+<span class="nc" id="L112">      parameter.setName(jpaParameter.getName());</span>
+<span class="nc" id="L113">      parameter.setType(jpaParameter.getTypeFQN());</span>
+<span class="nc" id="L114">      parameter.setPrecision(nullIfNotSet(jpaParameter.getPrecision()));</span>
+<span class="nc" id="L115">      parameter.setScale(nullIfNotSet(jpaParameter.getScale()));</span>
+<span class="nc" id="L116">      parameter.setMaxLength(nullIfNotSet(jpaParameter.getMaxLength()));</span>
+<span class="nc" id="L117">      parameter.setSrid(jpaParameter.getSrid());</span>
+<span class="nc" id="L118">      parameter.setMapping(new CsdlMapping()</span>
+<span class="nc" id="L119">          .setInternalName(getInternalName())</span>
+<span class="nc" id="L120">          .setMappedJavaClass(jpaParameter.getType()));</span>
+<span class="nc" id="L121">      parameters.add(parameter);</span>
+    }
+<span class="nc" id="L123">    return parameters;</span>
+  }
+
+  @Override
+  protected CsdlReturnType determineEdmResultType(final ReturnType definedReturnType) throws ODataJPAModelException {
+<span class="nc" id="L128">    final CsdlReturnType edmResultType = new CsdlReturnType();</span>
+<span class="nc" id="L129">    final Class&lt;?&gt; declaredReturnType = javaFunction.getReturnType();</span>
+<span class="nc bnc" id="L130" title="All 4 branches missed.">    if (IntermediateOperationHelper.isCollection(declaredReturnType) || definedReturnType.isCollection()) {</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">      if (definedReturnType.type() == Object.class)</span>
+        // Type parameter expected for %1$s
+<span class="nc" id="L133">        throw new ODataJPAModelException(MessageKeys.FUNC_RETURN_TYPE_EXP, javaFunction.getName());</span>
+<span class="nc" id="L134">      edmResultType.setCollection(true);</span>
+<span class="nc" id="L135">      edmResultType.setType(IntermediateOperationHelper.determineReturnType(definedReturnType, definedReturnType.type(),</span>
+<span class="nc" id="L136">          schema, javaFunction.getName()));</span>
+    } else {
+<span class="nc bnc" id="L138" title="All 2 branches missed.">      if (definedReturnType.type() != Object.class</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">          &amp;&amp; !definedReturnType.type().getCanonicalName().equals(declaredReturnType.getCanonicalName()))</span>
+        // The return type %1$s from EdmFunction does not match type %2$s declared at method %3$s
+<span class="nc" id="L141">        throw new ODataJPAModelException(MessageKeys.FUNC_RETURN_TYPE_INVALID, definedReturnType.type().getName(),</span>
+<span class="nc" id="L142">            declaredReturnType.getName(), javaFunction.getName());</span>
+
+<span class="nc" id="L144">      edmResultType.setCollection(false);</span>
+<span class="nc" id="L145">      edmResultType.setType(IntermediateOperationHelper.determineReturnType(definedReturnType, declaredReturnType,</span>
+<span class="nc" id="L146">          schema, javaFunction.getName()));</span>
+    }
+
+<span class="nc" id="L149">    edmResultType.setNullable(definedReturnType.isNullable());</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">    if (definedReturnType.maxLength() &gt;= 0)</span>
+<span class="nc" id="L151">      edmResultType.setMaxLength(definedReturnType.maxLength());</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">    if (definedReturnType.precision() &gt;= 0)</span>
+<span class="nc" id="L153">      edmResultType.setPrecision(definedReturnType.precision());</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">    if (definedReturnType.scale() &gt;= 0)</span>
+<span class="nc" id="L155">      edmResultType.setScale(definedReturnType.scale());</span>
+<span class="nc bnc" id="L156" title="All 4 branches missed.">    if (definedReturnType.srid() != null &amp;&amp; !definedReturnType.srid().srid().isEmpty()) {</span>
+<span class="nc" id="L157">      final SRID srid = SRID.valueOf(definedReturnType.srid().srid());</span>
+<span class="nc" id="L158">      srid.setDimension(definedReturnType.srid().dimension());</span>
+<span class="nc" id="L159">      edmResultType.setSrid(srid);</span>
+    }
+
+<span class="nc" id="L162">    return edmResultType;</span>
+  }
+
+  @Override
+  protected synchronized void lazyBuildEdmItem() throws ODataJPAModelException {
+<span class="nc" id="L167">    super.lazyBuildEdmItem();</span>
+<span class="nc" id="L168">    edmFunction.setBound(false);</span>
+<span class="nc" id="L169">  }</span>
+
+  @Override
+  boolean hasImport() {
+<span class="nc" id="L173">    return true;</span>
+  }
+
+  @Override
+  protected FullQualifiedName determineParameterType(final Class&lt;?&gt; type,
+      final EdmParameter definedParameter) throws ODataJPAModelException {
+<span class="nc" id="L179">    final EdmPrimitiveTypeKind edmType = JPATypeConverter.convertToEdmSimpleType(type);</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">    if (edmType != null)</span>
+<span class="nc" id="L181">      return edmType.getFullQualifiedName();</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">    else if(schema.getEnumerationType(type) != null) {</span>
+<span class="nc" id="L183">      return schema.getEnumerationType(type).getExternalFQN();</span>
+    } else {
+<span class="nc" id="L185">      final IntermediateStructuredType&lt;?&gt; entityType = schema.getEntityType(type);</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">      if(entityType != null)</span>
+<span class="nc" id="L187">        return entityType.getExternalFQN();</span>
+      else
+<span class="nc" id="L189">        throw new ODataJPAModelException(ODataJPAModelException.MessageKeys.FUNC_PARAM_ONLY_PRIMITIVE, javaFunction</span>
+<span class="nc" id="L190">            .getDeclaringClass().getName(), javaFunction.getName(), definedParameter.name());</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

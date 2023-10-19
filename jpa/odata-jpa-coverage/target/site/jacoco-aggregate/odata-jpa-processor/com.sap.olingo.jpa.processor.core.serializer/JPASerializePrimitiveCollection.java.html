@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPASerializePrimitiveCollection.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.serializer</a> &gt; <span class="el_source">JPASerializePrimitiveCollection.java</span></div><h1>JPASerializePrimitiveCollection.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.serializer;
+
+import java.net.URISyntaxException;
+
+import org.apache.olingo.commons.api.data.Annotatable;
+import org.apache.olingo.commons.api.data.ContextURL;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveType;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.serializer.ODataSerializer;
+import org.apache.olingo.server.api.serializer.PrimitiveSerializerOptions;
+import org.apache.olingo.server.api.serializer.SerializerException;
+import org.apache.olingo.server.api.serializer.SerializerResult;
+
+import com.sap.olingo.jpa.processor.core.api.JPAODataSessionContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPASerializerException;
+
+final class JPASerializePrimitiveCollection implements JPAOperationSerializer {
+  private final ServiceMetadata serviceMetadata;
+  private final ODataSerializer serializer;
+  private final ContentType responseFormat;
+  private final JPAODataSessionContextAccess serviceContext;
+
+  JPASerializePrimitiveCollection(final ServiceMetadata serviceMetadata, final ODataSerializer serializer,
+<span class="nc" id="L30">      final ContentType responseFormat, final JPAODataSessionContextAccess context) {</span>
+
+<span class="nc" id="L32">    this.serializer = serializer;</span>
+<span class="nc" id="L33">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L34">    this.responseFormat = responseFormat;</span>
+<span class="nc" id="L35">    this.serviceContext = context;</span>
+<span class="nc" id="L36">  }</span>
+
+  @Override
+  public ContentType getContentType() {
+<span class="nc" id="L40">    return responseFormat;</span>
+  }
+
+  @Override
+  public SerializerResult serialize(final Annotatable result, final EdmType primitiveType, final ODataRequest request)
+      throws SerializerException, ODataJPASerializerException {
+
+    try {
+<span class="nc" id="L48">      final ContextURL contextUrl = ContextURL.with()</span>
+<span class="nc" id="L49">          .serviceRoot(buildServiceRoot(request, serviceContext))</span>
+<span class="nc" id="L50">          .asCollection()</span>
+<span class="nc" id="L51">          .build();</span>
+<span class="nc" id="L52">      final PrimitiveSerializerOptions options = PrimitiveSerializerOptions.with().contextURL(contextUrl).build();</span>
+
+<span class="nc" id="L54">      return serializer.primitiveCollection(serviceMetadata, (EdmPrimitiveType) primitiveType, (Property) result,</span>
+          options);
+<span class="nc" id="L56">    } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L57">      throw new ODataJPASerializerException(e, HttpStatusCode.BAD_REQUEST);</span>
+    }
+  }
+
+  @Override
+  public SerializerResult serialize(final ODataRequest request, final EntityCollection result)
+      throws SerializerException, ODataJPASerializerException {
+<span class="nc" id="L64">    return null;</span>
+  }
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

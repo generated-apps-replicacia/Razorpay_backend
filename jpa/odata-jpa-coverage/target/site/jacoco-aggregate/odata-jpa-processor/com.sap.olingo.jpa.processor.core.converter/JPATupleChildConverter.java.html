@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPATupleChildConverter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.converter</a> &gt; <span class="el_source">JPATupleChildConverter.java</span></div><h1>JPATupleChildConverter.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.converter;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.persistence.Tuple;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.olingo.commons.api.data.ComplexValue;
+import org.apache.olingo.commons.api.data.Entity;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.data.ValueType;
+import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.ex.ODataRuntimeException;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.serializer.SerializerException;
+import org.apache.olingo.server.api.uri.UriHelper;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransientPropertyCalculator;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntitySet;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAODataRequestContextAccess;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+
+/**
+ * Converts the query result based on Tuples from JPA format into Olingo format.&lt;p&gt;
+ * To reduce the memory footprint each converted row is set to null. This is done as currently the query result is
+ * stored in an ArrayList and deleting a row, which is not the last row, leads to an array copy, which can consume a lot
+ * of time. For the same reason no trimToSize() is called. As an alternative to an ArrayList also a simple linked list
+ * could be used, but this comes with the draw back that each entry would consume round about double space in the list.
+ * @author Oliver Grande
+ *
+ */
+public class JPATupleChildConverter extends JPATupleResultConverter {
+<span class="nc" id="L55">  private static final Log LOGGER = LogFactory.getLog(JPATupleChildConverter.class);</span>
+  public JPATupleChildConverter(final JPAServiceDocument sd, final UriHelper uriHelper,
+      final ServiceMetadata serviceMetadata, final JPAODataRequestContextAccess requestContext) {
+
+<span class="nc" id="L59">    super(sd, uriHelper, serviceMetadata, requestContext);</span>
+<span class="nc" id="L60">  }</span>
+
+  public JPATupleChildConverter(final JPATupleChildConverter converter) {
+<span class="nc" id="L63">    this(converter.sd, converter.uriHelper, converter.serviceMetadata, converter.requestContext);</span>
+<span class="nc" id="L64">  }</span>
+
+  public Map&lt;String, List&lt;Object&gt;&gt; getCollectionResult(final JPACollectionResult jpaResult,
+      final Collection&lt;JPAPath&gt; requestedSelection) throws ODataApplicationException {
+
+<span class="nc" id="L69">    return new JPATupleCollectionConverter(sd, uriHelper, serviceMetadata, requestContext)</span>
+<span class="nc" id="L70">        .getResult(jpaResult, requestedSelection);</span>
+  }
+
+  @Override
+  public Map&lt;String, EntityCollection&gt; getResult(@Nonnull final JPAExpandResult jpaResult,
+      @Nonnull final Collection&lt;JPAPath&gt; requestedSelection) throws ODataApplicationException {
+
+<span class="nc" id="L77">    jpaQueryResult = jpaResult;</span>
+<span class="nc" id="L78">    this.setName = determineSetName(jpaQueryResult);</span>
+<span class="nc" id="L79">    this.jpaConversionTargetEntity = jpaQueryResult.getEntityType();</span>
+<span class="nc" id="L80">    this.edmType = determineEdmType();</span>
+<span class="nc" id="L81">    final Map&lt;String, List&lt;Tuple&gt;&gt; childResult = jpaResult.getResults();</span>
+
+<span class="nc" id="L83">    final Map&lt;String, EntityCollection&gt; result = new HashMap&lt;&gt;(childResult.size());</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">    for (final Entry&lt;String, List&lt;Tuple&gt;&gt; tuple : childResult.entrySet()) {</span>
+<span class="nc" id="L85">      final EntityCollection entityCollection = new EntityCollection();</span>
+<span class="nc" id="L86">      final List&lt;Entity&gt; entities = entityCollection.getEntities();</span>
+<span class="nc" id="L87">      final List&lt;Tuple&gt; rows = tuple.getValue();</span>
+
+<span class="nc bnc" id="L89" title="All 2 branches missed.">      for (int i = 0; i &lt; rows.size(); i++) {</span>
+<span class="nc" id="L90">        final Tuple row = rows.set(i, null);</span>
+<span class="nc" id="L91">        final Entity odataEntity = convertRow(jpaConversionTargetEntity, row, requestedSelection);</span>
+<span class="nc" id="L92">        odataEntity.setMediaContentType(determineContentType(jpaConversionTargetEntity, row));</span>
+<span class="nc" id="L93">        entities.add(odataEntity);</span>
+      }
+<span class="nc" id="L95">      result.put(tuple.getKey(), entityCollection);</span>
+<span class="nc" id="L96">    }</span>
+<span class="nc" id="L97">    childResult.replaceAll((k, v) -&gt; null);</span>
+<span class="nc" id="L98">    return result;</span>
+  }
+
+  protected Entity convertRow(final JPAEntityType rowEntity, final Tuple row,
+      final Collection&lt;JPAPath&gt; requestedSelection) throws ODataApplicationException {
+
+<span class="nc" id="L104">    final Map&lt;String, ComplexValue&gt; complexValueBuffer = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L105">    final Entity odataEntity = new Entity();</span>
+
+<span class="nc" id="L107">    odataEntity.setType(edmType.getFullQualifiedName().getFullQualifiedNameAsString());</span>
+<span class="nc" id="L108">    final List&lt;Property&gt; properties = odataEntity.getProperties();</span>
+    // Creates and add the key of an entity. In general OData allows a server to add additional properties that are not
+    // part of $select. As Olingo adds the key properties (with null) anyhow this can be done here already
+<span class="nc" id="L111">    createId(rowEntity, row, odataEntity);</span>
+<span class="nc" id="L112">    createEtag(rowEntity, row, odataEntity);</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">    if (requestedSelection.isEmpty())</span>
+<span class="nc" id="L114">      convertRowWithOutSelection(rowEntity, row, complexValueBuffer, odataEntity, properties);</span>
+    else
+<span class="nc" id="L116">      convertRowWithSelection(row, requestedSelection, complexValueBuffer, odataEntity, properties);</span>
+<span class="nc" id="L117">    createCollectionProperties(rowEntity, row, properties);</span>
+<span class="nc" id="L118">    odataEntity.getNavigationLinks().addAll(createExpand(rowEntity, row, EMPTY_PREFIX, odataEntity.getId().toString()));</span>
+
+<span class="nc" id="L120">    return odataEntity;</span>
+  }
+
+  protected void createCollectionProperties(final JPAStructuredType jpaStructuredType, final Tuple row,
+      final List&lt;Property&gt; properties) throws ODataJPAQueryException {
+
+    List&lt;Property&gt; result;
+    try {
+<span class="nc bnc" id="L128" title="All 2 branches missed.">      for (final JPAPath path : jpaStructuredType.getCollectionAttributesPath()) {</span>
+<span class="nc" id="L129">        result = properties;</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        for (final JPAElement pathElement : path.getPath()) {</span>
+<span class="nc" id="L131">          result = findOrCreateComplexProperty(result, pathElement);</span>
+<span class="nc" id="L132">        }</span>
+<span class="nc" id="L133">        final JPACollectionAttribute collection = (JPACollectionAttribute) path.getLeaf();</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">        if (collection.isTransient()) {</span>
+<span class="nc" id="L135">          addTransientCollection(row, result, collection);</span>
+        } else {
+<span class="nc" id="L137">          final JPAExpandResult child = jpaQueryResult.getChild(collection.asAssociation());</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">          if (child != null) {</span>
+<span class="nc" id="L139">            addCollection(row, result, collection, child);</span>
+          }
+        }
+<span class="nc" id="L142">      }</span>
+<span class="nc" id="L143">    } catch (ODataJPAModelException | ODataJPAProcessorException e) {</span>
+<span class="nc" id="L144">      throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_RESULT_CONV_ERROR,</span>
+          HttpStatusCode.INTERNAL_SERVER_ERROR, e);
+<span class="nc" id="L146">    }</span>
+<span class="nc" id="L147">  }</span>
+
+  /**
+   * @param row
+   * @param collection
+   * @throws ODataJPAProcessorException
+   */
+  private void addTransientCollection(final Tuple row, final List&lt;Property&gt; result,
+      final JPACollectionAttribute collection) throws ODataJPAProcessorException {
+
+<span class="nc" id="L157">    final Optional&lt;EdmTransientPropertyCalculator&lt;?&gt;&gt; calculator = requestContext.getCalculator(collection);</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">    if (calculator.isPresent()) {</span>
+<span class="nc" id="L159">      final Collection&lt;?&gt; collectionResult = calculator.get().calculateCollectionProperty(row);</span>
+<span class="nc" id="L160">      result.add(new Property(</span>
+          null,
+<span class="nc" id="L162">          collection.getExternalName(),</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">          collection.isComplex() ? ValueType.COLLECTION_COMPLEX : ValueType.COLLECTION_PRIMITIVE,</span>
+          collectionResult));
+    }
+<span class="nc" id="L166">  }</span>
+
+  private void addCollection(final Tuple row, final List&lt;Property&gt; result, final JPACollectionAttribute collection,
+      final JPAExpandResult child) throws ODataJPAModelException {
+
+<span class="nc" id="L171">    final Collection&lt;Object&gt; collectionResult = ((JPACollectionResult) child).getPropertyCollection(</span>
+<span class="nc" id="L172">        buildConcatenatedKey(row, collection.asAssociation().getLeftColumnsList()));</span>
+
+<span class="nc" id="L174">    result.add(new Property(</span>
+        null,
+<span class="nc" id="L176">        collection.getExternalName(),</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">        collection.isComplex() ? ValueType.COLLECTION_COMPLEX : ValueType.COLLECTION_PRIMITIVE,</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        collectionResult != null ? collectionResult : Collections.emptyList()));</span>
+<span class="nc" id="L179">  }</span>
+
+  private List&lt;Property&gt; findOrCreateComplexProperty(List&lt;Property&gt; result, final JPAElement pathElement)
+      throws ODataJPAModelException {
+<span class="nc" id="L183">    boolean found = false;</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">    for (final Property p : result) {</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">      if (p.getName().equals(pathElement.getExternalName())) {</span>
+<span class="nc" id="L186">        result = ((ComplexValue) p.getValue()).getValue();</span>
+<span class="nc" id="L187">        found = true;</span>
+<span class="nc" id="L188">        break;</span>
+      }
+<span class="nc" id="L190">    }</span>
+<span class="nc bnc" id="L191" title="All 4 branches missed.">    if (!found</span>
+        &amp;&amp; pathElement instanceof JPAAttribute
+<span class="nc bnc" id="L193" title="All 2 branches missed.">        &amp;&amp; ((JPAAttribute) pathElement).isComplex()</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">        &amp;&amp; !((JPAAttribute) pathElement).isCollection()) {</span>
+<span class="nc" id="L195">      final JPAAttribute a = (JPAAttribute) pathElement;</span>
+<span class="nc" id="L196">      final Property p = new Property(</span>
+<span class="nc" id="L197">          a.getStructuredType().getExternalFQN().getFullQualifiedNameAsString(),</span>
+<span class="nc" id="L198">          a.getExternalName(),</span>
+          ValueType.COMPLEX,
+          new ComplexValue());
+<span class="nc" id="L201">      result.add(p);</span>
+<span class="nc" id="L202">      result = ((ComplexValue) p.getValue()).getValue();</span>
+    }
+<span class="nc" id="L204">    return result;</span>
+  }
+
+  protected URI createId(final Entity entity) {
+
+    try {
+      // No host-name and port as part of ID; only relative path
+      // http://docs.oasis-open.org/odata/odata-atom-format/v4.0/cs02/odata-atom-format-v4.0-cs02.html#_Toc372792702
+
+<span class="nc" id="L213">      final StringBuilder uriString = new StringBuilder(setName);</span>
+<span class="nc" id="L214">      uriString.append(&quot;(&quot;);</span>
+<span class="nc" id="L215">      uriString.append(uriHelper.buildKeyPredicate(edmType, entity));</span>
+<span class="nc" id="L216">      uriString.append(&quot;)&quot;);</span>
+<span class="nc" id="L217">      return new URI(uriString.toString());</span>
+<span class="nc" id="L218">    } catch (final URISyntaxException e) {</span>
+<span class="nc" id="L219">      throw new ODataRuntimeException(&quot;Unable to create id for entity: &quot; + edmType.getName(), e);</span>
+<span class="nc" id="L220">    } catch (final IllegalArgumentException e) {</span>
+<span class="nc" id="L221">      LOGGER.debug(e.getMessage() + &quot;: No URI created&quot;);</span>
+<span class="nc" id="L222">      return null;</span>
+<span class="nc" id="L223">    } catch (final SerializerException e) {</span>
+<span class="nc" id="L224">      throw new ODataRuntimeException(e);</span>
+    }
+  }
+
+  protected void createId(final JPAEntityType rowEntity, final Tuple row, final Entity odataEntity)
+      throws ODataApplicationException {
+
+<span class="nc" id="L231">    final Map&lt;String, ComplexValue&gt; complexValueBuffer = Collections.emptyMap();</span>
+    try {
+<span class="nc bnc" id="L233" title="All 2 branches missed.">      for (final JPAAttribute path : rowEntity.getKey()) {</span>
+<span class="nc" id="L234">        convertAttribute(row.get(path.getExternalName()), rowEntity.getPath(path.getExternalName()), complexValueBuffer,</span>
+<span class="nc" id="L235">            odataEntity.getProperties(), row, EMPTY_PREFIX, null);</span>
+<span class="nc" id="L236">      }</span>
+<span class="nc" id="L237">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L238">      throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_RESULT_CONV_ERROR,</span>
+          HttpStatusCode.INTERNAL_SERVER_ERROR, e);
+<span class="nc" id="L240">    }</span>
+<span class="nc" id="L241">    odataEntity.setId(createId(odataEntity));</span>
+<span class="nc" id="L242">  }</span>
+
+  private void createEtag(@Nonnull final JPAEntityType rowEntity, final Tuple row, final Entity odataEntity)
+      throws ODataJPAQueryException {
+
+    try {
+<span class="nc bnc" id="L248" title="All 2 branches missed.">      if (rowEntity.hasEtag()) {</span>
+<span class="nc" id="L249">        final String etagAlias = rowEntity.getEtagPath().getAlias();</span>
+<span class="nc" id="L250">        final Object etag = row.get(etagAlias);</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">        if (etag != null) {</span>
+<span class="nc" id="L252">          odataEntity.setETag(etag.toString());</span>
+        }
+      }
+
+<span class="nc" id="L256">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L257">      throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_RESULT_CONV_ERROR,</span>
+          HttpStatusCode.INTERNAL_SERVER_ERROR, e);
+<span class="nc" id="L259">    }</span>
+<span class="nc" id="L260">  }</span>
+
+  protected EdmEntityType determineEdmType() {
+<span class="nc" id="L263">    return serviceMetadata.getEdm().getEntityType(jpaQueryResult.getEntityType().getExternalFQN());</span>
+  }
+
+  /**
+   * Returns the name of the first entity set that point to the entity type mentioned in &lt;code&gt;jpaQueryResult&lt;/code&gt;
+   * @param jpaQueryResult
+   * @return
+   * @throws ODataJPAQueryException
+   */
+  protected String determineSetName(@Nonnull final JPAExpandResult jpaQueryResult)
+      throws ODataJPAQueryException {
+    try {
+<span class="nc" id="L275">      final JPAEntitySet es = sd.getEntitySet(jpaQueryResult.getEntityType());</span>
+<span class="nc bnc" id="L276" title="All 2 branches missed.">      return es != null ? es.getExternalName() : &quot;&quot;;</span>
+<span class="nc" id="L277">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L278">      throw new ODataJPAQueryException(ODataJPAQueryException.MessageKeys.QUERY_RESULT_ENTITY_SET_ERROR,</span>
+<span class="nc" id="L279">          HttpStatusCode.INTERNAL_SERVER_ERROR, e, jpaQueryResult.getEntityType().getExternalFQN()</span>
+<span class="nc" id="L280">              .getFullQualifiedNameAsString());</span>
+    }
+  }
+
+  private String determineContentType(final JPAEntityType jpaEntity, final Tuple row) throws ODataJPAQueryException {
+
+    try {
+<span class="nc bnc" id="L287" title="All 2 branches missed.">      if (jpaEntity.hasStream()) {</span>
+<span class="nc bnc" id="L288" title="All 4 branches missed.">        if (jpaEntity.getContentType() != null &amp;&amp; !jpaEntity.getContentType().isEmpty()) {</span>
+<span class="nc" id="L289">          return jpaEntity.getContentType();</span>
+        } else {
+<span class="nc" id="L291">          Object rowElement = null;</span>
+<span class="nc bnc" id="L292" title="All 2 branches missed.">          for (final JPAElement element : jpaEntity.getContentTypeAttributePath().getPath()) {</span>
+<span class="nc" id="L293">            rowElement = row.get(element.getExternalName());</span>
+<span class="nc" id="L294">          }</span>
+<span class="nc bnc" id="L295" title="All 2 branches missed.">          return rowElement != null ? rowElement.toString() : null;</span>
+        }
+      }
+<span class="nc" id="L298">      return null;</span>
+<span class="nc" id="L299">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L300">      throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

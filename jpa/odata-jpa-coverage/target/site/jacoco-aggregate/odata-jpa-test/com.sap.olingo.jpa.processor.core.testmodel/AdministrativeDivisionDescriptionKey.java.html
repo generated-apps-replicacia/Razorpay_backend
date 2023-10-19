@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>AdministrativeDivisionDescriptionKey.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.testmodel</a> &gt; <span class="el_source">AdministrativeDivisionDescriptionKey.java</span></div><h1>AdministrativeDivisionDescriptionKey.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.testmodel;
+
+import java.io.Serializable;
+
+import javax.persistence.Column;
+import javax.persistence.Embeddable;
+
+@Embeddable
+public class AdministrativeDivisionDescriptionKey implements Serializable {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 4843041820527005995L;
+
+  @Column(name = &quot;\&quot;CodePublisher\&quot;&quot;, length = 10, nullable = false)
+  private String codePublisher;
+
+  @Column(name = &quot;\&quot;CodeID\&quot;&quot;, length = 10, nullable = false)
+  private String codeID;
+
+  @Column(name = &quot;\&quot;DivisionCode\&quot;&quot;, length = 10, nullable = false)
+  private String divisionCode;
+
+  @Column(name = &quot;\&quot;LanguageISO\&quot;&quot;)
+  private String language;
+
+<span class="nc" id="L27">  public AdministrativeDivisionDescriptionKey() {</span>
+    // Needed for JPA
+<span class="nc" id="L29">  }</span>
+
+  public AdministrativeDivisionDescriptionKey(final String codePublisher, final String codeID,
+      final String divisionCode, final String language) {
+<span class="nc" id="L33">    super();</span>
+<span class="nc" id="L34">    this.codePublisher = codePublisher;</span>
+<span class="nc" id="L35">    this.codeID = codeID;</span>
+<span class="nc" id="L36">    this.divisionCode = divisionCode;</span>
+<span class="nc" id="L37">    this.language = language;</span>
+<span class="nc" id="L38">  }</span>
+
+  public String getLanguage() {
+<span class="nc" id="L41">    return language;</span>
+  }
+
+  public String getCodePublisher() {
+<span class="nc" id="L45">    return codePublisher;</span>
+  }
+
+  public void setCodePublisher(String codePublisher) {
+<span class="nc" id="L49">    this.codePublisher = codePublisher;</span>
+<span class="nc" id="L50">  }</span>
+
+  public String getCodeID() {
+<span class="nc" id="L53">    return codeID;</span>
+  }
+
+  public void setCodeID(String codeID) {
+<span class="nc" id="L57">    this.codeID = codeID;</span>
+<span class="nc" id="L58">  }</span>
+
+  public String getDivisionCode() {
+<span class="nc" id="L61">    return divisionCode;</span>
+  }
+
+  public void setDivisionCode(String divisionCode) {
+<span class="nc" id="L65">    this.divisionCode = divisionCode;</span>
+<span class="nc" id="L66">  }</span>
+
+  public void setLanguage(String language) {
+<span class="nc" id="L69">    this.language = language;</span>
+<span class="nc" id="L70">  }</span>
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L74">    final int prime = 31;</span>
+<span class="nc" id="L75">    int result = 1;</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">    result = prime * result + ((codeID == null) ? 0 : codeID.hashCode());</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">    result = prime * result + ((codePublisher == null) ? 0 : codePublisher.hashCode());</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">    result = prime * result + ((divisionCode == null) ? 0 : divisionCode.hashCode());</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">    result = prime * result + ((language == null) ? 0 : language.hashCode());</span>
+<span class="nc" id="L80">    return result;</span>
+  }
+
+  @Override
+  public boolean equals(Object obj) { // NOSONAR
+<span class="nc bnc" id="L85" title="All 2 branches missed.">    if (this == obj) return true;</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">    if (obj == null) return false;</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">    if (getClass() != obj.getClass()) return false;</span>
+<span class="nc" id="L88">    AdministrativeDivisionDescriptionKey other = (AdministrativeDivisionDescriptionKey) obj;</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">    if (codeID == null) {</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">      if (other.codeID != null) return false;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">    } else if (!codeID.equals(other.codeID)) return false;</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">    if (codePublisher == null) {</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">      if (other.codePublisher != null) return false;</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">    } else if (!codePublisher.equals(other.codePublisher)) return false;</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">    if (divisionCode == null) {</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">      if (other.divisionCode != null) return false;</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">    } else if (!divisionCode.equals(other.divisionCode)) return false;</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">    if (language == null) {</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">      if (other.language != null) return false;</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">    } else if (!language.equals(other.language)) return false;</span>
+<span class="nc" id="L101">    return true;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PathImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">PathImpl.java</span></div><h1>PathImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Path;
+import javax.persistence.metamodel.Bindable;
+import javax.persistence.metamodel.MapAttribute;
+import javax.persistence.metamodel.PluralAttribute;
+import javax.persistence.metamodel.SingularAttribute;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+
+/**
+ * Represents a simple or compound attribute path from a
+ * bound type or collection, and is a &quot;primitive&quot; expression.
+ *
+ * @param &lt;X&gt; the type referenced by the path
+ *
+ * @author Oliver Grande
+ * @since 0.3.8
+ */
+class PathImpl&lt;X&gt; extends ExpressionImpl&lt;X&gt; implements Path&lt;X&gt; {
+
+  final Optional&lt;JPAPath&gt; path;
+  final Optional&lt;PathImpl&lt;?&gt;&gt; parent;
+  final Optional&lt;String&gt; tableAlias;
+  JPAEntityType st;
+
+  PathImpl(@Nonnull final JPAPath path, @Nonnull final Optional&lt;PathImpl&lt;?&gt;&gt; parent, final JPAEntityType type,
+      final Optional&lt;String&gt; tableAlias) {
+<span class="nc" id="L46">    this(Optional.of(path), parent, type, tableAlias);</span>
+<span class="nc" id="L47">  }</span>
+
+  PathImpl(@Nonnull final Optional&lt;JPAPath&gt; path, @Nonnull final Optional&lt;PathImpl&lt;?&gt;&gt; parent, final JPAEntityType type,
+      @Nonnull final Optional&lt;String&gt; tableAlias) {
+
+<span class="nc" id="L52">    super();</span>
+<span class="nc" id="L53">    this.path = Objects.requireNonNull(path);</span>
+<span class="nc" id="L54">    this.parent = Objects.requireNonNull(parent);</span>
+<span class="nc" id="L55">    this.st = type;</span>
+<span class="nc" id="L56">    this.tableAlias = Optional.ofNullable(tableAlias.orElseGet(this::tableAliasFromParent));</span>
+<span class="nc" id="L57">  }</span>
+
+  PathImpl(final PathImpl&lt;X&gt; s, final Optional&lt;String&gt; newTableAlias) {
+<span class="nc" id="L60">    super();</span>
+<span class="nc" id="L61">    this.path = s.path;</span>
+<span class="nc" id="L62">    this.parent = s.parent;</span>
+<span class="nc" id="L63">    this.st = s.st;</span>
+<span class="nc" id="L64">    this.tableAlias = newTableAlias;</span>
+<span class="nc" id="L65">  }</span>
+
+  @Override
+  public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L69">    tableAlias.ifPresent(p -&gt; {</span>
+<span class="nc" id="L70">      statement.append(p);</span>
+<span class="nc" id="L71">      statement.append(DOT);</span>
+<span class="nc" id="L72">    });</span>
+<span class="nc" id="L73">    path.ifPresent(p -&gt; statement.append(p.getDBFieldName()));</span>
+<span class="nc" id="L74">    return statement;</span>
+  }
+
+  /**
+   * Create a path corresponding to the referenced
+   * map-valued attribute.
+   * @param map map-valued attribute
+   * @return expression corresponding to the referenced attribute
+   */
+  @Override
+  public &lt;K, V, M extends Map&lt;K, V&gt;&gt; Expression&lt;M&gt; get(final MapAttribute&lt;X, K, V&gt; map) {
+<span class="nc" id="L85">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a path corresponding to the referenced
+   * collection-valued attribute.
+   * @param collection collection-valued attribute
+   * @return expression corresponding to the referenced attribute
+   */
+  @Override
+  public &lt;E, C extends Collection&lt;E&gt;&gt; Expression&lt;C&gt; get(final PluralAttribute&lt;X, C, E&gt; collection) {
+<span class="nc" id="L96">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a path corresponding to the referenced
+   * single-valued attribute.
+   * @param attribute single-valued attribute
+   * @return path corresponding to the referenced attribute
+   */
+  @Override
+  public &lt;Y&gt; Path&lt;Y&gt; get(final SingularAttribute&lt;? super X, Y&gt; attribute) {
+<span class="nc" id="L107">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a path corresponding to the referenced attribute.
+   *
+   * &lt;p&gt; Note: Applications using the string-based API may need to
+   * specify the type resulting from the &lt;code&gt;get&lt;/code&gt; operation in order
+   * to avoid the use of &lt;code&gt;Path&lt;/code&gt; variables.
+   *
+   * &lt;pre&gt;
+   * For example:
+   *
+   * CriteriaQuery&amp;#060;Person&amp;#062; q = cb.createQuery(Person.class);
+   * Root&amp;#060;Person&amp;#062; p = q.from(Person.class);
+   * q.select(p)
+   * .where(cb.isMember(&quot;joe&quot;,
+   * p.&amp;#060;Set&amp;#060;String&amp;#062;&amp;#062;get(&quot;nicknames&quot;)));
+   *
+   * rather than:
+   *
+   * CriteriaQuery&amp;#060;Person&amp;#062; q = cb.createQuery(Person.class);
+   * Root&amp;#060;Person&amp;#062; p = q.from(Person.class);
+   * Path&amp;#060;Set&amp;#060;String&amp;#062;&amp;#062; nicknames = p.get(&quot;nicknames&quot;);
+   * q.select(p)
+   * .where(cb.isMember(&quot;joe&quot;, nicknames));
+   * &lt;/pre&gt;
+   *
+   * @param attributeName name of the attribute
+   * @return path corresponding to the referenced attribute
+   * @throws IllegalStateException if invoked on a path that
+   * corresponds to a basic type
+   * @throws IllegalArgumentException if attribute of the given
+   * name does not otherwise exist
+   */
+  @Override
+  public &lt;Y&gt; Path&lt;Y&gt; get(final String attributeName) {
+
+    try {
+      JPAStructuredType source;
+<span class="nc bnc" id="L147" title="All 2 branches missed.">      if (this.path.isPresent()) {</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        if (this.path.get().getLeaf().isComplex()) {</span>
+<span class="nc" id="L149">          source = this.path.get().getLeaf().getStructuredType();</span>
+        } else {
+<span class="nc" id="L151">          throw new IllegalArgumentException(&quot;Parent not structured&quot;);</span>
+        }
+      } else {
+<span class="nc" id="L154">        source = st;</span>
+      }
+<span class="nc" id="L156">      final JPAAttribute a = source.getDeclaredAttribute(attributeName)</span>
+<span class="nc" id="L157">          .orElseThrow(() -&gt; new IllegalArgumentException(&quot;'&quot; + attributeName + &quot;' not found at &quot; + st</span>
+<span class="nc" id="L158">              .getInternalName()));</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">      if (this.path.isPresent()) {</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (isKeyPath(path.get())) {</span>
+<span class="nc" id="L161">          return new PathImpl&lt;&gt;(st.getPath(a.getExternalName()), Optional.of(this), st, tableAlias);</span>
+        }
+<span class="nc" id="L163">        final StringBuilder pathDescription = new StringBuilder(path.get().getAlias()).append(JPAPath.PATH_SEPARATOR)</span>
+<span class="nc" id="L164">            .append(a.getExternalName());</span>
+<span class="nc" id="L165">        return new PathImpl&lt;&gt;(st.getPath(pathDescription.toString(), false), Optional.of(this), st, tableAlias);</span>
+      } else {
+<span class="nc" id="L167">        return new PathImpl&lt;&gt;(st.getPath(a.getExternalName(), false), Optional.of(this), st, tableAlias);</span>
+      }
+<span class="nc" id="L169">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L170">      throw new IllegalArgumentException(&quot;'&quot; + attributeName + &quot;' not found&quot;, e);</span>
+    }
+  }
+
+  private boolean isKeyPath(final JPAPath jpaPath) throws ODataJPAModelException {
+<span class="nc" id="L175">    return st.getKeyPath()</span>
+<span class="nc" id="L176">        .stream()</span>
+<span class="nc" id="L177">        .anyMatch(p -&gt; p.getAlias().equals(jpaPath.getAlias()));</span>
+  }
+
+  /**
+   * Return the bindable object that corresponds to the
+   * path expression.
+   * @return bindable object corresponding to the path
+   */
+  @Override
+  public Bindable&lt;X&gt; getModel() {
+    // If required JPAEntityType and related would need to implement Bindable
+<span class="nc" id="L188">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Return the parent &quot;node&quot; in the path or null if no parent.
+   * @return parent
+   */
+  @Override
+  public Path&lt;?&gt; getParentPath() {
+<span class="nc" id="L197">    return parent.orElse(null);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L202">    return &quot;PathImpl [path=&quot; + path + &quot;, parent=&quot; + parent + &quot;, st=&quot; + st + &quot;]&quot;;</span>
+  }
+
+  /**
+   * Create an expression corresponding to the type of the path.
+   * @return expression corresponding to the type of the path
+   */
+  @Override
+  public Expression&lt;Class&lt;? extends X&gt;&gt; type() {
+<span class="nc" id="L211">    throw new NotImplementedException();</span>
+  }
+
+  List&lt;JPAPath&gt; getPathList() {
+<span class="nc" id="L215">    return Arrays.asList(path.orElseThrow(IllegalStateException::new));</span>
+  }
+
+  private String tableAliasFromParent() {
+<span class="nc bnc" id="L219" title="All 2 branches missed.">    if (parent.isPresent())</span>
+<span class="nc" id="L220">      return parent.get().tableAlias.orElse(null);</span>
+<span class="nc" id="L221">    return null;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  List&lt;Path&lt;Object&gt;&gt; resolvePathElements() {
+<span class="nc bnc" id="L226" title="All 2 branches missed.">    if (path.isPresent())</span>
+<span class="nc" id="L227">      return singletonList((Path&lt;Object&gt;) this);</span>
+<span class="nc" id="L228">    return getPathList()</span>
+<span class="nc" id="L229">        .stream()</span>
+<span class="nc" id="L230">        .map(e -&gt; new PathImpl&lt;&gt;(e, parent, st, tableAlias))</span>
+<span class="nc" id="L231">        .collect(toList());</span>
+
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L237">    final int prime = 31;</span>
+<span class="nc" id="L238">    int result = 1;</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">    result = prime * result + ((!path.isPresent()) ? 0 : path.hashCode());</span>
+<span class="nc bnc" id="L240" title="All 2 branches missed.">    result = prime * result + ((!tableAlias.isPresent()) ? 0 : tableAlias.hashCode());</span>
+<span class="nc" id="L241">    return result;</span>
+  }
+
+  @SuppressWarnings(&quot;rawtypes&quot;)
+  @Override
+  public boolean equals(final Object obj) {
+<span class="nc bnc" id="L247" title="All 2 branches missed.">    if (this == obj) return true;</span>
+<span class="nc bnc" id="L248" title="All 2 branches missed.">    if (obj == null) return false;</span>
+<span class="nc bnc" id="L249" title="All 2 branches missed.">    if (getClass() != obj.getClass()) return false;</span>
+<span class="nc" id="L250">    final PathImpl other = (PathImpl) obj;</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">    if (!path.isPresent()) {</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">      if (other.path.isPresent()) return false;</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">    } else if (!path.equals(other.path)) return false;</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">    if (!tableAlias.isPresent()) {</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">      if (other.tableAlias.isPresent()) return false;</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">    } else if (!tableAlias.equals(other.tableAlias)) return false;</span>
+<span class="nc" id="L257">    return true;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

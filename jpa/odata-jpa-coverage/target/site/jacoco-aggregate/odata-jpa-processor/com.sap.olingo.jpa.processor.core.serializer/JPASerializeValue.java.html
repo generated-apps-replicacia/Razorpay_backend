@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPASerializeValue.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.serializer</a> &gt; <span class="el_source">JPASerializeValue.java</span></div><h1>JPASerializeValue.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.serializer;
+
+import java.io.InputStream;
+import java.util.List;
+
+import org.apache.olingo.commons.api.data.Annotatable;
+import org.apache.olingo.commons.api.data.Entity;
+import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.edm.EdmKeyPropertyRef;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveType;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.serializer.FixedFormatSerializer;
+import org.apache.olingo.server.api.serializer.PrimitiveValueSerializerOptions;
+import org.apache.olingo.server.api.serializer.SerializerException;
+import org.apache.olingo.server.api.serializer.SerializerResult;
+import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceEntitySet;
+import org.apache.olingo.server.api.uri.UriResourceNavigation;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+
+import com.sap.olingo.jpa.processor.core.exception.ODataJPASerializerException;
+
+final class JPASerializeValue extends JPASerializePrimitiveAbstract {
+  private final FixedFormatSerializer serializer;
+
+  JPASerializeValue(final ServiceMetadata serviceMetadata, final FixedFormatSerializer serializer,
+      final UriInfo uriInfo) {
+
+<span class="nc" id="L37">    super(serviceMetadata, uriInfo);</span>
+<span class="nc" id="L38">    this.serializer = serializer;</span>
+<span class="nc" id="L39">  }</span>
+
+  @Override
+  public SerializerResult serialize(final ODataRequest request, final EntityCollection result)
+      throws SerializerException, ODataJPASerializerException {
+
+<span class="nc bnc" id="L45" title="All 2 branches missed.">    if (result.getEntities().get(0) == null</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        || result.getEntities().get(0).getProperties() == null</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">        || result.getEntities().get(0).getProperties().isEmpty()) {</span>
+<span class="nc" id="L48">      throw new ODataJPASerializerException(ODataJPASerializerException.MessageKeys.RESULT_NOT_FOUND,</span>
+          HttpStatusCode.INTERNAL_SERVER_ERROR);
+    }
+
+<span class="nc" id="L52">    InputStream serializerResult = null;</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">    if (isStream()) {</span>
+<span class="nc" id="L54">      final Entity et = result.getEntities().get(0);</span>
+<span class="nc" id="L55">      final EdmEntityType edmEt = serviceMetadata.getEdm().getEntityType(new FullQualifiedName(et.getType()));</span>
+<span class="nc" id="L56">      final List&lt;EdmKeyPropertyRef&gt; p = edmEt.getKeyPropertyRefs();</span>
+<span class="nc" id="L57">      Property property = null;</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">      for (final Property item : result.getEntities().get(0).getProperties()) {</span>
+<span class="nc bnc" id="L59" title="All 4 branches missed.">        if (!isKey(p, item) &amp;&amp; !et.getMediaContentType().equals(item.getValue())) {</span>
+<span class="nc" id="L60">          property = item;</span>
+<span class="nc" id="L61">          break;</span>
+        }
+<span class="nc" id="L63">      }</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">      if (property == null)</span>
+<span class="nc" id="L65">        throw new ODataJPASerializerException(ODataJPASerializerException.MessageKeys.RESULT_NOT_FOUND,</span>
+            HttpStatusCode.INTERNAL_SERVER_ERROR);
+<span class="nc" id="L67">      serializerResult = serializer.binary((byte[]) property.getValue());</span>
+<span class="nc" id="L68">    } else {</span>
+
+<span class="nc" id="L70">      final UriResourceProperty uriProperty = (UriResourceProperty) uriInfo.getUriResourceParts().get(uriInfo</span>
+<span class="nc" id="L71">          .getUriResourceParts().size() - 2);</span>
+
+<span class="nc" id="L73">      final EdmPrimitiveType edmPropertyType = (EdmPrimitiveType) uriProperty.getType();</span>
+
+<span class="nc" id="L75">      final JPAPrimitivePropertyInfo info = determinePrimitiveProperty(result, uriInfo.getUriResourceParts());</span>
+<span class="nc" id="L76">      final PrimitiveValueSerializerOptions options = PrimitiveValueSerializerOptions.with().build();</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">      if (!info.getProperty().isNull())</span>
+<span class="nc" id="L78">        serializerResult = serializer.primitiveValue(edmPropertyType, info.getProperty().getValue(), options);</span>
+    }
+<span class="nc" id="L80">    return new JPAValueSerializerResult(serializerResult);</span>
+  }
+
+  @Override
+  public SerializerResult serialize(final Annotatable result, final EdmType entityType, final ODataRequest request)
+      throws SerializerException, ODataJPASerializerException {
+
+<span class="nc" id="L87">    final PrimitiveValueSerializerOptions options = PrimitiveValueSerializerOptions.with().build();</span>
+<span class="nc" id="L88">    return new JPAValueSerializerResult(serializer.primitiveValue((EdmPrimitiveType) entityType, ((Property) result)</span>
+<span class="nc" id="L89">        .getValue(), options));</span>
+
+  }
+
+  private boolean isStream() {
+<span class="nc" id="L94">    final UriResource successor = uriInfo.getUriResourceParts().get(uriInfo.getUriResourceParts().size() - 2);</span>
+
+<span class="nc bnc" id="L96" title="All 4 branches missed.">    return (successor instanceof UriResourceEntitySet</span>
+        || successor instanceof UriResourceNavigation &amp;&amp; ((UriResourceNavigation) successor)
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            .getType() instanceof EdmEntityType);</span>
+  }
+
+  private boolean isKey(final List&lt;EdmKeyPropertyRef&gt; keyList, final Property item) {
+<span class="nc bnc" id="L102" title="All 2 branches missed.">    for (final EdmKeyPropertyRef key : keyList) {</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">      if (key.getName().equals(item.getName()))</span>
+<span class="nc" id="L104">        return true;</span>
+<span class="nc" id="L105">    }</span>
+<span class="nc" id="L106">    return false;</span>
+  }
+
+  @Override
+  public ContentType getContentType() {
+<span class="nc" id="L111">    return ContentType.TEXT_PLAIN;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

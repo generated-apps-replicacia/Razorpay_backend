@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>CsdlDocumentReader.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.annotation</a> &gt; <span class="el_source">CsdlDocumentReader.java</span></div><h1>CsdlDocumentReader.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.annotation;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.Objects;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+
+import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys;
+
+/**
+ *
+ * @author Oliver Grande
+ * @since 15.12.2019
+ * @version 0.3.8
+ *
+ */
+public class CsdlDocumentReader {
+  final JacksonXmlModule module;
+  final XmlMapper xmlMapper;
+
+  /**
+   *
+   */
+  public CsdlDocumentReader() {
+<span class="nc" id="L36">    super();</span>
+<span class="nc" id="L37">    module = new JacksonXmlModule();</span>
+<span class="nc" id="L38">    module.setDefaultUseWrapper(false);</span>
+<span class="nc" id="L39">    xmlMapper = new XmlMapper(module);</span>
+<span class="nc" id="L40">  }</span>
+
+  String loadXML(@Nonnull final String path, @Nonnull final Charset charset) throws IOException,
+      ODataJPAModelException {
+
+<span class="nc" id="L45">    final Optional&lt;URL&gt; url = Optional.ofNullable(this.getClass().getClassLoader().getResource(path));</span>
+<span class="nc" id="L46">    final File file = new File(url.orElseThrow(</span>
+<span class="nc" id="L47">        () -&gt; new ODataJPAModelException(MessageKeys.FILE_NOT_FOUND, path)).getFile());</span>
+<span class="nc" id="L48">    final StringBuilder content = new StringBuilder();</span>
+
+<span class="nc" id="L50">    try (final FileInputStream reader = new FileInputStream(file);</span>
+<span class="nc" id="L51">        final InputStreamReader input = new InputStreamReader(reader, charset);</span>
+<span class="nc" id="L52">        final BufferedReader br = new BufferedReader(input)) {</span>
+      String line;
+<span class="nc bnc" id="L54" title="All 2 branches missed.">      while ((line = br.readLine()) != null) {</span>
+<span class="nc" id="L55">        content.append(line);</span>
+      }
+    }
+<span class="nc" id="L58">    return content.toString();</span>
+  }
+
+  /**
+   *
+   * @param path
+   * @param charset
+   * @return
+   * @throws IOException
+   * @throws ODataJPAModelException
+   * @throws NullPointerException
+   */
+  public CsdlDocument readFromResource(@Nonnull final String path, @Nonnull final Charset charset)
+      throws IOException, ODataJPAModelException {
+
+<span class="nc bnc" id="L73" title="All 2 branches missed.">    if (Objects.requireNonNull(path).isEmpty())</span>
+<span class="nc" id="L74">      return null;</span>
+<span class="nc" id="L75">    return xmlMapper.readValue(loadXML(path, Objects.requireNonNull(charset)),</span>
+        CsdlDocument.class);
+  }
+
+  /**
+   *
+   * @param uri
+   * @return
+   * @throws IOException
+   * @throws NullPointerException
+   */
+  public CsdlDocument readFromURI(@Nonnull final URI uri) throws IOException {
+
+<span class="nc" id="L88">    return xmlMapper.readValue(Objects.requireNonNull(uri).toURL(), CsdlDocument.class);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

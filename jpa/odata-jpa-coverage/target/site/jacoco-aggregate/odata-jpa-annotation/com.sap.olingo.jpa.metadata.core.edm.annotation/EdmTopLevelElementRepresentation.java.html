@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>EdmTopLevelElementRepresentation.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-annotation</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.annotation</a> &gt; <span class="el_source">EdmTopLevelElementRepresentation.java</span></div><h1>EdmTopLevelElementRepresentation.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.annotation;
+
+/**
+ * @author Oliver Grande
+ * Created: 01.05.2021
+ *
+ */
+<span class="nc" id="L8">public enum EdmTopLevelElementRepresentation {</span>
+  /**
+   * Allows to state that a jpa entity is exposed as odata entity type only.
+   */
+<span class="nc" id="L12">  AS_ENTITY_TYPE,</span>
+  /**
+   * Allows to state that a jpa entity is exposed not only as odata entity type only, but also as entity set.
+   */
+<span class="nc" id="L16">  AS_ENTITY_SET,</span>
+  /**
+   * Allows to mark a jpa entity as an additional entity set of another entity type.
+   * This is only allowed for leafs in an inheritance hierarchy. The jpa entity must not have own columns&lt;p&gt;
+   * &lt;a href=
+   * &quot;https://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part3-csdl/odata-v4.0-errata03-os-part3-csdl-complete.html#_Toc453752596&quot;
+   * &gt;OData Version 4.0 Part 3 - 13 Entity Container Example 30&lt;/a&gt;
+   */
+<span class="nc" id="L24">  AS_ENTITY_SET_ONLY,</span>
+  /**
+   * Allows to state that a jpa entity is exposed not only as odata entity type only, but also as singleton.
+   */
+<span class="nc" id="L28">  AS_SINGLETON,</span>
+  /**
+   * Allows to mark a jpa entity as an additional singleton of another entity type.
+   * This is only allowed for leafs in an inheritance hierarchy. The jpa entity must not have own columns&lt;p&gt;
+   * &lt;a href=
+   * &quot;https://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part3-csdl/odata-v4.0-errata03-os-part3-csdl-complete.html#_Toc453752596&quot;
+   * &gt;OData Version 4.0 Part 3 - 13 Entity Container Example 30&lt;/a&gt;
+   */
+<span class="nc" id="L36">  AS_SINGLETON_ONLY;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

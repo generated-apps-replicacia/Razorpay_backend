@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>CriteriaQueryImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">CriteriaQueryImpl.java</span></div><h1>CriteriaQueryImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.Order;
+import javax.persistence.criteria.ParameterExpression;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Predicate.BooleanOperator;
+import javax.persistence.criteria.Root;
+import javax.persistence.criteria.Selection;
+import javax.persistence.metamodel.EntityType;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.cb.ProcessorCriteriaQuery;
+import com.sap.olingo.jpa.processor.cb.ProcessorSubquery;
+import com.sap.olingo.jpa.processor.cb.exeptions.InternalServerError;
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+import com.sap.olingo.jpa.processor.cb.joiner.ExpressionCollector;
+import com.sap.olingo.jpa.processor.cb.joiner.SqlConvertible;
+import com.sap.olingo.jpa.processor.cb.joiner.StringBuilderCollector;
+
+class CriteriaQueryImpl&lt;T&gt; implements ProcessorCriteriaQuery&lt;T&gt;, SqlConvertible {
+  private final Class&lt;T&gt; resultType;
+<span class="nc" id="L42">  private final Set&lt;FromImpl&lt;?, ?&gt;&gt; roots = new HashSet&lt;&gt;();</span>
+  private final JPAServiceDocument sd;
+  private SqlSelection&lt;?&gt; selection;
+  private Optional&lt;Expression&lt;Boolean&gt;&gt; where;
+  private boolean distinct;
+  private final AliasBuilder aliasBuilder;
+  private final AliasBuilder selectAliasBuilder;
+  private Optional&lt;List&lt;Order&gt;&gt; orderList;
+  private Optional&lt;List&lt;Expression&lt;?&gt;&gt;&gt; groupBy;
+  private Optional&lt;Expression&lt;Boolean&gt;&gt; having;
+  private final CriteriaBuilder cb;
+
+  CriteriaQueryImpl(final Class&lt;T&gt; clazz, final JPAServiceDocument sd, final AliasBuilder ab,
+      final CriteriaBuilder cb) {
+<span class="nc" id="L56">    super();</span>
+<span class="nc" id="L57">    this.resultType = clazz;</span>
+<span class="nc" id="L58">    this.sd = sd;</span>
+<span class="nc" id="L59">    this.where = Optional.empty();</span>
+<span class="nc" id="L60">    this.orderList = Optional.empty();</span>
+<span class="nc" id="L61">    this.groupBy = Optional.empty();</span>
+<span class="nc" id="L62">    this.having = Optional.empty();</span>
+<span class="nc" id="L63">    this.aliasBuilder = ab;</span>
+<span class="nc" id="L64">    this.cb = cb;</span>
+<span class="nc" id="L65">    this.selectAliasBuilder = new AliasBuilder(&quot;S&quot;);</span>
+<span class="nc" id="L66">  }</span>
+
+  CriteriaQueryImpl(final Class&lt;T&gt; clazz, final JPAServiceDocument sd, final CriteriaBuilder cb) {
+<span class="nc" id="L69">    this(clazz, sd, new AliasBuilder(), cb);</span>
+<span class="nc" id="L70">  }</span>
+
+  @Override
+  public StringBuilder asSQL(final StringBuilder statement) {
+<span class="nc" id="L74">    final List&lt;Expression&lt;Boolean&gt;&gt; filterExpressions = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L75">    where.ifPresent(filterExpressions::add);</span>
+<span class="nc" id="L76">    roots.stream().forEach(r -&gt; addInheritanceWhere(r, filterExpressions));</span>
+
+<span class="nc" id="L78">    where = Optional.ofNullable(filterExpressions.stream().filter(Objects::nonNull).collect(new ExpressionCollector(</span>
+        cb, BooleanOperator.AND)));
+
+<span class="nc" id="L81">    statement.append(SqlKeyWords.SELECT)</span>
+<span class="nc" id="L82">        .append(&quot; &quot;)</span>
+<span class="nc" id="L83">        .append(addDistinct());</span>
+<span class="nc" id="L84">    selection.asSQL(statement);</span>
+<span class="nc" id="L85">    statement.append(&quot; &quot;)</span>
+<span class="nc" id="L86">        .append(SqlKeyWords.FROM)</span>
+<span class="nc" id="L87">        .append(&quot; &quot;);</span>
+<span class="nc" id="L88">    statement.append(roots.stream().collect(new StringBuilderCollector.ExpressionCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L89">    where.ifPresent(e -&gt; {</span>
+<span class="nc" id="L90">      statement.append(&quot; &quot;)</span>
+<span class="nc" id="L91">          .append(SqlKeyWords.WHERE)</span>
+<span class="nc" id="L92">          .append(&quot; &quot;);</span>
+<span class="nc" id="L93">      ((SqlConvertible) e).asSQL(statement);</span>
+<span class="nc" id="L94">    });</span>
+<span class="nc" id="L95">    groupBy.ifPresent(g -&gt; {</span>
+<span class="nc" id="L96">      statement.append(&quot; &quot;).append(SqlKeyWords.GROUPBY).append(&quot; &quot;);</span>
+<span class="nc" id="L97">      statement.append(g.stream().collect(new StringBuilderCollector.ExpressionCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L98">    });</span>
+<span class="nc" id="L99">    orderList.ifPresent(l -&gt; {</span>
+<span class="nc" id="L100">      statement.append(&quot; &quot;).append(SqlKeyWords.ORDERBY).append(&quot; &quot;);</span>
+<span class="nc" id="L101">      statement.append(l.stream().collect(new StringBuilderCollector.OrderCollector(statement, &quot;, &quot;)));</span>
+<span class="nc" id="L102">    });</span>
+<span class="nc" id="L103">    having.ifPresent(e -&gt; {</span>
+<span class="nc" id="L104">      statement.append(&quot; &quot;)</span>
+<span class="nc" id="L105">          .append(SqlKeyWords.HAVING)</span>
+<span class="nc" id="L106">          .append(&quot; &quot;);</span>
+<span class="nc" id="L107">      ((SqlConvertible) e).asSQL(statement);</span>
+<span class="nc" id="L108">    });</span>
+<span class="nc" id="L109">    return statement;</span>
+  }
+
+  @Override
+  public CriteriaQuery&lt;T&gt; distinct(final boolean distinct) {
+<span class="nc" id="L114">    this.distinct = distinct;</span>
+<span class="nc" id="L115">    return this;</span>
+  }
+
+  @Override
+  public &lt;X&gt; Root&lt;X&gt; from(final Class&lt;X&gt; entityClass) {
+    try {
+<span class="nc" id="L121">      final JPAEntityType et = sd.getEntity(entityClass);</span>
+<span class="nc" id="L122">      final Root&lt;X&gt; root = new RootImpl&lt;&gt;(et, aliasBuilder, cb);</span>
+<span class="nc" id="L123">      roots.add((FromImpl&lt;?, ?&gt;) root);</span>
+<span class="nc" id="L124">      return root;</span>
+<span class="nc" id="L125">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L126">      throw new InternalServerError(e);</span>
+    }
+  }
+
+  @Override
+  public &lt;X&gt; Root&lt;X&gt; from(final EntityType&lt;X&gt; entity) {
+<span class="nc" id="L132">    return from(entity.getJavaType());</span>
+  }
+
+  @Override
+  public &lt;X&gt; Root&lt;X&gt; from(@Nonnull final ProcessorSubquery&lt;X&gt; inner) {
+
+    try {
+<span class="nc" id="L139">      final Root&lt;X&gt; root = new SubqueryRootImpl&lt;&gt;(inner, aliasBuilder, sd);</span>
+<span class="nc" id="L140">      roots.add((FromImpl&lt;?, ?&gt;) root);</span>
+<span class="nc" id="L141">      return root;</span>
+<span class="nc" id="L142">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L143">      throw new InternalServerError(e);</span>
+    }
+  }
+
+  /**
+   * Return a list of the grouping expressions. Returns empty
+   * list if no grouping expressions have been specified.
+   * Modifications to the list do not affect the query.
+   * @return the list of grouping expressions
+   */
+  @Override
+  public List&lt;Expression&lt;?&gt;&gt; getGroupList() {
+<span class="nc" id="L155">    return groupBy.orElse(emptyList());</span>
+  }
+
+  /**
+   * Return the predicate that corresponds to the restriction(s)
+   * over the grouping items, or null if no restrictions have
+   * been specified.
+   * @return having clause predicate
+   */
+  @Override
+  public Predicate getGroupRestriction() {
+<span class="nc" id="L166">    return (Predicate) having.orElse(null);</span>
+  }
+
+  @Override
+  public List&lt;Order&gt; getOrderList() {
+<span class="nc" id="L171">    return orderList.orElse(emptyList());</span>
+  }
+
+  @Override
+  public Set&lt;ParameterExpression&lt;?&gt;&gt; getParameters() {
+<span class="nc" id="L176">    return emptySet();</span>
+  }
+
+  /**
+   * Return the predicate that corresponds to the where clause
+   * restriction(s), or null if no restrictions have been
+   * specified.
+   * @return where clause predicate
+   */
+  @Override
+  public Predicate getRestriction() {
+<span class="nc" id="L187">    return (Predicate) where.orElse(null);</span>
+  }
+
+  @Override
+  public Class&lt;T&gt; getResultType() {
+<span class="nc" id="L192">    return resultType;</span>
+  }
+
+  @Override
+  public Set&lt;Root&lt;?&gt;&gt; getRoots() {
+<span class="nc" id="L197">    return roots.stream()</span>
+<span class="nc" id="L198">        .map(r -&gt; (Root&lt;?&gt;) r) // NOSONAR</span>
+<span class="nc" id="L199">        .collect(Collectors.toSet());</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public Selection&lt;T&gt; getSelection() {
+<span class="nc" id="L205">    return (Selection&lt;T&gt;) selection;</span>
+  }
+
+  /**
+   * Specify the expressions that are used to form groups over
+   * the query results.
+   * Replaces the previous specified grouping expressions, if any.
+   * If no grouping expressions are specified, any previously
+   * added grouping expressions are simply removed.
+   * This method only overrides the return type of the
+   * corresponding &lt;code&gt;AbstractQuery&lt;/code&gt; method.
+   * @param grouping zero or more grouping expressions
+   * @return the modified query
+   */
+  @Override
+  public CriteriaQuery&lt;T&gt; groupBy(final Expression&lt;?&gt;... grouping) {
+<span class="nc bnc" id="L221" title="All 2 branches missed.">    return groupBy(grouping != null ? Arrays.asList(grouping) : emptyList());</span>
+  }
+
+  /**
+   * Specify the expressions that are used to form groups over
+   * the query results.
+   * Replaces the previous specified grouping expressions, if any.
+   * If no grouping expressions are specified, any previously
+   * added grouping expressions are simply removed.
+   * This method only overrides the return type of the
+   * corresponding &lt;code&gt;AbstractQuery&lt;/code&gt; method.
+   * @param grouping list of zero or more grouping expressions
+   * @return the modified query
+   */
+  @Override
+  public CriteriaQuery&lt;T&gt; groupBy(final List&lt;Expression&lt;?&gt;&gt; grouping) {
+<span class="nc bnc" id="L237" title="All 2 branches missed.">    groupBy = Optional.ofNullable(grouping.isEmpty() ? null : grouping);</span>
+<span class="nc" id="L238">    return this;</span>
+  }
+
+  /**
+   * Specify a restriction over the groups of the query.
+   * Replaces the previous having restriction(s), if any.
+   * This method only overrides the return type of the
+   * corresponding &lt;code&gt;AbstractQuery&lt;/code&gt; method.
+   * @param restriction a simple or compound boolean expression
+   * @return the modified query
+   */
+  @Override
+  public CriteriaQuery&lt;T&gt; having(final Expression&lt;Boolean&gt; restriction) {
+<span class="nc" id="L251">    final Predicate[] p = { (Predicate) restriction };</span>
+<span class="nc" id="L252">    return having(p); // NOSONAR</span>
+  }
+
+  /**
+   * Specify restrictions over the groups of the query
+   * according the conjunction of the specified restriction
+   * predicates.
+   * Replaces the previously added having restriction(s), if any.
+   * If no restrictions are specified, any previously added
+   * restrictions are simply removed.
+   * This method only overrides the return type of the
+   * corresponding &lt;code&gt;AbstractQuery&lt;/code&gt; method.
+   * @param restrictions zero or more restriction predicates
+   * @return the modified query
+   */
+  @Override
+  public CriteriaQuery&lt;T&gt; having(final Predicate... restrictions) {
+<span class="nc bnc" id="L269" title="All 2 branches missed.">    final Predicate p = restrictions.length &gt; 1</span>
+<span class="nc" id="L270">        ? cb.and(restrictions)</span>
+<span class="nc bnc" id="L271" title="All 2 branches missed.">        : restrictions.length == 1 // NOSONAR</span>
+<span class="nc" id="L272">            ? restrictions[0]</span>
+<span class="nc" id="L273">            : null;</span>
+<span class="nc" id="L274">    having = Optional.ofNullable(p);</span>
+<span class="nc" id="L275">    return this;</span>
+  }
+
+  @Override
+  public boolean isDistinct() {
+<span class="nc" id="L280">    return distinct;</span>
+  }
+
+  /**
+   * Specify the selection items that are to be returned in the
+   * query result.
+   * Replaces the previously specified selection(s), if any.
+   *
+   * The type of the result of the query execution depends on
+   * the specification of the type of the criteria query object
+   * created as well as the arguments to the multiselect method.
+   * &lt;p&gt; An argument to the multiselect method must not be a tuple-
+   * or array-valued compound selection item.
+   *
+   * &lt;p&gt;The semantics of this method are as follows:
+   * &lt;ul&gt;
+   * &lt;li&gt;
+   * If the type of the criteria query is
+   * &lt;code&gt;CriteriaQuery&amp;#060;Tuple&amp;#062;&lt;/code&gt; (i.e., a criteria
+   * query object created by either the
+   * &lt;code&gt;createTupleQuery&lt;/code&gt; method or by passing a
+   * &lt;code&gt;Tuple&lt;/code&gt; class argument to the
+   * &lt;code&gt;createQuery&lt;/code&gt; method), a &lt;code&gt;Tuple&lt;/code&gt; object
+   * corresponding to the arguments of the &lt;code&gt;multiselect&lt;/code&gt;
+   * method, in the specified order, will be instantiated and
+   * returned for each row that results from the query execution.
+   *
+   * &lt;li&gt; If the type of the criteria query is &lt;code&gt;CriteriaQuery&amp;#060;X&amp;#062;&lt;/code&gt; for
+   * some user-defined class X (i.e., a criteria query object
+   * created by passing a X class argument to the &lt;code&gt;createQuery&lt;/code&gt;
+   * method), the arguments to the &lt;code&gt;multiselect&lt;/code&gt; method will be
+   * passed to the X constructor and an instance of type X will be
+   * returned for each row.
+   *
+   * &lt;li&gt; If the type of the criteria query is &lt;code&gt;CriteriaQuery&amp;#060;X[]&amp;#062;&lt;/code&gt; for
+   * some class X, an instance of type X[] will be returned for
+   * each row. The elements of the array will correspond to the
+   * arguments of the &lt;code&gt;multiselect&lt;/code&gt; method, in the
+   * specified order.
+   *
+   * &lt;li&gt; If the type of the criteria query is &lt;code&gt;CriteriaQuery&amp;#060;Object&amp;#062;&lt;/code&gt;
+   * or if the criteria query was created without specifying a
+   * type, and only a single argument is passed to the &lt;code&gt;multiselect&lt;/code&gt;
+   * method, an instance of type &lt;code&gt;Object&lt;/code&gt; will be returned for
+   * each row.
+   *
+   * &lt;li&gt; If the type of the criteria query is &lt;code&gt;CriteriaQuery&amp;#060;Object&amp;#062;&lt;/code&gt;
+   * or if the criteria query was created without specifying a
+   * type, and more than one argument is passed to the &lt;code&gt;multiselect&lt;/code&gt;
+   * method, an instance of type &lt;code&gt;Object[]&lt;/code&gt; will be instantiated
+   * and returned for each row. The elements of the array will
+   * correspond to the arguments to the &lt;code&gt; multiselect&lt;/code&gt; method,
+   * in the specified order.
+   * &lt;/ul&gt;
+   *
+   * @param selections selection items corresponding to the
+   * results to be returned by the query
+   * @return the modified query
+   * @throws IllegalArgumentException if a selection item is
+   * not valid or if more than one selection item has
+   * the same assigned alias
+   */
+  @Override
+  public CriteriaQuery&lt;T&gt; multiselect(final List&lt;Selection&lt;?&gt;&gt; selectionList) {
+<span class="nc" id="L344">    selection = new CompoundSelectionImpl&lt;&gt;(selectionList, resultType, selectAliasBuilder);</span>
+<span class="nc" id="L345">    return this;</span>
+  }
+
+  @Override
+  public CriteriaQuery&lt;T&gt; multiselect(final Selection&lt;?&gt;... selections) {
+<span class="nc" id="L350">    return multiselect(Arrays.asList(selections));</span>
+  }
+
+  /**
+   * Specify the ordering expressions that are used to
+   * order the query results.
+   * Replaces the previous ordering expressions, if any.
+   * If no ordering expressions are specified, the previous
+   * ordering, if any, is simply removed, and results will
+   * be returned in no particular order.
+   * The order of the ordering expressions in the list
+   * determines the precedence, whereby the first element in the
+   * list has highest precedence.
+   * @param o list of zero or more ordering expressions
+   * @return the modified query
+   */
+  @Override
+  public CriteriaQuery&lt;T&gt; orderBy(final List&lt;Order&gt; o) {
+<span class="nc bnc" id="L368" title="All 4 branches missed.">    if (o != null &amp;&amp; o.isEmpty())</span>
+<span class="nc" id="L369">      this.orderList = Optional.empty();</span>
+    else
+<span class="nc" id="L371">      this.orderList = Optional.ofNullable(o);</span>
+<span class="nc" id="L372">    return this;</span>
+  }
+
+  @Override
+  public CriteriaQuery&lt;T&gt; orderBy(final Order... o) {
+<span class="nc bnc" id="L377" title="All 2 branches missed.">    if (o == null) {</span>
+<span class="nc" id="L378">      this.orderList = Optional.empty();</span>
+<span class="nc" id="L379">      return this;</span>
+    }
+<span class="nc" id="L381">    return this.orderBy(Arrays.asList(o));</span>
+
+  }
+
+  @Override
+  public CriteriaQuery&lt;T&gt; select(final Selection&lt;? extends T&gt; selection) {
+<span class="nc" id="L387">    this.selection = new SelectionImpl&lt;&gt;(selection, resultType, selectAliasBuilder);</span>
+<span class="nc" id="L388">    return this;</span>
+  }
+
+  @Override
+  public &lt;U&gt; ProcessorSubquery&lt;U&gt; subquery(@Nonnull final Class&lt;U&gt; type) {
+<span class="nc" id="L393">    return new SubqueryImpl&lt;&gt;(type, this, aliasBuilder, cb);</span>
+  }
+
+  /**
+   * Modify the query to restrict the query result according
+   * to the specified boolean expression.
+   * Replaces the previously added restriction(s), if any. &lt;br&gt;
+   * This method overrides the return type of the
+   * corresponding &lt;code&gt;AbstractQuery&lt;/code&gt; method;
+   * @param restriction a simple or compound boolean expression
+   * @return the modified query
+   */
+  @Override
+  public CriteriaQuery&lt;T&gt; where(@Nullable final Expression&lt;Boolean&gt; restriction) {
+<span class="nc" id="L407">    where = Optional.ofNullable(restriction);</span>
+<span class="nc" id="L408">    return this;</span>
+  }
+
+  /**
+   * Modify the query to restrict the query result according
+   * to the conjunction of the specified restriction predicates.
+   * Replaces the previously added restriction(s), if any.
+   * If no restrictions are specified, any previously added
+   * restrictions are simply removed.
+   * This method only overrides the return type of the
+   * corresponding &lt;code&gt;AbstractQuery&lt;/code&gt; method.
+   * @param restrictions zero or more restriction predicates
+   * @return the modified query
+   */
+  @Override
+  public CriteriaQuery&lt;T&gt; where(final Predicate... restrictions) {
+<span class="nc" id="L424">    throw new NotImplementedException();</span>
+  }
+
+  JPAServiceDocument getServiceDocument() {
+<span class="nc" id="L428">    return sd;</span>
+  }
+
+  private String addDistinct() {
+<span class="nc bnc" id="L432" title="All 2 branches missed.">    if (distinct)</span>
+<span class="nc" id="L433">      return SqlKeyWords.DISTINCT + &quot; &quot;;</span>
+<span class="nc" id="L434">    return &quot;&quot;;</span>
+  }
+
+  private void addInheritanceWhere(final FromImpl&lt;?, ?&gt; from, final List&lt;Expression&lt;Boolean&gt;&gt; inheritanceWhere) {
+
+<span class="nc" id="L439">    inheritanceWhere.add(from.createInheritanceWhere());</span>
+<span class="nc bnc" id="L440" title="All 2 branches missed.">    for (final Join&lt;?, ?&gt; join : from.getJoins()) {</span>
+<span class="nc" id="L441">      addInheritanceWhere((FromImpl&lt;?, ?&gt;) join, inheritanceWhere);</span>
+<span class="nc" id="L442">    }</span>
+<span class="nc" id="L443">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

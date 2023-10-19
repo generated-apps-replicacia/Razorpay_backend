@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAComparisonOperatorImp.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAComparisonOperatorImp.java</span></div><h1>JPAComparisonOperatorImp.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import javax.persistence.criteria.Expression;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.queryoption.expression.BinaryOperatorKind;
+
+//
+public class JPAComparisonOperatorImp&lt;T extends Comparable&lt;T&gt;&gt; implements JPAComparisonOperator&lt;T&gt; {
+  private final JPAOperationConverter converter;
+  private final BinaryOperatorKind operator;
+  private final JPAOperator left;
+  private final JPAOperator right;
+
+  public JPAComparisonOperatorImp(final JPAOperationConverter converter, final BinaryOperatorKind operator,
+      final JPAOperator left, final JPAOperator right) {
+
+<span class="nc" id="L18">    super();</span>
+<span class="nc" id="L19">    this.converter = converter;</span>
+<span class="nc" id="L20">    this.operator = operator;</span>
+<span class="nc" id="L21">    this.left = left;</span>
+<span class="nc" id="L22">    this.right = right;</span>
+<span class="nc" id="L23">  }</span>
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAComparisonOperator#get()
+   */
+  @Override
+  public Expression&lt;Boolean&gt; get() throws ODataApplicationException {
+<span class="nc" id="L32">    return converter.convert(this);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAComparisonOperator#getOperator()
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public BinaryOperatorKind getOperator() {
+<span class="nc" id="L43">    return operator;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAComparisonOperator#getLeft()
+   */
+  @Override
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public Expression&lt;T&gt; getLeft() throws ODataApplicationException {
+<span class="nc bnc" id="L54" title="All 2 branches missed.">    if (left instanceof JPALiteralOperator)</span>
+<span class="nc" id="L55">      return (Expression&lt;T&gt;) right.get();</span>
+<span class="nc" id="L56">    return (Expression&lt;T&gt;) left.get();</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAComparisonOperator#getRight()
+   */
+  @Override
+  public Object getRight() {
+<span class="nc bnc" id="L66" title="All 2 branches missed.">    if (left instanceof JPALiteralOperator)</span>
+<span class="nc" id="L67">      return left;</span>
+<span class="nc" id="L68">    return right;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAComparisonOperator#getRightAsComparable()
+   */
+  @Override
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public Comparable&lt;T&gt; getRightAsComparable() throws ODataApplicationException {
+<span class="nc bnc" id="L79" title="All 2 branches missed.">    if (left instanceof JPALiteralOperator) {</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">      if (right instanceof JPAMemberOperator)</span>
+<span class="nc" id="L81">        return (Comparable&lt;T&gt;) ((JPALiteralOperator) left).get(((JPAMemberOperator) right).determineAttribute());</span>
+      else
+<span class="nc" id="L83">        return (Comparable&lt;T&gt;) left.get();</span>
+    }
+<span class="nc bnc" id="L85" title="All 2 branches missed.">    if (right instanceof JPALiteralOperator) {</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">      if (left instanceof JPAMemberOperator)</span>
+<span class="nc" id="L87">        return (Comparable&lt;T&gt;) ((JPALiteralOperator) right).get(((JPAMemberOperator) left).determineAttribute());</span>
+
+      else {
+<span class="nc" id="L90">        return (Comparable&lt;T&gt;) right.get();</span>
+      }
+    }
+<span class="nc" id="L93">    return (Comparable&lt;T&gt;) right.get();</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAComparisonOperator#getRightAsExpression()
+   */
+  @Override
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public Expression&lt;T&gt; getRightAsExpression() throws ODataApplicationException {
+<span class="nc" id="L104">    return (Expression&lt;T&gt;) right.get();</span>
+  }
+
+  @Override
+  public String getName() {
+<span class="nc" id="L109">    return operator.name();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>StringBuilderCollector.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.joiner</a> &gt; <span class="el_source">StringBuilderCollector.java</span></div><h1>StringBuilderCollector.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.joiner;
+
+import java.util.Collections;
+import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
+
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Order;
+import javax.persistence.criteria.Selection;
+
+public abstract class StringBuilderCollector&lt;T&gt; implements Collector&lt;T, StringBuilderJoiner&lt;T&gt;, String&gt; {
+
+  final Supplier&lt;StringBuilderJoiner&lt;T&gt;&gt; supplier;
+
+<span class="nc" id="L20">  StringBuilderCollector(@Nonnull final StringBuilder statement, @Nonnull final String delimiter) {</span>
+<span class="nc" id="L21">    this.supplier = () -&gt; new StringBuilderJoiner&lt;&gt;(statement, delimiter);</span>
+<span class="nc" id="L22">  }</span>
+
+  @Override
+  public Supplier&lt;StringBuilderJoiner&lt;T&gt;&gt; supplier() {
+<span class="nc" id="L26">    return supplier;</span>
+  }
+
+  @Override
+  public BinaryOperator&lt;StringBuilderJoiner&lt;T&gt;&gt; combiner() {
+<span class="nc" id="L31">    return null;</span>
+  }
+
+  @Override
+  public BiConsumer&lt;StringBuilderJoiner&lt;T&gt;, T&gt; accumulator() {
+<span class="nc" id="L36">    return StringBuilderJoiner::add;</span>
+  }
+
+  @Override
+  public Function&lt;StringBuilderJoiner&lt;T&gt;, String&gt; finisher() {
+<span class="nc" id="L41">    return StringBuilderJoiner::finish;</span>
+  }
+
+  @Override
+  public Set&lt;Characteristics&gt; characteristics() {
+<span class="nc" id="L46">    return Collections.emptySet();</span>
+  }
+
+  public static class OrderCollector extends StringBuilderCollector&lt;Order&gt; {
+    public OrderCollector(@Nonnull final StringBuilder statement, @Nonnull final String delimiter) {
+<span class="nc" id="L51">      super(statement, delimiter);</span>
+<span class="nc" id="L52">    }</span>
+  }
+
+  public static class ExpressionCollector extends StringBuilderCollector&lt;Expression&lt;?&gt;&gt; {
+    public ExpressionCollector(@Nonnull final StringBuilder statement, @Nonnull final String delimiter) {
+<span class="nc" id="L57">      super(statement, delimiter);</span>
+<span class="nc" id="L58">    }</span>
+  }
+
+  public static class SelectionCollector extends StringBuilderCollector&lt;Selection&lt;?&gt;&gt; {
+    public SelectionCollector(@Nonnull final StringBuilder statement, @Nonnull final String delimiter) {
+<span class="nc" id="L63">      super(statement, delimiter);</span>
+<span class="nc" id="L64">    }</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

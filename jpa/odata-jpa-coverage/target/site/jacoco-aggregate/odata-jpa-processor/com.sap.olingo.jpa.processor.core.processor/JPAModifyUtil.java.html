@@ -1,0 +1,453 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAModifyUtil.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPAModifyUtil.java</span></div><h1>JPAModifyUtil.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.ATTRIBUTE_NOT_FOUND;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAOnConditionItem;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAInvocationTargetException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys;
+
+/**
+ * This class provides some primitive util methods to support modifying
+ * operations like create or update.
+ * &lt;p&gt;
+ * The set method shall fill an object from a given Map. JPA processor provides
+ * in a Map the internal, JAVA attribute, names. Based on the JAVA naming
+ * conventions the corresponding Setter is called, as long as the Setter has the
+ * correct type.
+ * 
+ * @author Oliver Grande
+ *
+ */
+<span class="nc" id="L41">public final class JPAModifyUtil {</span>
+
+<span class="nc" id="L43">  private JPAStructuredType st = null;</span>
+
+  public String buildMethodNameSuffix(final JPAElement pathItem) {
+<span class="nc" id="L46">    final String relationName = pathItem.getInternalName();</span>
+<span class="nc" id="L47">    return relationName.substring(0, 1).toUpperCase() + relationName.substring(1);</span>
+  }
+
+  /**
+   * Create a filled instance of a JPA entity key.
+   * &lt;br&gt;
+   * For JPA entities having only one key, so do not use an IdClass, the
+   * corresponding value in &lt;code&gt;jpaKeys&lt;/code&gt; is returned
+   * 
+   * @param et
+   * @param jpaKeys
+   * @return
+   * @throws ODataJPAProcessorException
+   */
+  public Object createPrimaryKey(final JPAEntityType et, final Map&lt;String, Object&gt; jpaKeys, final JPAStructuredType st)
+      throws ODataJPAProcessorException, ODataJPAInvocationTargetException {
+    try {
+<span class="nc bnc" id="L64" title="All 2 branches missed.">      if (et.getKey().size() == 1)</span>
+<span class="nc" id="L65">        return jpaKeys.get(et.getKey().get(0).getInternalName());</span>
+
+<span class="nc" id="L67">      final Object key = et.getKeyType().getConstructor().newInstance();</span>
+<span class="nc" id="L68">      setAttributes(jpaKeys, key, st);</span>
+<span class="nc" id="L69">      return key;</span>
+<span class="nc" id="L70">    } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException</span>
+        | IllegalArgumentException | InvocationTargetException | ODataJPAModelException e) {
+<span class="nc" id="L72">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  /**
+   * 
+   * @param et
+   * @param instance
+   * @return
+   * @throws ODataJPAProcessorException
+   * @throws ODataJPAInvocationTargetException
+   */
+  public Object createPrimaryKey(final JPAEntityType et, final Object instance) throws ODataJPAProcessorException {
+    try {
+<span class="nc bnc" id="L86" title="All 2 branches missed.">      if (et.getKey().size() == 1)</span>
+<span class="nc" id="L87">        return getAttribute(instance, et.getKey().get(0));</span>
+
+<span class="nc" id="L89">      final Object key = et.getKeyType().getConstructor().newInstance();</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">      for (final JPAAttribute keyElement : et.getKey()) {</span>
+<span class="nc" id="L91">        setAttribute(key, keyElement, getAttribute(instance, keyElement));</span>
+<span class="nc" id="L92">      }</span>
+
+<span class="nc" id="L94">      return key;</span>
+<span class="nc" id="L95">    } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException</span>
+        | IllegalArgumentException | InvocationTargetException | ODataJPAModelException e) {
+<span class="nc" id="L97">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  /**
+   * Sets a link between a source and target instance. Prerequisite are
+   * existing setter and getter on the level of the sourceInstance. In case of to n associations it is expected that the
+   * getter always returns a collection. In case structured properties are passed either a getter returns always an
+   * instance or the corresponding type has a parameter less constructor.
+   * 
+   * @param parentInstance
+   * @param newInstance
+   * @param pathInfo
+   * @throws ODataJPAProcessorException
+   */
+
+  public &lt;T&gt; void linkEntities(final Object sourceInstance, final T targetInstance, final JPAAssociationPath pathInfo)
+      throws ODataJPAProcessorException {
+
+    try {
+<span class="nc" id="L117">      final Object source = determineSourceForLink(sourceInstance, pathInfo);</span>
+<span class="nc" id="L118">      setLink(source, targetInstance, pathInfo.getLeaf());</span>
+
+<span class="nc" id="L120">    } catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException</span>
+        | InvocationTargetException e) {
+<span class="nc" id="L122">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L123">    }</span>
+<span class="nc" id="L124">  }</span>
+
+  /**
+   * Fills instance without filling its embedded components.
+   * 
+   * @param jpaAttributes Map of attributes and values that shall be changed
+   * @param instance JPA POJO instance to take the changes
+   * @param st Entity Type
+   * @throws ODataJPAProcessorException Thrown when ever a problem with invoking a getter or setter occurs except
+   * InvocationTargetException occurs.
+   * @throws ODataJPAInvocationTargetException Thrown when InvocationTargetException was thrown.
+   * ODataJPAInvocationTargetException contains the original cause and the OData path to the property which should be
+   * changed. The path starts with the entity type. The path parts a separated by {@code JPAPath.PATH_SEPERATOR}.
+   */
+  public void setAttributes(final Map&lt;String, Object&gt; jpaAttributes, final Object instance, final JPAStructuredType st)
+      throws ODataJPAProcessorException, ODataJPAInvocationTargetException {
+<span class="nc" id="L140">    final Method[] methods = instance.getClass().getMethods();</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">    for (final Method meth : methods) {</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">      if (meth.getName().substring(0, 3).equals(&quot;set&quot;)) {</span>
+<span class="nc" id="L143">        final String attributeName = meth.getName().substring(3, 4).toLowerCase(Locale.ENGLISH) + meth.getName()</span>
+<span class="nc" id="L144">            .substring(4);</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (jpaAttributes.containsKey(attributeName)) {</span>
+<span class="nc" id="L146">          final Object value = jpaAttributes.get(attributeName);</span>
+<span class="nc bnc" id="L147" title="All 4 branches missed.">          if (!(value instanceof Map&lt;?, ?&gt;) &amp;&amp; !(value instanceof JPARequestEntity)) {</span>
+            try {
+<span class="nc" id="L149">              final Class&lt;?&gt;[] parameters = meth.getParameterTypes();</span>
+<span class="nc bnc" id="L150" title="All 6 branches missed.">              if (parameters.length == 1 &amp;&amp; (value == null || value.getClass() == parameters[0])) {</span>
+<span class="nc" id="L151">                meth.invoke(instance, value);</span>
+              }
+<span class="nc" id="L153">            } catch (IllegalAccessException | IllegalArgumentException e) {</span>
+<span class="nc" id="L154">              throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L155">            } catch (final InvocationTargetException e) {</span>
+              try {
+<span class="nc" id="L157">                throw new ODataJPAInvocationTargetException(e.getCause(),</span>
+<span class="nc" id="L158">                    st.getExternalName() + JPAPath.PATH_SEPARATOR + st.getAttribute(attributeName)</span>
+<span class="nc" id="L159">                        .orElseThrow(() -&gt; new ODataJPAProcessorException(</span>
+                            ATTRIBUTE_NOT_FOUND, HttpStatusCode.INTERNAL_SERVER_ERROR, attributeName))
+<span class="nc" id="L161">                        .getExternalName());</span>
+<span class="nc" id="L162">              } catch (final ODataJPAModelException e1) {</span>
+<span class="nc" id="L163">                throw new ODataJPAProcessorException(e1, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+              }
+<span class="nc" id="L165">            }</span>
+          }
+        }
+      }
+    }
+<span class="nc" id="L170">  }</span>
+
+  /**
+   * Fills instance and its embedded components. In case of embedded
+   * components it first tries to get an existing instance. If that is non
+   * provided a new one is created and set.
+   * 
+   * @param jpaAttributes Map of attributes and values that shall be changed
+   * @param instance JPA POJO instance to take the changes
+   * @param st Entity Type
+   * @throws ODataJPAProcessorException Thrown when ever a problem with invoking a getter or setter occurs except
+   * InvocationTargetException occurs.
+   * @throws ODataJPAInvocationTargetException Thrown when InvocationTargetException was thrown.
+   * ODataJPAInvocationTargetException contains the original cause and the OData path to the property which should be
+   * changed. The path starts with the entity type. The path parts a separated by {@code JPAPath.PATH_SEPERATOR}.
+   */
+  public void setAttributesDeep(final Map&lt;String, Object&gt; jpaAttributes, final Object instance,
+      final JPAStructuredType st) throws ODataJPAProcessorException, ODataJPAInvocationTargetException {
+
+<span class="nc" id="L189">    final Method[] methods = instance.getClass().getMethods();</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">    for (final Method meth : methods) {</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">      if (meth.getName().substring(0, 3).equals(&quot;set&quot;)) {</span>
+<span class="nc" id="L192">        final String attributeName = meth.getName().substring(3, 4).toLowerCase() + meth.getName().substring(4);</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">        if (jpaAttributes.containsKey(attributeName)) {</span>
+<span class="nc" id="L194">          final Object value = jpaAttributes.get(attributeName);</span>
+<span class="nc" id="L195">          final Class&lt;?&gt;[] parameters = meth.getParameterTypes();</span>
+<span class="nc bnc" id="L196" title="All 4 branches missed.">          if (!(value instanceof JPARequestEntity) &amp;&amp; parameters.length == 1) {</span>
+<span class="nc" id="L197">            setAttributeDeep(instance, st, meth, attributeName, value, parameters);</span>
+          }
+        }
+      }
+    }
+<span class="nc" id="L202">  }</span>
+
+  /**
+   * Boxed
+   * missing getter
+   * @param parentInstance
+   * @param newInstance
+   * @param pathInfo
+   * @throws ODataJPAProcessorException
+   */
+  public void setForeignKey(final Object parentInstance, final Object newInstance, final JPAAssociationPath pathInfo)
+      throws ODataJPAProcessorException {
+    try {
+<span class="nc bnc" id="L215" title="All 2 branches missed.">      for (final JPAOnConditionItem joinColumn : pathInfo.getJoinColumnsList()) {</span>
+<span class="nc" id="L216">        setAttribute(newInstance, joinColumn.getRightPath().getLeaf(), getAttribute(parentInstance, joinColumn</span>
+<span class="nc" id="L217">            .getLeftPath().getLeaf()));</span>
+<span class="nc" id="L218">      }</span>
+<span class="nc" id="L219">    } catch (ODataJPAModelException | NoSuchMethodException | IllegalAccessException | IllegalArgumentException</span>
+        | InvocationTargetException e) {
+<span class="nc" id="L221">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L222">    }</span>
+<span class="nc" id="L223">  }</span>
+
+  /**
+   * Creates an instance of type &lt;code&gt;type&lt;/code&gt; using a parameter free constructor
+   * @param type
+   * @return
+   * @throws NoSuchMethodException
+   * @throws InstantiationException
+   * @throws IllegalAccessException
+   * @throws InvocationTargetException
+   */
+  private Object createInstance(final Class&lt;?&gt; type) throws NoSuchMethodException,
+      InstantiationException, IllegalAccessException, InvocationTargetException {
+
+<span class="nc" id="L237">    final Class&lt;?&gt;[] parameter = new Class&lt;?&gt;[0];</span>
+<span class="nc" id="L238">    final Constructor&lt;?&gt; cons = type.getConstructor(parameter);</span>
+<span class="nc" id="L239">    return cons.newInstance();</span>
+  }
+
+  /**
+   * Determines the instance a link shall be added to. This may be the entity or a structured type. If the structured
+   * property does not exists, the method creates a new instance.
+   * @param sourceInstance
+   * @param pathInfo
+   * @return
+   * @throws NoSuchMethodException
+   * @throws IllegalAccessException
+   * @throws InvocationTargetException
+   * @throws ODataJPAProcessorException
+   */
+  private Object determineSourceForLink(final Object sourceInstance, final JPAAssociationPath pathInfo)
+      throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, ODataJPAProcessorException {
+
+<span class="nc" id="L256">    Object source = sourceInstance;</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">    for (final JPAElement pathItem : pathInfo.getPath()) {</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">      if (pathItem != pathInfo.getLeaf()) {</span>
+<span class="nc" id="L259">        final String methodSuffix = buildMethodNameSuffix(pathItem);</span>
+<span class="nc" id="L260">        final Method getter = source.getClass().getMethod(&quot;get&quot; + methodSuffix);</span>
+<span class="nc" id="L261">        Object next = getter.invoke(source);</span>
+<span class="nc bnc" id="L262" title="All 2 branches missed.">        if (next == null) {</span>
+          try {
+<span class="nc" id="L264">            final Constructor&lt;?&gt; c = ((JPAAttribute) pathItem).getStructuredType().getTypeClass().getConstructor();</span>
+<span class="nc" id="L265">            next = c.newInstance();</span>
+<span class="nc" id="L266">            final Method setter = source.getClass().getMethod(&quot;set&quot; + methodSuffix, next.getClass());</span>
+<span class="nc" id="L267">            setter.invoke(source, next);</span>
+<span class="nc" id="L268">          } catch (ODataJPAModelException | InstantiationException e) {</span>
+<span class="nc" id="L269">            throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L270">          }</span>
+        }
+<span class="nc" id="L272">        source = next;</span>
+      }
+<span class="nc" id="L274">    }</span>
+<span class="nc" id="L275">    return source;</span>
+  }
+
+  /**
+   * Tries to read the current state of an attribute. If no getter exists an exception is thrown.
+   * @param instance
+   * @param attribute
+   * @return
+   * @throws NoSuchMethodException
+   * @throws ODataJPAProcessorException
+   * @throws IllegalAccessException
+   * @throws InvocationTargetException
+   */
+  private Object getAttribute(final Object instance, final JPAElement attribute) throws NoSuchMethodException,
+      ODataJPAProcessorException, IllegalAccessException, InvocationTargetException {
+
+<span class="nc" id="L291">    final Method getter = instance.getClass().getMethod(&quot;get&quot; + buildMethodNameSuffix(attribute));</span>
+<span class="nc bnc" id="L292" title="All 2 branches missed.">    if (getter == null)</span>
+<span class="nc" id="L293">      throw new ODataJPAProcessorException(MessageKeys.GETTER_NOT_FOUND, HttpStatusCode.INTERNAL_SERVER_ERROR,</span>
+<span class="nc" id="L294">          buildMethodNameSuffix(attribute), instance.getClass().getName());</span>
+<span class="nc" id="L295">    return getter.invoke(instance);</span>
+  }
+
+  private void handleInvocationTargetException(final JPAStructuredType st, final String attributeName,
+      final Exception e)
+      throws ODataJPAInvocationTargetException, ODataJPAProcessorException {
+
+<span class="nc" id="L302">    String pathPart = null;</span>
+    try {
+<span class="nc" id="L304">      pathPart = st.getAttribute(attributeName).orElseThrow(() -&gt; new ODataJPAProcessorException(ATTRIBUTE_NOT_FOUND,</span>
+<span class="nc" id="L305">          HttpStatusCode.INTERNAL_SERVER_ERROR, attributeName)).getExternalName();</span>
+<span class="nc bnc" id="L306" title="All 4 branches missed.">      if (this.st != null &amp;&amp; this.st.equals(st)) {</span>
+<span class="nc" id="L307">        final String path = st.getExternalName() + JPAPath.PATH_SEPARATOR + pathPart + JPAPath.PATH_SEPARATOR</span>
+<span class="nc" id="L308">            + ((ODataJPAInvocationTargetException) e).getPath();</span>
+<span class="nc" id="L309">        this.st = null;</span>
+<span class="nc" id="L310">        throw new ODataJPAInvocationTargetException(e.getCause(), path);</span>
+      }
+<span class="nc" id="L312">    } catch (final ODataJPAModelException e1) {</span>
+<span class="nc" id="L313">      throw new ODataJPAProcessorException(e1, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L314">    }</span>
+<span class="nc bnc" id="L315" title="All 2 branches missed.">    if (e instanceof ODataJPAInvocationTargetException)</span>
+<span class="nc" id="L316">      throw new ODataJPAInvocationTargetException(e.getCause(), pathPart + JPAPath.PATH_SEPARATOR</span>
+<span class="nc" id="L317">          + ((ODataJPAInvocationTargetException) e).getPath());</span>
+    else
+<span class="nc" id="L319">      throw new ODataJPAInvocationTargetException(e.getCause(), pathPart);</span>
+  }
+
+  /**
+   * Tries to read the current state of an attribute. If no getter exists null is returned.
+   * @param instance
+   * @param attribute
+   * @return
+   * @throws NoSuchMethodException
+   * @throws IllegalAccessException
+   * @throws InvocationTargetException
+   */
+  private Object readCurrentState(final Object instance, final JPAElement attribute) throws NoSuchMethodException,
+      IllegalAccessException, InvocationTargetException {
+
+<span class="nc" id="L334">    final Method getter = instance.getClass().getMethod(&quot;get&quot; + buildMethodNameSuffix(attribute));</span>
+<span class="nc bnc" id="L335" title="All 2 branches missed.">    if (getter == null)</span>
+<span class="nc" id="L336">      return null;</span>
+<span class="nc" id="L337">    return getter.invoke(instance);</span>
+  }
+
+  private void setAttribute(final Object instance, final JPAElement attribute, final Object value)
+      throws NoSuchMethodException, ODataJPAProcessorException, IllegalAccessException, InvocationTargetException {
+
+<span class="nc" id="L343">    final Method setter = instance.getClass().getMethod(&quot;set&quot; + buildMethodNameSuffix(attribute), value.getClass());</span>
+<span class="nc bnc" id="L344" title="All 2 branches missed.">    if (setter == null)</span>
+<span class="nc" id="L345">      throw new ODataJPAProcessorException(MessageKeys.SETTER_NOT_FOUND, HttpStatusCode.INTERNAL_SERVER_ERROR,</span>
+<span class="nc" id="L346">          buildMethodNameSuffix(attribute), instance.getClass().getName(), value.getClass().getName());</span>
+<span class="nc" id="L347">    setter.invoke(instance, value);</span>
+<span class="nc" id="L348">  }</span>
+
+  private void setAttributeDeep(final Object instance, final JPAStructuredType st, final Method meth,
+      final String attributeName, final Object value, final Class&lt;?&gt;[] parameters) throws ODataJPAProcessorException,
+      ODataJPAInvocationTargetException {
+    try {
+<span class="nc" id="L354">      final JPAAttribute attribute = st.getAttribute(attributeName).orElseThrow(</span>
+<span class="nc" id="L355">          () -&gt; new ODataJPAProcessorException(ATTRIBUTE_NOT_FOUND,</span>
+              HttpStatusCode.INTERNAL_SERVER_ERROR, attributeName));
+<span class="nc bnc" id="L357" title="All 4 branches missed.">      if (!attribute.isComplex() || value == null) {</span>
+<span class="nc bnc" id="L358" title="All 4 branches missed.">        if (value == null || parameters[0].isAssignableFrom(value.getClass())) {</span>
+<span class="nc" id="L359">          meth.invoke(instance, value);</span>
+        }
+<span class="nc bnc" id="L361" title="All 2 branches missed.">      } else if (attribute.isCollection()) {</span>
+<span class="nc" id="L362">        setEmbeddedCollectionAttributeDeep(instance, st, meth, value, parameters, attribute);</span>
+      } else {
+<span class="nc" id="L364">        setEmbeddedAttributeDeep(instance, st, meth, value, parameters, attribute);</span>
+      }
+<span class="nc" id="L366">    } catch (IllegalAccessException | IllegalArgumentException | ODataJPAModelException</span>
+        | NoSuchMethodException | SecurityException | InstantiationException e) {
+<span class="nc" id="L368">      throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L369">    } catch (InvocationTargetException | ODataJPAInvocationTargetException e) {</span>
+<span class="nc" id="L370">      handleInvocationTargetException(st, attributeName, e);</span>
+<span class="nc" id="L371">    }</span>
+<span class="nc" id="L372">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private void setEmbeddedAttributeDeep(final Object instance, final JPAStructuredType st, final Method meth,
+      final Object value, final Class&lt;?&gt;[] parameters, final JPAAttribute attribute)
+      throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException,
+      ODataJPAModelException, ODataJPAProcessorException, ODataJPAInvocationTargetException {
+
+<span class="nc" id="L380">    Object embedded = readCurrentState(instance, attribute);</span>
+<span class="nc bnc" id="L381" title="All 2 branches missed.">    if (embedded == null) {</span>
+<span class="nc" id="L382">      embedded = createInstance(parameters[0]);</span>
+<span class="nc" id="L383">      meth.invoke(instance, embedded);</span>
+    }
+<span class="nc bnc" id="L385" title="All 2 branches missed.">    if (embedded != null) {</span>
+<span class="nc bnc" id="L386" title="All 2 branches missed.">      if (this.st == null)</span>
+<span class="nc" id="L387">        this.st = st;</span>
+<span class="nc" id="L388">      setAttributesDeep((Map&lt;String, Object&gt;) value, embedded, attribute.getStructuredType());</span>
+<span class="nc bnc" id="L389" title="All 2 branches missed.">      if (this.st.equals(st)) {</span>
+<span class="nc" id="L390">        this.st = null;</span>
+      }
+    }
+<span class="nc" id="L393">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private void setEmbeddedCollectionAttributeDeep(final Object instance, final JPAStructuredType st, final Method meth,
+      final Object value, final Class&lt;?&gt;[] parameters, final JPAAttribute attribute)
+      throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException,
+      ODataJPAModelException, ODataJPAProcessorException, ODataJPAInvocationTargetException {
+
+<span class="nc" id="L401">    Collection&lt;Object&gt; embedded = (Collection&lt;Object&gt;) readCurrentState(instance, attribute);</span>
+<span class="nc bnc" id="L402" title="All 2 branches missed.">    if (embedded == null) {</span>
+      // List; Set; Queue
+<span class="nc bnc" id="L404" title="All 2 branches missed.">      if (parameters[0].isAssignableFrom(List.class)) {</span>
+<span class="nc" id="L405">        embedded = (Collection&lt;Object&gt;) createInstance(ArrayList.class);</span>
+      } else {
+<span class="nc" id="L407">        embedded = (Collection&lt;Object&gt;) createInstance(parameters[0]);</span>
+      }
+<span class="nc" id="L409">      meth.invoke(instance, embedded);</span>
+    }
+<span class="nc bnc" id="L411" title="All 2 branches missed.">    if (embedded != null) {</span>
+<span class="nc bnc" id="L412" title="All 2 branches missed.">      if (this.st == null)</span>
+<span class="nc" id="L413">        this.st = st;</span>
+<span class="nc" id="L414">      embedded.clear();</span>
+<span class="nc bnc" id="L415" title="All 2 branches missed.">      for (final Map&lt;String, Object&gt; collectionElement : (Collection&lt;Map&lt;String, Object&gt;&gt;) value) {</span>
+<span class="nc" id="L416">        final Object line = createInstance(attribute.getStructuredType().getTypeClass());</span>
+<span class="nc" id="L417">        setAttributesDeep(collectionElement, line, attribute.getStructuredType());</span>
+<span class="nc" id="L418">        embedded.add(line);</span>
+<span class="nc" id="L419">      }</span>
+<span class="nc bnc" id="L420" title="All 2 branches missed.">      if (this.st.equals(st)) {</span>
+<span class="nc" id="L421">        this.st = null;</span>
+      }
+    }
+<span class="nc" id="L424">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private &lt;T&gt; void setLink(final Object sourceInstance, final T targetInstance, final JPAAssociationAttribute attribute)
+      throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, ODataJPAProcessorException {
+
+<span class="nc" id="L430">    final String methodSuffix = attribute.getInternalName().substring(0, 1).toUpperCase() + attribute.getInternalName()</span>
+<span class="nc" id="L431">        .substring(1);</span>
+
+<span class="nc bnc" id="L433" title="All 2 branches missed.">    if (attribute.isCollection()) {</span>
+<span class="nc" id="L434">      final Method getter = sourceInstance.getClass().getMethod(&quot;get&quot; + methodSuffix);</span>
+<span class="nc" id="L435">      ((Collection&lt;T&gt;) getter.invoke(sourceInstance)).add(targetInstance);</span>
+<span class="nc" id="L436">    } else {</span>
+<span class="nc" id="L437">      Method setter = null;</span>
+<span class="nc" id="L438">      Class&lt;?&gt; clazz = targetInstance.getClass();</span>
+<span class="nc bnc" id="L439" title="All 4 branches missed.">      while (clazz != null &amp;&amp; setter == null) {</span>
+        try {
+<span class="nc" id="L441">          setter = sourceInstance.getClass().getMethod(&quot;set&quot; + methodSuffix, clazz);</span>
+<span class="nc" id="L442">        } catch (final NoSuchMethodException e) {</span>
+<span class="nc" id="L443">          clazz = clazz.getSuperclass();</span>
+<span class="nc" id="L444">        }</span>
+      }
+<span class="nc bnc" id="L446" title="All 2 branches missed.">      if (setter == null)</span>
+<span class="nc" id="L447">        throw new ODataJPAProcessorException(MessageKeys.SETTER_NOT_FOUND, HttpStatusCode.INTERNAL_SERVER_ERROR, &quot;set&quot;</span>
+<span class="nc" id="L448">            + methodSuffix, sourceInstance.getClass().getName(), targetInstance.getClass().getName());</span>
+<span class="nc" id="L449">      setter.invoke(sourceInstance, targetInstance);</span>
+    }
+<span class="nc" id="L451">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

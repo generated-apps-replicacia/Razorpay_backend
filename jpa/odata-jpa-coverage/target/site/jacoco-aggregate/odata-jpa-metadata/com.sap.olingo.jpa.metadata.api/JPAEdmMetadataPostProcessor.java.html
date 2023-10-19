@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAEdmMetadataPostProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.api</a> &gt; <span class="el_source">JPAEdmMetadataPostProcessor.java</span></div><h1>JPAEdmMetadataPostProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.api;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateEntityContainerAccess;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateEntitySetAccess;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateEntityTypeAccess;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateNavigationPropertyAccess;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediatePropertyAccess;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateReferenceList;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateSingletonAccess;
+
+<span class="nc" id="L12">public abstract class JPAEdmMetadataPostProcessor {</span>
+
+<span class="nc" id="L14">  public void processEntityContainer(final IntermediateEntityContainerAccess container) {}</span>
+
+  public abstract void processEntityType(final IntermediateEntityTypeAccess entityType);
+
+<span class="nc" id="L18">  public void processEntitySet(final IntermediateEntitySetAccess entitySet) {}</span>
+
+<span class="nc" id="L20">  public void processSingleton(final IntermediateSingletonAccess singleton) {}</span>
+
+  public abstract void processNavigationProperty(final IntermediateNavigationPropertyAccess property,
+      final String jpaManagedTypeClassName);
+
+  /**
+   *
+   * @param property
+   * @param jpaManagedTypeClassName
+   * @return
+   */
+  public abstract void processProperty(final IntermediatePropertyAccess property, final String jpaManagedTypeClassName);
+
+  public abstract void provideReferences(final IntermediateReferenceList references) throws ODataJPAModelException;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

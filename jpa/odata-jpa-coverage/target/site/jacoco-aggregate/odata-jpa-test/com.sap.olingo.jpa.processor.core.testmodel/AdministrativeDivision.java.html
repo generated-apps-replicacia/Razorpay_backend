@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>AdministrativeDivision.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.testmodel</a> &gt; <span class="el_source">AdministrativeDivision.java</span></div><h1>AdministrativeDivision.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.testmodel;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.IdClass;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.PostPersist;
+import javax.persistence.PostUpdate;
+import javax.persistence.Table;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunction;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmParameter;
+
+@EdmFunction(
+    name = &quot;SiblingsBound&quot;,
+    functionName = &quot;\&quot;OLINGO\&quot;.\&quot;Siblings\&quot;&quot;,
+    isBound = true,
+    hasFunctionImport = false,
+    returnType = @EdmFunction.ReturnType(isCollection = true),
+    parameter = {
+        @EdmParameter(name = &quot;CodePublisher&quot;, parameterName = &quot;\&quot;Publisher\&quot;&quot;,
+            type = String.class, maxLength = 10),
+        @EdmParameter(name = &quot;CodeID&quot;, parameterName = &quot;\&quot;ID\&quot;&quot;, type = String.class, maxLength = 10),
+        @EdmParameter(name = &quot;DivisionCode&quot;, parameterName = &quot;\&quot;Division\&quot;&quot;, type = String.class,
+            maxLength = 10) })
+@EdmFunction(
+    name = &quot;Siblings&quot;,
+    functionName = &quot;\&quot;OLINGO\&quot;.\&quot;Siblings\&quot;&quot;,
+    isBound = false,
+    hasFunctionImport = true,
+    returnType = @EdmFunction.ReturnType(isCollection = true),
+    parameter = {
+        @EdmParameter(name = &quot;CodePublisher&quot;, parameterName = &quot;\&quot;Publisher\&quot;&quot;,
+            type = String.class, maxLength = 10),
+        @EdmParameter(name = &quot;CodeID&quot;, parameterName = &quot;\&quot;ID\&quot;&quot;, type = String.class, maxLength = 10),
+        @EdmParameter(name = &quot;DivisionCode&quot;, parameterName = &quot;\&quot;Division\&quot;&quot;, type = String.class,
+            maxLength = 10) })
+@EdmFunction(
+    name = &quot;PopulationDensity&quot;,
+    functionName = &quot;\&quot;OLINGO\&quot;.\&quot;PopulationDensity\&quot;&quot;,
+    isBound = false,
+    hasFunctionImport = false,
+    returnType = @EdmFunction.ReturnType(isCollection = false, type = Double.class),
+    parameter = {
+        @EdmParameter(name = &quot;Area&quot;, parameterName = &quot;UnitArea&quot;, type = Integer.class),
+        @EdmParameter(name = &quot;Population&quot;, parameterName = &quot;Population&quot;, type = Long.class) })
+@EdmFunction(
+    name = &quot;ConvertToQkm&quot;,
+    functionName = &quot;\&quot;OLINGO\&quot;.\&quot;ConvertToQkm\&quot;&quot;,
+    isBound = false,
+    hasFunctionImport = false,
+    returnType = @EdmFunction.ReturnType(isCollection = false, type = Integer.class),
+    parameter = {
+        @EdmParameter(name = &quot;Area&quot;, parameterName = &quot;UnitArea&quot;, type = Integer.class) })
+
+@IdClass(AdministrativeDivisionKey.class)
+@Entity(name = &quot;AdministrativeDivision&quot;)
+@Table(schema = &quot;\&quot;OLINGO\&quot;&quot;, name = &quot;\&quot;AdministrativeDivision\&quot;&quot;)
+public class AdministrativeDivision implements KeyAccess {
+
+  @Id
+  @Column(name = &quot;\&quot;CodePublisher\&quot;&quot;, length = 10)
+  private String codePublisher;
+  @Id
+  @Column(name = &quot;\&quot;CodeID\&quot;&quot;, length = 10)
+  private String codeID;
+  @Id
+  @Column(name = &quot;\&quot;DivisionCode\&quot;&quot;, length = 10)
+  private String divisionCode;
+
+  @Column(name = &quot;\&quot;CountryISOCode\&quot;&quot;, length = 4)
+  private String countryCode;
+  @Column(name = &quot;\&quot;ParentCodeID\&quot;&quot;, length = 10)
+  private String parentCodeID;
+  @Column(name = &quot;\&quot;ParentDivisionCode\&quot;&quot;, length = 10)
+  private String parentDivisionCode;
+  @Column(name = &quot;\&quot;AlternativeCode\&quot;&quot;, length = 10)
+  private String alternativeCode;
+<span class="nc" id="L87">  @Column(name = &quot;\&quot;Area\&quot;&quot;) // , precision = 34, scale = 0)</span>
+<span class="nc" id="L88">  private Integer area = 0;</span>
+  @Column(name = &quot;\&quot;Population\&quot;&quot;, precision = 34, scale = 0)
+  private long population;
+
+  @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST, optional = true)
+  @JoinColumn(referencedColumnName = &quot;\&quot;CodePublisher\&quot;&quot;, name = &quot;\&quot;CodePublisher\&quot;&quot;, nullable = false,
+      insertable = false, updatable = false)
+  @JoinColumn(referencedColumnName = &quot;\&quot;CodeID\&quot;&quot;, name = &quot;\&quot;ParentCodeID\&quot;&quot;, nullable = false,
+      insertable = false, updatable = false)
+  @JoinColumn(referencedColumnName = &quot;\&quot;DivisionCode\&quot;&quot;, name = &quot;\&quot;ParentDivisionCode\&quot;&quot;, nullable = false,
+      insertable = false, updatable = false)
+  private AdministrativeDivision parent;
+
+<span class="nc" id="L101">  @OneToMany(mappedBy = &quot;parent&quot;, fetch = FetchType.LAZY, cascade = CascadeType.ALL)</span>
+  private List&lt;AdministrativeDivision&gt; children = new ArrayList&lt;&gt;();
+
+  @OneToMany(fetch = FetchType.LAZY)
+  @JoinColumn(name = &quot;\&quot;CodePublisher\&quot;&quot;, referencedColumnName = &quot;\&quot;CodePublisher\&quot;&quot;, insertable = false,
+      updatable = false)
+  @JoinColumn(name = &quot;\&quot;CodeID\&quot;&quot;, referencedColumnName = &quot;\&quot;CodeID\&quot;&quot;, insertable = false, updatable = false)
+  @JoinColumn(name = &quot;\&quot;DivisionCode\&quot;&quot;, referencedColumnName = &quot;\&quot;DivisionCode\&quot;&quot;, insertable = false,
+      updatable = false)
+  private List&lt;AdministrativeDivisionDescription&gt; allDescriptions;
+
+<span class="nc" id="L112">  public AdministrativeDivision() {</span>
+    // required for JPA
+<span class="nc" id="L114">  }</span>
+
+<span class="nc" id="L116">  public AdministrativeDivision(final AdministrativeDivisionKey key) {</span>
+<span class="nc" id="L117">    codePublisher = key.getCodePublisher();</span>
+<span class="nc" id="L118">    codeID = key.getCodeID();</span>
+<span class="nc" id="L119">    divisionCode = key.getDivisionCode();</span>
+<span class="nc" id="L120">  }</span>
+
+  @PostPersist
+  @PostUpdate
+  public void adjustParent() {
+<span class="nc bnc" id="L125" title="All 2 branches missed.">    for (AdministrativeDivision child : children) {</span>
+<span class="nc" id="L126">      child.setParent(this);</span>
+<span class="nc" id="L127">    }</span>
+<span class="nc" id="L128">  }</span>
+
+  public String getAlternativeCode() {
+<span class="nc" id="L131">    return alternativeCode;</span>
+  }
+
+  public int getArea() {
+<span class="nc" id="L135">    return area;</span>
+  }
+
+  public List&lt;AdministrativeDivision&gt; getChildren() {
+<span class="nc" id="L139">    return children;</span>
+  }
+
+  public String getCodeID() {
+<span class="nc" id="L143">    return codeID;</span>
+  }
+
+  public String getCodePublisher() {
+<span class="nc" id="L147">    return codePublisher;</span>
+  }
+
+  public String getCountryCode() {
+<span class="nc" id="L151">    return countryCode;</span>
+  }
+
+  public String getDivisionCode() {
+<span class="nc" id="L155">    return divisionCode;</span>
+  }
+
+  @Override
+  public Object getKey() {
+<span class="nc" id="L160">    return new AdministrativeDivisionKey(codePublisher, codeID, divisionCode);</span>
+  }
+
+  public AdministrativeDivision getParent() {
+<span class="nc" id="L164">    return parent;</span>
+  }
+
+  public String getParentCodeID() {
+<span class="nc" id="L168">    return parentCodeID;</span>
+  }
+
+  public String getParentDivisionCode() {
+<span class="nc" id="L172">    return parentDivisionCode;</span>
+  }
+
+  public long getPopulation() {
+<span class="nc" id="L176">    return population;</span>
+  }
+
+  public void setAlternativeCode(String alternativeCode) {
+<span class="nc" id="L180">    this.alternativeCode = alternativeCode;</span>
+<span class="nc" id="L181">  }</span>
+
+  public void setArea(int area) {
+<span class="nc" id="L184">    this.area = area;</span>
+<span class="nc" id="L185">  }</span>
+
+  public void setArea(Integer area) {
+<span class="nc" id="L188">    this.area = area;</span>
+<span class="nc" id="L189">  }</span>
+
+  public void setChildren(List&lt;AdministrativeDivision&gt; children) {
+<span class="nc" id="L192">    this.children = children;</span>
+<span class="nc" id="L193">  }</span>
+
+  public void setCodeID(String codeID) {
+<span class="nc" id="L196">    this.codeID = codeID;</span>
+<span class="nc" id="L197">  }</span>
+
+  public void setCodePublisher(String codePublisher) {
+<span class="nc" id="L200">    this.codePublisher = codePublisher;</span>
+<span class="nc" id="L201">  }</span>
+
+  public void setCountryCode(String countryCode) {
+<span class="nc" id="L204">    this.countryCode = countryCode;</span>
+<span class="nc" id="L205">  }</span>
+
+  public void setDivisionCode(String divisionCode) {
+<span class="nc" id="L208">    this.divisionCode = divisionCode;</span>
+<span class="nc" id="L209">  }</span>
+
+  public void setParent(AdministrativeDivision parent) {
+<span class="nc" id="L212">    this.parent = parent;</span>
+<span class="nc" id="L213">    this.parentCodeID = parent.getCodeID();</span>
+<span class="nc" id="L214">    this.parentDivisionCode = parent.getDivisionCode();</span>
+
+<span class="nc" id="L216">  }</span>
+
+  public void setParentCodeID(String parentCodeID) {
+<span class="nc" id="L219">    this.parentCodeID = parentCodeID;</span>
+<span class="nc" id="L220">  }</span>
+
+  public void setParentDivisionCode(String parentDivisionCode) {
+<span class="nc" id="L223">    this.parentDivisionCode = parentDivisionCode;</span>
+<span class="nc" id="L224">  }</span>
+
+  public void setPopulation(long population) {
+<span class="nc" id="L227">    this.population = population;</span>
+<span class="nc" id="L228">  }</span>
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L232">    final int prime = 31;</span>
+<span class="nc" id="L233">    int result = 1;</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">    result = prime * result + ((codeID == null) ? 0 : codeID.hashCode());</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">    result = prime * result + ((codePublisher == null) ? 0 : codePublisher.hashCode());</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">    result = prime * result + ((divisionCode == null) ? 0 : divisionCode.hashCode());</span>
+<span class="nc" id="L237">    return result;</span>
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+<span class="nc bnc" id="L242" title="All 2 branches missed.">    if (this == obj) return true;</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">    if (obj == null) return false;</span>
+<span class="nc bnc" id="L244" title="All 2 branches missed.">    if (getClass() != obj.getClass()) return false;</span>
+<span class="nc" id="L245">    AdministrativeDivision other = (AdministrativeDivision) obj;</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">    if (codeID == null) {</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">      if (other.codeID != null) return false;</span>
+<span class="nc bnc" id="L248" title="All 2 branches missed.">    } else if (!codeID.equals(other.codeID)) return false;</span>
+<span class="nc bnc" id="L249" title="All 2 branches missed.">    if (codePublisher == null) {</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">      if (other.codePublisher != null) return false;</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">    } else if (!codePublisher.equals(other.codePublisher)) return false;</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">    if (divisionCode == null) {</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">      if (other.divisionCode != null) return false;</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">    } else if (!divisionCode.equals(other.divisionCode)) return false;</span>
+<span class="nc" id="L255">    return true;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

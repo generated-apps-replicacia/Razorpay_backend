@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataExternalRequestContext.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAODataExternalRequestContext.java</span></div><h1>JPAODataExternalRequestContext.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import static java.util.Collections.emptyList;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.EntityManager;
+
+import org.apache.olingo.server.api.debug.DebugSupport;
+
+import com.sap.olingo.jpa.metadata.api.JPARequestParameterMap;
+import com.sap.olingo.jpa.processor.core.processor.JPARequestParameterHashMap;
+
+public class JPAODataExternalRequestContext implements JPAODataRequestContext {
+
+  private final JPARequestParameterMap customParameter;
+  private final DebugSupport debugSupport;
+  private final Optional&lt;JPAODataClaimProvider&gt; claims;
+  private final Optional&lt;JPAODataGroupProvider&gt; groups;
+  private final JPAODataTransactionFactory transactionFactory;
+  private final EntityManager em;
+  private final JPACUDRequestHandler cudRequestHandler;
+  private final List&lt;Locale&gt; locales;
+
+<span class="nc" id="L31">  public JPAODataExternalRequestContext(final Builder builder) {</span>
+
+<span class="nc" id="L33">    this.debugSupport = builder.debugSupport;</span>
+<span class="nc" id="L34">    this.claims = Optional.ofNullable(builder.claimsProvider);</span>
+<span class="nc" id="L35">    this.groups = Optional.ofNullable(builder.groupsProvider);</span>
+<span class="nc" id="L36">    this.transactionFactory = builder.transactionFactory;</span>
+<span class="nc" id="L37">    this.em = builder.em;</span>
+<span class="nc" id="L38">    this.cudRequestHandler = builder.cudRequestHandler;</span>
+<span class="nc" id="L39">    this.customParameter = builder.customParameter;</span>
+<span class="nc" id="L40">    this.locales = builder.locales;</span>
+<span class="nc" id="L41">  }</span>
+
+  @Override
+  public EntityManager getEntityManager() {
+<span class="nc" id="L45">    return em;</span>
+  }
+
+  @Override
+  public Optional&lt;JPAODataClaimProvider&gt; getClaimsProvider() {
+<span class="nc" id="L50">    return claims;</span>
+  }
+
+  @Override
+  public Optional&lt;JPAODataGroupProvider&gt; getGroupsProvider() {
+<span class="nc" id="L55">    return groups;</span>
+  }
+
+  @Override
+  public JPACUDRequestHandler getCUDRequestHandler() {
+<span class="nc" id="L60">    return cudRequestHandler;</span>
+  }
+
+  @Override
+  public DebugSupport getDebuggerSupport() {
+<span class="nc" id="L65">    return debugSupport;</span>
+  }
+
+  @Override
+  public JPAODataTransactionFactory getTransactionFactory() {
+<span class="nc" id="L70">    return transactionFactory;</span>
+  }
+
+  @Override
+  public List&lt;Locale&gt; getLocales() {
+<span class="nc" id="L75">    return locales;</span>
+  }
+
+<span class="nc" id="L78">  public static class Builder {</span>
+    public static final int CONTAINS_ONLY_LANGU = 1;
+    public static final int CONTAINS_LANGU_COUNTRY = 2;
+    public static final String SELECT_ITEM_SEPARATOR = &quot;,&quot;;
+
+<span class="nc" id="L83">    private final JPARequestParameterMap customParameter = new JPARequestParameterHashMap();</span>
+    private DebugSupport debugSupport;
+    private JPAODataClaimProvider claimsProvider;
+    private JPAODataGroupProvider groupsProvider;
+    private JPAODataTransactionFactory transactionFactory;
+    private EntityManager em;
+    private JPACUDRequestHandler cudRequestHandler;
+<span class="nc" id="L90">    private List&lt;Locale&gt; locales = emptyList();</span>
+
+    public JPAODataRequestContext build() {
+<span class="nc" id="L93">      return new JPAODataExternalRequestContext(this);</span>
+    }
+
+    /**
+     * Adds a Claims Provider to the request context providing the claims of the current user.
+     * @param provider
+     * @return Builder
+     */
+    public Builder setClaimsProvider(@Nullable final JPAODataClaimProvider provider) {
+<span class="nc" id="L102">      this.claimsProvider = provider;</span>
+<span class="nc" id="L103">      return this;</span>
+    }
+
+    /**
+     *
+     * @param cudRequestHandler
+     * @return Builder
+     */
+    public Builder setCUDRequestHandler(@Nonnull final JPACUDRequestHandler cudRequestHandler) {
+<span class="nc" id="L112">      this.cudRequestHandler = requireNonNull(cudRequestHandler);</span>
+<span class="nc" id="L113">      return this;</span>
+    }
+
+    /**
+     * Add a request specific parameter to re request context.
+     * @param name
+     * @param value
+     * @return
+     */
+    public Builder setParameter(@Nonnull final String name, @Nullable final Object value) {
+<span class="nc" id="L123">      customParameter.put(requireNonNull(name), value);</span>
+<span class="nc" id="L124">      return this;</span>
+    }
+
+    /**
+     *
+     * @param debugSupport
+     * @return Builder
+     */
+    public Builder setDebugSupport(@Nullable final DebugSupport debugSupport) {
+<span class="nc" id="L133">      this.debugSupport = debugSupport;</span>
+<span class="nc" id="L134">      return this;</span>
+    }
+
+    /**
+     * An entity manager can be provided. If the entity manager is not provided, one is created automatically from the
+     * entity manager factory provided by the session context {@link JPAODataServiceContext}
+     * @param em
+     * @return Builder
+     */
+    public Builder setEntityManager(@Nonnull final EntityManager em) {
+<span class="nc" id="L144">      this.em = requireNonNull(em);</span>
+<span class="nc" id="L145">      return this;</span>
+    }
+
+    /**
+     * Adds a Field Group Provider to the request context providing the field groups the current user is assigned to.
+     * @param provider
+     * @return Builder
+     */
+    public Builder setGroupsProvider(@Nullable final JPAODataGroupProvider provider) {
+<span class="nc" id="L154">      this.groupsProvider = provider;</span>
+<span class="nc" id="L155">      return this;</span>
+    }
+
+    /**
+     * Sets a transaction factory. If non is provided {@link JPAODataDefaultTransactionFactory} is taken.
+     * @see JPAODataTransactionFactory
+     * @param transactionFactory
+     * @return Builder
+     */
+    public Builder setTransactionFactory(@Nullable final JPAODataTransactionFactory transactionFactory) {
+<span class="nc" id="L165">      this.transactionFactory = transactionFactory;</span>
+<span class="nc" id="L166">      return this;</span>
+    }
+
+    /**
+     * Sets the locales relevant for the current request. The first locale is used e.g. for description properties. If
+     * no locale is set as a fallback the accept-language header is used.
+     * @param locales
+     * @return
+     */
+    public Builder setLocales(@Nonnull final List&lt;Locale&gt; locales) {
+<span class="nc" id="L176">      this.locales = requireNonNull(locales);</span>
+<span class="nc" id="L177">      return this;</span>
+    }
+
+    /**
+     * Sets the locale relevant for the current request. The locale is used e.g. for description properties. If no
+     * locale is set as a fallback the accept-language header is used.
+     * @param locale
+     * @return
+     */
+    public Builder setLocales(@Nonnull final Locale locale) {
+<span class="nc" id="L187">      this.locales = Collections.singletonList(requireNonNull(locale));</span>
+<span class="nc" id="L188">      return this;</span>
+    }
+  }
+
+  @Override
+  public JPARequestParameterMap getRequestParameter() {
+<span class="nc" id="L194">    return customParameter;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

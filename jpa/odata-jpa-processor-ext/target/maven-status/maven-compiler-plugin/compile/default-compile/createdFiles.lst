@@ -1,0 +1,8 @@
+com\sap\olingo\jpa\processor\cb\ProcessorSelection$SelectionItem.class
+com\sap\olingo\jpa\processor\cb\ProcessorSelection.class
+com\sap\olingo\jpa\processor\cb\ProcessorCriteriaQuery.class
+com\sap\olingo\jpa\processor\cb\ProcessorCriteriaBuilder$WindowFunction.class
+com\sap\olingo\jpa\processor\cb\ProcessorCriteriaBuilder.class
+com\sap\olingo\jpa\processor\cb\ProcessorSubQueryProvider.class
+com\sap\olingo\jpa\processor\cb\ProcessorSelection$SelectionAttribute.class
+com\sap\olingo\jpa\processor\cb\ProcessorSubquery.class

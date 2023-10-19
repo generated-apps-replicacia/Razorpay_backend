@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataRequestProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAODataRequestProcessor.java</span></div><h1>JPAODataRequestProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import javax.persistence.Entity;
+import javax.persistence.OptimisticLockException;
+import javax.persistence.RollbackException;
+
+import com.sap.olingo.jpa.processor.core.query.Util;
+import org.apache.olingo.commons.api.edm.EdmEntitySet;
+import org.apache.olingo.commons.api.ex.ODataException;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ODataLibraryException;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.processor.ActionPrimitiveProcessor;
+import org.apache.olingo.server.api.processor.ActionVoidProcessor;
+import org.apache.olingo.server.api.processor.ComplexCollectionProcessor;
+import org.apache.olingo.server.api.processor.ComplexProcessor;
+import org.apache.olingo.server.api.processor.CountComplexCollectionProcessor;
+import org.apache.olingo.server.api.processor.CountEntityCollectionProcessor;
+import org.apache.olingo.server.api.processor.EntityProcessor;
+import org.apache.olingo.server.api.processor.MediaEntityProcessor;
+import org.apache.olingo.server.api.processor.PrimitiveCollectionProcessor;
+import org.apache.olingo.server.api.processor.PrimitiveValueProcessor;
+import org.apache.olingo.server.api.uri.UriInfo;
+
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.processor.JPAActionRequestProcessor;
+import com.sap.olingo.jpa.processor.core.processor.JPACUDRequestProcessor;
+import com.sap.olingo.jpa.processor.core.processor.JPAProcessorFactory;
+import com.sap.olingo.jpa.processor.core.processor.JPARequestProcessor;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceEntitySet;
+
+public final class JPAODataRequestProcessor
+    implements PrimitiveValueProcessor, PrimitiveCollectionProcessor, ComplexProcessor, ComplexCollectionProcessor,
+    CountEntityCollectionProcessor, EntityProcessor, MediaEntityProcessor, ActionPrimitiveProcessor,
+    ActionVoidProcessor, CountComplexCollectionProcessor {
+
+  private final JPAODataSessionContextAccess sessionContext;
+  private final JPAODataRequestContextAccess requestContext;
+  private JPAProcessorFactory factory;
+
+  public JPAODataRequestProcessor(final JPAODataSessionContextAccess sessionContext,
+      final JPAODataRequestContextAccess requestContext) {
+<span class="nc" id="L49">    super();</span>
+<span class="nc" id="L50">    this.sessionContext = sessionContext;</span>
+<span class="nc" id="L51">    this.requestContext = requestContext;</span>
+<span class="nc" id="L52">  }</span>
+
+  @Override
+  public void init(final OData odata, final ServiceMetadata serviceMetadata) {
+<span class="nc" id="L56">    this.factory = new JPAProcessorFactory(odata, serviceMetadata, sessionContext);</span>
+<span class="nc" id="L57">  }</span>
+
+  @Override
+  public void countEntityCollection(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo)
+      throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L64">      final JPARequestProcessor p = factory.createProcessor(uriInfo, ContentType.TEXT_PLAIN, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L66">      p.retrieveData(request, response, ContentType.TEXT_PLAIN);</span>
+<span class="nc" id="L67">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L68">      throw e;</span>
+<span class="nc" id="L69">    } catch (final ODataException e) {</span>
+<span class="nc" id="L70">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L71">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L72">    }</span>
+<span class="nc" id="L73">  }</span>
+
+  @Override
+  public void countComplexCollection(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo)
+      throws ODataApplicationException, ODataLibraryException {
+
+<span class="nc" id="L79">    throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_COUNT,</span>
+        HttpStatusCode.NOT_IMPLEMENTED);
+  }
+
+  @Override
+  public void createEntity(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat) throws ODataApplicationException,
+      ODataLibraryException {
+
+    try {
+<span class="nc" id="L89">      final JPACUDRequestProcessor p = factory.createCUDRequestProcessor(uriInfo, responseFormat, requestContext,</span>
+<span class="nc" id="L90">          request.getAllHeaders());</span>
+<span class="nc" id="L91">      p.createEntity(request, response, requestFormat, responseFormat);</span>
+<span class="nc" id="L92">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L93">      throw e;</span>
+<span class="nc" id="L94">    } catch (final ODataException e) {</span>
+<span class="nc" id="L95">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L96">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L97">    }</span>
+<span class="nc" id="L98">  }</span>
+
+  @Override
+  public void createMediaEntity(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+    try {
+<span class="nc" id="L105">      final JPACUDRequestProcessor p = factory.createCUDRequestProcessor(uriInfo, responseFormat, requestContext,</span>
+<span class="nc" id="L106">              request.getAllHeaders());</span>
+<span class="nc" id="L107">      p.createMediaEntity(request, response, requestFormat, responseFormat);</span>
+<span class="nc" id="L108">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L109">      throw e;</span>
+<span class="nc" id="L110">    } catch (final ODataException e) {</span>
+<span class="nc" id="L111">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L112">              HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L113">    }</span>
+<span class="nc" id="L114">  }</span>
+
+  @Override
+  public void deleteComplex(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo)
+      throws ODataApplicationException, ODataLibraryException {
+    // Set NULL: .../Organizations('4')/Address
+
+    try {
+<span class="nc" id="L122">      final JPACUDRequestProcessor p = factory.createCUDRequestProcessor(uriInfo, requestContext, request</span>
+<span class="nc" id="L123">          .getAllHeaders());</span>
+<span class="nc" id="L124">      p.clearFields(request, response);</span>
+<span class="nc" id="L125">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">      if (e.getCause() instanceof RollbackException)</span>
+<span class="nc" id="L127">        handleRollbackException((RollbackException) e.getCause());</span>
+<span class="nc" id="L128">      throw e;</span>
+<span class="nc" id="L129">    } catch (final ODataException e) {</span>
+<span class="nc" id="L130">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L131">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L132">    }</span>
+<span class="nc" id="L133">  }</span>
+
+  @Override
+  public void deleteEntity(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo)
+      throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L140">      final JPACUDRequestProcessor p = this.factory.createCUDRequestProcessor(uriInfo, requestContext, request</span>
+<span class="nc" id="L141">          .getAllHeaders());</span>
+<span class="nc" id="L142">      p.deleteEntity(request, response);</span>
+<span class="nc" id="L143">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">      if (e.getCause() instanceof RollbackException)</span>
+<span class="nc" id="L145">        handleRollbackException((RollbackException) e.getCause());</span>
+<span class="nc" id="L146">      throw e;</span>
+<span class="nc" id="L147">    } catch (final ODataException e) {</span>
+<span class="nc" id="L148">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L149">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L150">    }</span>
+<span class="nc" id="L151">  }</span>
+
+  @Override
+  public void deletePrimitive(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo)
+      throws ODataApplicationException, ODataLibraryException {
+    // Set NULL: .../Organizations('4')/Address/Country
+    // https://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part1-protocol/odata-v4.0-errata03-os-part1-protocol-complete.html#_Toc453752306
+    // 11.4.9.2 Set a Value to Null:
+    // A successful DELETE request to the edit URL for a structural property, or to the edit URL of the raw value of a
+    // primitive property, sets the property to null. The request body is ignored and should be empty. A DELETE request
+    // to a non-nullable value MUST fail and the service respond with 400 Bad Request or other appropriate error. The
+    // same rules apply whether the target is the value of a regular property or the value of a dynamic property. A
+    // missing dynamic property is defined to be the same as a dynamic property with value null. All dynamic properties
+    // are nullable.On success, the service MUST respond with 204 No Content and an empty body.
+    //
+    // Nullable checked by Olingo Core
+    try {
+<span class="nc" id="L168">      final JPACUDRequestProcessor p = factory.createCUDRequestProcessor(uriInfo, requestContext, request</span>
+<span class="nc" id="L169">          .getAllHeaders());</span>
+<span class="nc" id="L170">      p.clearFields(request, response);</span>
+<span class="nc" id="L171">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">      if (e.getCause() instanceof RollbackException)</span>
+<span class="nc" id="L173">        handleRollbackException((RollbackException) e.getCause());</span>
+<span class="nc" id="L174">      throw e;</span>
+<span class="nc" id="L175">    } catch (final ODataException e) {</span>
+<span class="nc" id="L176">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L177">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L178">    }</span>
+<span class="nc" id="L179">  }</span>
+
+  @Override
+  public void deletePrimitiveValue(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo)
+      throws ODataApplicationException, ODataLibraryException {
+    // .../Organizations('4')/Address/Country/$value
+<span class="nc" id="L185">    throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_DELETE_VALUE,</span>
+        HttpStatusCode.NOT_IMPLEMENTED);
+
+  }
+
+  @Override
+  public void deleteMediaEntity(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo)
+      throws ODataApplicationException, ODataLibraryException {
+    try {
+<span class="nc" id="L194">      final JPACUDRequestProcessor p = this.factory.createCUDRequestProcessor(uriInfo, requestContext, request</span>
+<span class="nc" id="L195">              .getAllHeaders());</span>
+<span class="nc" id="L196">      p.deleteMediaEntity(request, response);</span>
+<span class="nc" id="L197">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">      if (e.getCause() instanceof RollbackException)</span>
+<span class="nc" id="L199">        handleRollbackException((RollbackException) e.getCause());</span>
+<span class="nc" id="L200">      throw e;</span>
+<span class="nc" id="L201">    } catch (final ODataException e) {</span>
+<span class="nc" id="L202">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L203">              HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L204">    }</span>
+
+<span class="nc" id="L206">  }</span>
+
+  @Override
+  public void readComplex(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L213">      final JPARequestProcessor p = factory.createProcessor(uriInfo, responseFormat, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L215">      p.retrieveData(request, response, responseFormat);</span>
+<span class="nc" id="L216">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L217">      requestContext.getDebugger().debug(this, e.getMessage());</span>
+<span class="nc" id="L218">      throw e;</span>
+<span class="nc" id="L219">    } catch (final ODataException e) {</span>
+<span class="nc" id="L220">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L221">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L222">    }</span>
+<span class="nc" id="L223">  }</span>
+
+  @Override
+  public void readComplexCollection(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+    try {
+<span class="nc" id="L229">      final JPARequestProcessor p = factory.createProcessor(uriInfo, responseFormat, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L231">      p.retrieveData(request, response, responseFormat);</span>
+<span class="nc" id="L232">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L233">      requestContext.getDebugger().debug(this, e.getMessage());</span>
+<span class="nc" id="L234">      throw e;</span>
+<span class="nc" id="L235">    } catch (final ODataException e) {</span>
+<span class="nc" id="L236">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L237">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L238">    }</span>
+<span class="nc" id="L239">  }</span>
+
+  @Override
+  public void readEntity(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L246">      final JPARequestProcessor p = factory.createProcessor(uriInfo, responseFormat, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L248">      p.retrieveData(request, response, responseFormat);</span>
+<span class="nc" id="L249">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L250">      requestContext.getDebugger().debug(this, e.getMessage());</span>
+<span class="nc" id="L251">      throw e;</span>
+<span class="nc" id="L252">    } catch (final ODataException e) {</span>
+<span class="nc" id="L253">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L254">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L255">    }</span>
+<span class="nc" id="L256">  }</span>
+
+  @Override
+  public void readEntityCollection(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L263">      final JPARequestProcessor p = factory.createProcessor(uriInfo, responseFormat, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L265">      p.retrieveData(request, response, responseFormat);</span>
+<span class="nc" id="L266">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L267">      requestContext.getDebugger().debug(this, e.getMessage());</span>
+<span class="nc" id="L268">      throw e;</span>
+<span class="nc" id="L269">    } catch (final ODataException e) {</span>
+<span class="nc" id="L270">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L271">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L272">    }</span>
+<span class="nc" id="L273">  }</span>
+
+  @Override
+  public void readPrimitiveCollection(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+    try {
+<span class="nc" id="L279">      final JPARequestProcessor p = factory.createProcessor(uriInfo, responseFormat, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L281">      p.retrieveData(request, response, responseFormat);</span>
+<span class="nc" id="L282">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L283">      requestContext.getDebugger().debug(this, e.getMessage());</span>
+<span class="nc" id="L284">      throw e;</span>
+<span class="nc" id="L285">    } catch (final ODataException e) {</span>
+<span class="nc" id="L286">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L287">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L288">    }</span>
+<span class="nc" id="L289">  }</span>
+
+  @Override
+  public void readPrimitive(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L296">      final JPARequestProcessor p = factory.createProcessor(uriInfo, responseFormat, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L298">      p.retrieveData(request, response, responseFormat);</span>
+<span class="nc" id="L299">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L300">      requestContext.getDebugger().debug(this, e.getMessage());</span>
+<span class="nc" id="L301">      throw e;</span>
+<span class="nc" id="L302">    } catch (final ODataException e) {</span>
+<span class="nc" id="L303">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L304">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L305">    }</span>
+<span class="nc" id="L306">  }</span>
+
+  @Override
+  public void readPrimitiveValue(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L313">      final JPARequestProcessor p = factory.createProcessor(uriInfo, responseFormat, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L315">      p.retrieveData(request, response, responseFormat);</span>
+<span class="nc" id="L316">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L317">      requestContext.getDebugger().debug(this, e.getMessage());</span>
+<span class="nc" id="L318">      throw e;</span>
+<span class="nc" id="L319">    } catch (final ODataException e) {</span>
+<span class="nc" id="L320">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L321">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L322">    }</span>
+
+<span class="nc" id="L324">  }</span>
+
+  @Override
+  public void readMediaEntity(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L331">      final JPARequestProcessor p = factory.createProcessor(uriInfo, responseFormat, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L333">      p.retrieveData(request, response, responseFormat);</span>
+<span class="nc" id="L334">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L335">      requestContext.getDebugger().debug(this, e.getMessage());</span>
+<span class="nc" id="L336">      throw e;</span>
+<span class="nc" id="L337">    } catch (final ODataException e) {</span>
+<span class="nc" id="L338">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L339">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L340">    }</span>
+<span class="nc" id="L341">  }</span>
+
+  @Override
+  public void updateComplex(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+    // ../Organizations('5')/Address
+    // Not supported yet, as PATCH and PUT are allowed here
+<span class="nc" id="L349">    throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_UPDATE_VALUE,</span>
+        HttpStatusCode.NOT_IMPLEMENTED);
+  }
+
+  @Override
+  public void updateEntity(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L359">      final JPACUDRequestProcessor p = factory.createCUDRequestProcessor(uriInfo, responseFormat, requestContext,</span>
+<span class="nc" id="L360">          request.getAllHeaders());</span>
+<span class="nc" id="L361">      p.updateEntity(request, response, requestFormat, responseFormat);</span>
+<span class="nc" id="L362">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc bnc" id="L363" title="All 2 branches missed.">      if (e.getCause() instanceof RollbackException)</span>
+<span class="nc" id="L364">        handleRollbackException((RollbackException) e.getCause());</span>
+<span class="nc" id="L365">      throw e;</span>
+<span class="nc" id="L366">    } catch (final ODataException e) {</span>
+<span class="nc" id="L367">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L368">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L369">    }</span>
+<span class="nc" id="L370">  }</span>
+
+  private void handleRollbackException(final RollbackException e) throws ODataJPAProcessorException {
+<span class="nc bnc" id="L373" title="All 2 branches missed.">    if (e.getCause() instanceof OptimisticLockException) {</span>
+<span class="nc" id="L374">      throw new ODataJPAProcessorException(e.getCause().getCause(), HttpStatusCode.PRECONDITION_FAILED);</span>
+    }
+<span class="nc" id="L376">    throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+  }
+
+  @Override
+  public void updatePrimitive(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+    // http://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part1-protocol/odata-v4.0-errata03-os-part1-protocol-complete.html#_Toc453752306
+    // only PUT ../Organizations('5')/Address/StreetName
+<span class="nc" id="L385">    updateEntity(request, response, uriInfo, requestFormat, responseFormat);</span>
+<span class="nc" id="L386">  }</span>
+
+  @Override
+  public void updatePrimitiveValue(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+    // ../Organizations('5')/Address/StreetName/$value
+<span class="nc" id="L393">    throw new ODataJPAProcessorException(ODataJPAProcessorException.MessageKeys.NOT_SUPPORTED_UPDATE_VALUE,</span>
+        HttpStatusCode.NOT_IMPLEMENTED);
+  }
+
+  @Override
+  public void updateMediaEntity(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+    try {
+<span class="nc" id="L402">      final JPACUDRequestProcessor p = factory.createCUDRequestProcessor(uriInfo, responseFormat, requestContext,</span>
+<span class="nc" id="L403">              request.getAllHeaders());</span>
+<span class="nc" id="L404">      p.updateMediaEntity(request, response, requestFormat, responseFormat);</span>
+<span class="nc" id="L405">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc bnc" id="L406" title="All 2 branches missed.">      if (e.getCause() instanceof RollbackException)</span>
+<span class="nc" id="L407">        handleRollbackException((RollbackException) e.getCause());</span>
+<span class="nc" id="L408">      throw e;</span>
+<span class="nc" id="L409">    } catch (final ODataException e) {</span>
+<span class="nc" id="L410">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L411">              HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L412">    }</span>
+<span class="nc" id="L413">  }</span>
+
+  @Override
+  public void updatePrimitiveCollection(final ODataRequest request, final ODataResponse response,
+      final UriInfo uriInfo, final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+
+<span class="nc" id="L420">    updateEntity(request, response, uriInfo, requestFormat, responseFormat);</span>
+<span class="nc" id="L421">  }</span>
+
+  @Override
+  public void deletePrimitiveCollection(final ODataRequest request, final ODataResponse response,
+      final UriInfo uriInfo) throws ODataApplicationException, ODataLibraryException {
+    // Set NULL: .../Organizations('4')/Comment
+    // See deletePrimitive
+    try {
+<span class="nc" id="L429">      final JPACUDRequestProcessor p = factory.createCUDRequestProcessor(uriInfo, requestContext, request</span>
+<span class="nc" id="L430">          .getAllHeaders());</span>
+<span class="nc" id="L431">      p.clearFields(request, response);</span>
+<span class="nc" id="L432">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc bnc" id="L433" title="All 2 branches missed.">      if (e.getCause() instanceof RollbackException)</span>
+<span class="nc" id="L434">        handleRollbackException((RollbackException) e.getCause());</span>
+<span class="nc" id="L435">      throw e;</span>
+<span class="nc" id="L436">    } catch (final ODataException e) {</span>
+<span class="nc" id="L437">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L438">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L439">    }</span>
+<span class="nc" id="L440">  }</span>
+
+  @Override
+  public void updateComplexCollection(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+
+<span class="nc" id="L447">    updateEntity(request, response, uriInfo, requestFormat, responseFormat);</span>
+<span class="nc" id="L448">  }</span>
+
+  @Override
+  public void deleteComplexCollection(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo)
+      throws ODataApplicationException, ODataLibraryException {
+    // Set NULL: .../Persons('4')/InhouseAddress
+    // See deletePrimitive
+    try {
+<span class="nc" id="L456">      final JPACUDRequestProcessor p = factory.createCUDRequestProcessor(uriInfo, requestContext, request</span>
+<span class="nc" id="L457">          .getAllHeaders());</span>
+<span class="nc" id="L458">      p.clearFields(request, response);</span>
+<span class="nc" id="L459">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc bnc" id="L460" title="All 2 branches missed.">      if (e.getCause() instanceof RollbackException)</span>
+<span class="nc" id="L461">        handleRollbackException((RollbackException) e.getCause());</span>
+<span class="nc" id="L462">      throw e;</span>
+<span class="nc" id="L463">    } catch (final ODataException e) {</span>
+<span class="nc" id="L464">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L465">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L466">    }</span>
+<span class="nc" id="L467">  }</span>
+
+  @Override
+  public void processActionPrimitive(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat, final ContentType responseFormat)
+      throws ODataApplicationException, ODataLibraryException {
+
+    try {
+<span class="nc" id="L475">      final JPAActionRequestProcessor p = this.factory.createActionProcessor(uriInfo, responseFormat, request</span>
+<span class="nc" id="L476">          .getAllHeaders(), requestContext);</span>
+<span class="nc" id="L477">      p.performAction(request, response, requestFormat);</span>
+<span class="nc" id="L478">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L479">      throw e;</span>
+<span class="nc" id="L480">    } catch (final ODataException e) {</span>
+<span class="nc" id="L481">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L482">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L483">    }</span>
+<span class="nc" id="L484">  }</span>
+
+  @Override
+  public void processActionVoid(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestFormat) throws ODataApplicationException, ODataLibraryException {
+    try {
+<span class="nc" id="L490">      final JPAActionRequestProcessor p = this.factory.createActionProcessor(uriInfo, null, request.getAllHeaders(),</span>
+          requestContext);
+<span class="nc" id="L492">      p.performAction(request, response, requestFormat);</span>
+<span class="nc" id="L493">    } catch (ODataApplicationException | ODataLibraryException e) {</span>
+<span class="nc" id="L494">      throw e;</span>
+<span class="nc" id="L495">    } catch (final ODataException e) {</span>
+<span class="nc" id="L496">      throw new ODataApplicationException(e.getLocalizedMessage(),</span>
+<span class="nc" id="L497">          HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), null, e);</span>
+<span class="nc" id="L498">    }</span>
+
+<span class="nc" id="L500">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

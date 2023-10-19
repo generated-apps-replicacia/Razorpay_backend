@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataServiceDocumentProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAODataServiceDocumentProcessor.java</span></div><h1>JPAODataServiceDocumentProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpHeader;
+import org.apache.olingo.commons.api.http.HttpMethod;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ODataLibraryException;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.etag.ETagHelper;
+import org.apache.olingo.server.api.etag.ServiceMetadataETagSupport;
+import org.apache.olingo.server.api.processor.DefaultProcessor;
+import org.apache.olingo.server.api.processor.ServiceDocumentProcessor;
+import org.apache.olingo.server.api.serializer.ODataSerializer;
+import org.apache.olingo.server.api.uri.UriInfo;
+
+public class JPAODataServiceDocumentProcessor implements ServiceDocumentProcessor {
+
+  private OData odata;
+  private ServiceMetadata serviceMetadata;
+  private final JPAODataSessionContextAccess serviceContext;
+
+  public JPAODataServiceDocumentProcessor(final JPAODataSessionContextAccess serviceContext) {
+<span class="nc" id="L27">    super();</span>
+<span class="nc" id="L28">    this.serviceContext = serviceContext;</span>
+<span class="nc" id="L29">  }</span>
+
+  @Override
+  public void init(OData odata, ServiceMetadata serviceMetadata) {
+<span class="nc" id="L33">    this.odata = odata;</span>
+<span class="nc" id="L34">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L35">  }</span>
+
+  /**
+   * This is a copy from @see
+   * {@link DefaultProcessor#readServiceDocument(ODataRequest, ODataResponse, UriInfo, ContentType)}
+   * 
+   */
+  @Override
+  public void readServiceDocument(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
+      final ContentType requestedContentType) throws ODataApplicationException, ODataLibraryException {
+<span class="nc bnc" id="L45" title="All 2 branches missed.">    String uri = serviceContext.useAbsoluteContextURL() ? request.getRawBaseUri() : null;</span>
+<span class="nc" id="L46">    boolean isNotModified = false;</span>
+<span class="nc" id="L47">    ServiceMetadataETagSupport eTagSupport = serviceMetadata.getServiceMetadataETagSupport();</span>
+<span class="nc bnc" id="L48" title="All 4 branches missed.">    if (eTagSupport != null &amp;&amp; eTagSupport.getServiceDocumentETag() != null) {</span>
+      // Set application etag at response
+<span class="nc" id="L50">      response.setHeader(HttpHeader.ETAG, eTagSupport.getServiceDocumentETag());</span>
+      // Check if service document has been modified
+<span class="nc" id="L52">      ETagHelper eTagHelper = odata.createETagHelper();</span>
+<span class="nc" id="L53">      isNotModified = eTagHelper.checkReadPreconditions(eTagSupport.getServiceDocumentETag(), request</span>
+<span class="nc" id="L54">          .getHeaders(HttpHeader.IF_MATCH), request.getHeaders(HttpHeader.IF_NONE_MATCH));</span>
+    }
+
+    // Send the correct response
+<span class="nc bnc" id="L58" title="All 2 branches missed.">    if (isNotModified) {</span>
+<span class="nc" id="L59">      response.setStatusCode(HttpStatusCode.NOT_MODIFIED.getStatusCode());</span>
+    } else {
+      // HTTP HEAD requires no payload but a 200 OK response
+<span class="nc bnc" id="L62" title="All 2 branches missed.">      if (HttpMethod.HEAD == request.getMethod()) {</span>
+<span class="nc" id="L63">        response.setStatusCode(HttpStatusCode.OK.getStatusCode());</span>
+      } else {
+<span class="nc" id="L65">        ODataSerializer serializer = odata.createSerializer(requestedContentType);</span>
+<span class="nc" id="L66">        response.setContent(serializer.serviceDocument(serviceMetadata, uri).getContent());</span>
+<span class="nc" id="L67">        response.setStatusCode(HttpStatusCode.OK.getStatusCode());</span>
+<span class="nc" id="L68">        response.setHeader(HttpHeader.CONTENT_TYPE, requestedContentType.toContentTypeString());</span>
+      }
+    }
+<span class="nc" id="L71">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ODataJPAException.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.exception</a> &gt; <span class="el_source">ODataJPAException.java</span></div><h1>ODataJPAException.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.exception;
+
+import java.util.Enumeration;
+import java.util.Locale;
+
+import org.apache.olingo.commons.api.ex.ODataException;
+
+public abstract class ODataJPAException extends ODataException {
+
+  private static final long serialVersionUID = 1148357369597923853L;
+  private static final String UNKNOWN_MESSAGE = &quot;No message text found&quot;;
+  private static Enumeration&lt;Locale&gt; locales;
+
+  public static Enumeration&lt;Locale&gt; getLocales() {
+<span class="nc" id="L15">    return locales;</span>
+  }
+
+  public static void setLocales(final Enumeration&lt;Locale&gt; locales) {
+<span class="nc" id="L19">    ODataJPAException.locales = locales;</span>
+<span class="nc" id="L20">  }</span>
+
+  protected final String id;
+  protected final ODataJPAMessageTextBuffer messageBuffer;
+  protected final String[] parameter;
+
+  protected ODataJPAException(final String id) {
+<span class="nc" id="L27">    super(&quot;&quot;);</span>
+<span class="nc" id="L28">    this.id = id;</span>
+<span class="nc" id="L29">    this.messageBuffer = new ODataJPAMessageTextBuffer(getBundleName(), locales);</span>
+<span class="nc" id="L30">    this.parameter = null;</span>
+<span class="nc" id="L31">  }</span>
+
+  protected ODataJPAException(final String id, final String... params) {
+<span class="nc" id="L34">    super(&quot;&quot;);</span>
+<span class="nc" id="L35">    this.id = id;</span>
+<span class="nc" id="L36">    this.messageBuffer = new ODataJPAMessageTextBuffer(getBundleName(), locales);</span>
+<span class="nc" id="L37">    this.parameter = params;</span>
+<span class="nc" id="L38">  }</span>
+
+  protected ODataJPAException(final String id, final Throwable cause, final String... params) {
+<span class="nc" id="L41">    super(&quot;&quot;, cause);</span>
+<span class="nc" id="L42">    this.id = id;</span>
+<span class="nc" id="L43">    this.messageBuffer = new ODataJPAMessageTextBuffer(getBundleName(), locales);</span>
+<span class="nc" id="L44">    this.parameter = params;</span>
+<span class="nc" id="L45">  }</span>
+
+  protected ODataJPAException(final String id, final Throwable cause) {
+<span class="nc" id="L48">    super(&quot;&quot;, cause);</span>
+<span class="nc" id="L49">    this.id = id;</span>
+<span class="nc" id="L50">    this.messageBuffer = new ODataJPAMessageTextBuffer(getBundleName(), locales);</span>
+<span class="nc" id="L51">    this.parameter = null;</span>
+<span class="nc" id="L52">  }</span>
+
+  protected ODataJPAException(final Throwable cause) {
+<span class="nc" id="L55">    super(cause);</span>
+<span class="nc" id="L56">    id = null;</span>
+<span class="nc" id="L57">    messageBuffer = null;</span>
+<span class="nc" id="L58">    this.parameter = null;</span>
+<span class="nc" id="L59">  }</span>
+
+  @Override
+  public String getLocalizedMessage() {
+<span class="nc" id="L63">    return getMessage();</span>
+  }
+
+  @Override
+  public String getMessage() {
+<span class="nc bnc" id="L68" title="All 6 branches missed.">    if (id != null &amp;&amp; !id.isEmpty() &amp;&amp; messageBuffer != null) {</span>
+<span class="nc" id="L69">      return messageBuffer.getText(this, id, parameter);</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">    } else if (getCause() != null) {</span>
+<span class="nc" id="L71">      return getCause().getLocalizedMessage();</span>
+    } else
+<span class="nc" id="L73">      return UNKNOWN_MESSAGE;</span>
+  }
+
+  protected abstract String getBundleName();
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

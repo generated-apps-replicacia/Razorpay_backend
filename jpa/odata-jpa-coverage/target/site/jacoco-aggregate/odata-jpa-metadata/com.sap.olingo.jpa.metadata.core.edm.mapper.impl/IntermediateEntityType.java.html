@@ -1,0 +1,519 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateEntityType.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateEntityType.java</span></div><h1>IntermediateEntityType.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import static com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException.MessageKeys.INVALID_TOP_LEVEL_SETTING;
+
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.persistence.IdClass;
+import javax.persistence.Table;
+import javax.persistence.metamodel.EmbeddableType;
+import javax.persistence.metamodel.EntityType;
+import javax.persistence.metamodel.IdentifiableType;
+import javax.persistence.metamodel.ManagedType;
+import javax.persistence.metamodel.MappedSuperclassType;
+import javax.persistence.metamodel.Type;
+
+import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmItem;
+import org.apache.olingo.commons.api.edm.provider.CsdlAnnotation;
+import org.apache.olingo.commons.api.edm.provider.CsdlEntityType;
+import org.apache.olingo.commons.api.edm.provider.CsdlProperty;
+import org.apache.olingo.commons.api.edm.provider.CsdlPropertyRef;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmAsEntitySet;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmQueryExtensionProvider;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTopLevelElementRepresentation;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAQueryExtension;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.extension.IntermediateEntityTypeAccess;
+
+/**
+ * &lt;a href=
+ * &quot;https://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406397974&quot;
+ * &gt;OData Version 4.0 Part 3 - 8 Entity Type&lt;/a&gt;
+ *
+ * @param &lt;T&gt; Java type the entity type base on.
+ * @author Oliver Grande
+ *
+ */
+public final class IntermediateEntityType&lt;T&gt; extends IntermediateStructuredType&lt;T&gt; implements JPAEntityType,
+    IntermediateEntityTypeAccess {
+  private Optional&lt;JPAPath&gt; etagPath;
+  private Optional&lt;Optional&lt;JPAQueryExtension&lt;EdmQueryExtensionProvider&gt;&gt;&gt; extensionQueryProvider;
+  private List&lt;JPAAttribute&gt; keyAttributes;
+  private final boolean asTopLevelOnly;
+  private final boolean asEntitySet;
+  private final boolean asSingleton;
+
+  IntermediateEntityType(final JPAEdmNameBuilder nameBuilder, final EntityType&lt;T&gt; et, final IntermediateSchema schema) {
+<span class="nc" id="L68">    super(nameBuilder, et, schema);</span>
+<span class="nc" id="L69">    this.setExternalName(nameBuilder.buildEntityTypeName(et));</span>
+<span class="nc" id="L70">    asTopLevelOnly = determineAsTopLevelOnly();</span>
+<span class="nc" id="L71">    asEntitySet = determineAsEntitySet();</span>
+<span class="nc" id="L72">    asSingleton = determineAsSingleton();</span>
+<span class="nc" id="L73">    etagPath = Optional.empty();</span>
+<span class="nc" id="L74">    extensionQueryProvider = Optional.empty();</span>
+<span class="nc" id="L75">  }</span>
+
+  @Override
+  public void addAnnotations(final List&lt;CsdlAnnotation&gt; annotations) {
+<span class="nc" id="L79">    this.edmAnnotations.addAll(annotations);</span>
+
+<span class="nc" id="L81">  }</span>
+
+  @Override
+  public Optional&lt;JPAAttribute&gt; getAttribute(final String internalName) throws ODataJPAModelException {
+<span class="nc bnc" id="L85" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L86">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L88">    final Optional&lt;JPAAttribute&gt; a = super.getAttribute(internalName);</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">    if (a.isPresent())</span>
+<span class="nc" id="L90">      return a;</span>
+<span class="nc" id="L91">    return getKey(internalName);</span>
+  }
+
+  @Override
+  public Optional&lt;JPAAttribute&gt; getAttribute(final UriResourceProperty uriResourceItem) throws ODataJPAModelException {
+<span class="nc bnc" id="L96" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L97">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L99">    final Optional&lt;JPAAttribute&gt; a = super.getAttribute(uriResourceItem);</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">    if (a.isPresent())</span>
+<span class="nc" id="L101">      return a;</span>
+<span class="nc" id="L102">    return getKey(uriResourceItem);</span>
+  }
+
+  @Override
+  public JPACollectionAttribute getCollectionAttribute(final String externalName) throws ODataJPAModelException {
+<span class="nc" id="L107">    final JPAPath path = getPath(externalName);</span>
+<span class="nc bnc" id="L108" title="All 4 branches missed.">    if (path != null &amp;&amp; path.getLeaf() instanceof JPACollectionAttribute)</span>
+<span class="nc" id="L109">      return (JPACollectionAttribute) path.getLeaf();</span>
+<span class="nc" id="L110">    return null;</span>
+  }
+
+  @Override
+  public String getContentType() throws ODataJPAModelException {
+<span class="nc" id="L115">    final IntermediateSimpleProperty stream = getStreamProperty();</span>
+<span class="nc" id="L116">    return stream.getContentType();</span>
+  }
+
+  @Override
+  public JPAPath getContentTypeAttributePath() throws ODataJPAModelException {
+<span class="nc" id="L121">    final String propertyInternalName = getStreamProperty().getContentTypeProperty();</span>
+<span class="nc bnc" id="L122" title="All 4 branches missed.">    if (propertyInternalName == null || propertyInternalName.isEmpty()) {</span>
+<span class="nc" id="L123">      return null;</span>
+    }
+    // Ensure that Ignore is ignored
+<span class="nc" id="L126">    return getPathByDBField(getProperty(propertyInternalName).getDBFieldName());</span>
+  }
+
+  @Override
+  public Optional&lt;JPAAttribute&gt; getDeclaredAttribute(@Nonnull final String internalName) throws ODataJPAModelException {
+<span class="nc" id="L131">    final Optional&lt;JPAAttribute&gt; a = super.getDeclaredAttribute(internalName);</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">    if (a.isPresent())</span>
+<span class="nc" id="L133">      return a;</span>
+<span class="nc" id="L134">    return getKey(internalName);</span>
+  }
+
+  @Override
+  public JPAPath getEtagPath() throws ODataJPAModelException {
+<span class="nc bnc" id="L139" title="All 4 branches missed.">    if (hasEtag() &amp;&amp; etagPath.isPresent())</span>
+<span class="nc" id="L140">      return etagPath.get();</span>
+<span class="nc" id="L141">    return null;</span>
+  }
+
+  @Override
+  public List&lt;JPAAttribute&gt; getKey() throws ODataJPAModelException {
+<span class="nc bnc" id="L146" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L147">      lazyBuildEdmItem();</span>
+    }
+<span class="nc bnc" id="L149" title="All 2 branches missed.">    if (keyAttributes == null) {</span>
+<span class="nc" id="L150">      final List&lt;JPAAttribute&gt; intermediateKey = new ArrayList&lt;&gt;(); // Cycle break</span>
+<span class="nc" id="L151">      addKeyAttribute(intermediateKey, this.getTypeClass().getDeclaredFields());</span>
+<span class="nc" id="L152">      addKeyAttribute(intermediateKey, mappedSuperclass</span>
+<span class="nc" id="L153">          .map(ManagedType::getJavaType)</span>
+<span class="nc" id="L154">          .map(Class::getDeclaredFields)</span>
+<span class="nc" id="L155">          .orElse(new Field[] {}));</span>
+<span class="nc" id="L156">      final IntermediateStructuredType&lt;?&gt; baseType = getBaseType();</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">      if (baseType != null) {</span>
+<span class="nc" id="L158">        intermediateKey.addAll(((IntermediateEntityType&lt;?&gt;) baseType).getKey());</span>
+      }
+<span class="nc" id="L160">      keyAttributes = Collections.unmodifiableList(intermediateKey);</span>
+    }
+<span class="nc" id="L162">    return Collections.unmodifiableList(keyAttributes);</span>
+  }
+
+  @Override
+  public List&lt;JPAPath&gt; getKeyPath() throws ODataJPAModelException {
+<span class="nc bnc" id="L167" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L168">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L170">    final List&lt;JPAPath&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateProperty&gt; property : this.declaredPropertiesList.entrySet()) {</span>
+<span class="nc" id="L172">      final JPAAttribute attribute = property.getValue();</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">      if (attribute instanceof IntermediateEmbeddedIdProperty) {</span>
+<span class="nc" id="L174">        result.add(intermediatePathMap.get(attribute.getExternalName()));</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">      } else if (attribute.isKey()) {</span>
+<span class="nc" id="L176">        result.add(resolvedPathMap.get(attribute.getExternalName()));</span>
+      }
+<span class="nc" id="L178">    }</span>
+<span class="nc" id="L179">    final IntermediateStructuredType&lt;?&gt; baseType = getBaseType();</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">    if (baseType != null) {</span>
+<span class="nc" id="L181">      result.addAll(((IntermediateEntityType&lt;?&gt;) baseType).getKeyPath());</span>
+    }
+<span class="nc" id="L183">    return Collections.unmodifiableList(result);</span>
+  }
+
+  @Override
+  public Class&lt;?&gt; getKeyType() {
+<span class="nc bnc" id="L188" title="All 2 branches missed.">    if (jpaManagedType instanceof IdentifiableType&lt;?&gt;) {</span>
+<span class="nc" id="L189">      Class&lt;?&gt; idClass = null;</span>
+<span class="nc" id="L190">      final Type&lt;?&gt; idType = ((IdentifiableType&lt;?&gt;) jpaManagedType).getIdType();</span>
+
+<span class="nc bnc" id="L192" title="All 2 branches missed.">      if (idType == null)</span>
+        // Hibernate does not return an IdType in case of compound key that do not use
+        // EmbeddableId. So fallback to hand made evaluation
+<span class="nc" id="L195">        idClass = jpaManagedType.getJavaType().getAnnotation(IdClass.class).value();</span>
+      else
+<span class="nc" id="L197">        idClass = idType.getJavaType();</span>
+<span class="nc" id="L198">      return idClass;</span>
+    } else {
+<span class="nc" id="L200">      return null;</span>
+    }
+  }
+
+  @Override
+  public Optional&lt;JPAQueryExtension&lt;EdmQueryExtensionProvider&gt;&gt; getQueryExtention() throws ODataJPAModelException {
+<span class="nc" id="L206">    return extensionQueryProvider.orElse(determineExtensionQueryProvide());</span>
+  }
+
+  @Override
+  public List&lt;JPAPath&gt; getSearchablePath() throws ODataJPAModelException {
+<span class="nc" id="L211">    final List&lt;JPAPath&gt; allPath = getPathList();</span>
+<span class="nc" id="L212">    final List&lt;JPAPath&gt; searchablePath = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">    for (final JPAPath p : allPath) {</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">      if (p.getLeaf().isSearchable())</span>
+<span class="nc" id="L215">        searchablePath.add(p);</span>
+<span class="nc" id="L216">    }</span>
+<span class="nc" id="L217">    return searchablePath;</span>
+  }
+
+  @Override
+  public JPAPath getStreamAttributePath() throws ODataJPAModelException {
+<span class="nc" id="L222">    return getPath(getStreamProperty().getExternalName());</span>
+  }
+
+  @Override
+  public String getTableName() {
+<span class="nc" id="L227">    final AnnotatedElement a = jpaManagedType.getJavaType();</span>
+<span class="nc" id="L228">    Table t = null;</span>
+
+<span class="nc bnc" id="L230" title="All 2 branches missed.">    if (a != null)</span>
+<span class="nc" id="L231">      t = a.getAnnotation(Table.class);</span>
+<span class="nc" id="L232">    final IntermediateStructuredType&lt;?&gt; baseType = getBaseType();</span>
+<span class="nc bnc" id="L233" title="All 4 branches missed.">    if (t == null &amp;&amp; baseType != null)</span>
+<span class="nc" id="L234">      return ((IntermediateEntityType&lt;?&gt;) baseType).getTableName();</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">    return (t == null) ? jpaManagedType.getJavaType().getSimpleName().toUpperCase(Locale.ENGLISH)</span>
+<span class="nc" id="L236">        : buildFQTableName(t.schema(), t.name());</span>
+  }
+
+  @Override
+  public boolean hasCompoundKey() {
+<span class="nc" id="L241">    final Type&lt;?&gt; idType = ((IdentifiableType&lt;?&gt;) jpaManagedType).getIdType();</span>
+<span class="nc bnc" id="L242" title="All 4 branches missed.">    return jpaManagedType.getJavaType().getAnnotation(IdClass.class) != null</span>
+        || idType instanceof EmbeddableType;
+  }
+
+  @Override
+  public boolean hasEtag() throws ODataJPAModelException {
+<span class="nc bnc" id="L248" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L249">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L251">    return etagPath.isPresent();</span>
+  }
+
+  @Override
+  public boolean hasStream() throws ODataJPAModelException {
+<span class="nc bnc" id="L256" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L257">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L259">    return this.determineHasStream();</span>
+  }
+
+  @Override
+  public boolean ignore() {
+<span class="nc bnc" id="L264" title="All 4 branches missed.">    return (asTopLevelOnly || super.ignore());</span>
+  }
+
+  @Override
+  public boolean isAbstract() {
+<span class="nc" id="L269">    return determineAbstract();</span>
+  }
+
+  @Override
+  public List&lt;JPAPath&gt; searchChildPath(final JPAPath selectItemPath) {
+<span class="nc" id="L274">    final List&lt;JPAPath&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L275" title="All 2 branches missed.">    for (final Entry&lt;String, JPAPathImpl&gt; path : this.resolvedPathMap.entrySet()) {</span>
+<span class="nc" id="L276">      final JPAPath p = path.getValue();</span>
+<span class="nc bnc" id="L277" title="All 4 branches missed.">      if (!p.ignore() &amp;&amp; p.getAlias().startsWith(selectItemPath.getAlias()))</span>
+<span class="nc" id="L278">        result.add(p);</span>
+<span class="nc" id="L279">    }</span>
+<span class="nc" id="L280">    return result;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  protected &lt;I extends CsdlAbstractEdmItem&gt; List&lt;I&gt; extractEdmModelElements(
+      final Map&lt;String, ? extends IntermediateModelElement&gt; mappingBuffer)
+      throws ODataJPAModelException {
+
+<span class="nc" id="L289">    final List&lt;I&gt; extractionTarget = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">    for (final Entry&lt;String, ? extends IntermediateModelElement&gt; element : mappingBuffer.entrySet()) {</span>
+<span class="nc bnc" id="L291" title="All 2 branches missed.">      if (!element.getValue().ignore()</span>
+          // Skip Streams
+<span class="nc bnc" id="L293" title="All 2 branches missed.">          &amp;&amp; !(element.getValue() instanceof IntermediateSimpleProperty &amp;&amp;</span>
+<span class="nc bnc" id="L294" title="All 2 branches missed.">              ((IntermediateSimpleProperty) element.getValue()).isStream())) {</span>
+<span class="nc bnc" id="L295" title="All 2 branches missed.">        if (element.getValue() instanceof IntermediateEmbeddedIdProperty) {</span>
+<span class="nc" id="L296">          extractionTarget.addAll((Collection&lt;? extends I&gt;) resolveEmbeddedId(</span>
+<span class="nc" id="L297">              (IntermediateEmbeddedIdProperty) element.getValue()));</span>
+        } else {
+<span class="nc" id="L299">          extractionTarget.add((I) element.getValue().getEdmItem());</span>
+        }
+      }
+<span class="nc" id="L302">    }</span>
+<span class="nc" id="L303">    return returnNullIfEmpty(extractionTarget);</span>
+  }
+
+  @Override
+  protected synchronized void lazyBuildEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L308" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L309">      buildPropertyList();</span>
+<span class="nc" id="L310">      buildNaviPropertyList();</span>
+<span class="nc" id="L311">      addTransientProperties();</span>
+<span class="nc" id="L312">      determineExtensionQueryProvide();</span>
+<span class="nc" id="L313">      postProcessor.processEntityType(this);</span>
+
+<span class="nc" id="L315">      edmStructuralType = new CsdlEntityType();</span>
+<span class="nc" id="L316">      edmStructuralType.setName(getExternalName());</span>
+<span class="nc" id="L317">      edmStructuralType.setProperties(extractEdmModelElements(declaredPropertiesList));</span>
+<span class="nc" id="L318">      edmStructuralType.setNavigationProperties(extractEdmModelElements(</span>
+          declaredNaviPropertiesList));
+<span class="nc" id="L320">      ((CsdlEntityType) edmStructuralType).setKey(extractEdmKeyElements());</span>
+<span class="nc" id="L321">      edmStructuralType.setAbstract(determineAbstract());</span>
+<span class="nc" id="L322">      edmStructuralType.setBaseType(determineBaseType());</span>
+<span class="nc" id="L323">      ((CsdlEntityType) edmStructuralType).setHasStream(determineHasStream());</span>
+<span class="nc" id="L324">      edmStructuralType.setAnnotations(determineAnnotations());</span>
+<span class="nc" id="L325">      determineHasEtag();</span>
+<span class="nc" id="L326">      checkTopLevelTypeConsistency();</span>
+<span class="nc" id="L327">      checkPropertyConsistency(); //</span>
+      // TODO determine OpenType
+    }
+<span class="nc" id="L330">  }</span>
+
+  /**
+   * The top level representation of this entity type is entity set.
+   * @return
+   */
+  boolean asEntitySet() {
+<span class="nc" id="L337">    return asEntitySet;</span>
+  }
+
+  public boolean asSingleton() {
+<span class="nc" id="L341">    return asSingleton;</span>
+  }
+
+  /**
+   * This entity type represents only an entity set and not a entity type itself, but an alternative way to access the
+   * superordinate entity type. See: {@link EdmAsEntitySet}
+   * @return
+   */
+  boolean asTopLevelOnly() {
+<span class="nc" id="L350">    return asTopLevelOnly;</span>
+  }
+
+  boolean dbEquals(final String dbCatalog, final String dbSchema, final String dbTableName) {
+<span class="nc" id="L354">    final AnnotatedElement a = jpaManagedType.getJavaType();</span>
+<span class="nc" id="L355">    Table t = null;</span>
+<span class="nc bnc" id="L356" title="All 2 branches missed.">    if (a != null)</span>
+<span class="nc" id="L357">      t = a.getAnnotation(Table.class);</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">    if (t == null)</span>
+<span class="nc bnc" id="L359" title="All 6 branches missed.">      return (dbCatalog == null || dbCatalog.isEmpty())</span>
+<span class="nc bnc" id="L360" title="All 2 branches missed.">          &amp;&amp; (dbSchema == null || dbSchema.isEmpty())</span>
+<span class="nc bnc" id="L361" title="All 2 branches missed.">          &amp;&amp; dbTableName.equals(getTableName());</span>
+    else
+<span class="nc bnc" id="L363" title="All 2 branches missed.">      return dbCatalog.equals(t.catalog())</span>
+<span class="nc bnc" id="L364" title="All 2 branches missed.">          &amp;&amp; dbSchema.equals(t.schema())</span>
+<span class="nc bnc" id="L365" title="All 2 branches missed.">          &amp;&amp; dbTableName.equals(t.name());</span>
+  }
+
+  boolean determineAbstract() {
+<span class="nc" id="L369">    final int modifiers = jpaManagedType.getJavaType().getModifiers();</span>
+<span class="nc" id="L370">    return Modifier.isAbstract(modifiers);</span>
+  }
+
+  /**
+   * Creates the key of an entity. In case the POJO is declared with an embedded ID the key fields get resolved, so that
+   * they occur as separate properties within the metadata document
+   *
+   * @param propertyList
+   * @return
+   * @throws ODataJPAModelException
+   */
+  List&lt;CsdlPropertyRef&gt; extractEdmKeyElements() throws ODataJPAModelException {
+
+<span class="nc" id="L383">    return getKey().stream()</span>
+<span class="nc" id="L384">        .map(this::asPropertyRef)</span>
+<span class="nc" id="L385">        .collect(Collectors.toList());</span>
+  }
+
+  @Override
+  CsdlEntityType getEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L390" title="All 2 branches missed.">    if (edmStructuralType == null) {</span>
+<span class="nc" id="L391">      lazyBuildEdmItem();</span>
+    }
+<span class="nc" id="L393">    return (CsdlEntityType) edmStructuralType;</span>
+  }
+
+  Optional&lt;MappedSuperclassType&lt;? super T&gt;&gt; getMappedSuperType() {
+<span class="nc" id="L397">    return mappedSuperclass;</span>
+  }
+
+  private void addKeyAttribute(final List&lt;JPAAttribute&gt; intermediateKey, final Field[] keyFields)
+      throws ODataJPAModelException {
+<span class="nc bnc" id="L402" title="All 2 branches missed.">    for (int i = 0; i &lt; keyFields.length; i++) {</span>
+<span class="nc" id="L403">      final JPAAttribute attribute = this.declaredPropertiesList.get(keyFields[i].getName());</span>
+<span class="nc bnc" id="L404" title="All 4 branches missed.">      if (attribute != null &amp;&amp; attribute.isKey()) {</span>
+<span class="nc bnc" id="L405" title="All 2 branches missed.">        if (attribute.isComplex()) {</span>
+<span class="nc" id="L406">          intermediateKey.addAll(buildEmbeddedIdKey(attribute));</span>
+        } else {
+<span class="nc" id="L408">          intermediateKey.add(attribute);</span>
+        }
+      }
+    }
+<span class="nc" id="L412">  }</span>
+
+  private CsdlPropertyRef asPropertyRef(final JPAAttribute idAttribute) {
+    // TODO setAlias
+<span class="nc" id="L416">    final CsdlPropertyRef keyElement = new CsdlPropertyRef();</span>
+<span class="nc" id="L417">    keyElement.setName(idAttribute.getExternalName());</span>
+<span class="nc" id="L418">    return keyElement;</span>
+  }
+
+  private List&lt;JPAAttribute&gt; buildEmbeddedIdKey(final JPAAttribute attribute) throws ODataJPAModelException {
+
+<span class="nc" id="L423">    final JPAStructuredType id = ((IntermediateEmbeddedIdProperty) attribute).getStructuredType();</span>
+<span class="nc" id="L424">    final List&lt;JPAAttribute&gt; keyElements = new ArrayList&lt;&gt;(id.getTypeClass().getDeclaredFields().length);</span>
+<span class="nc" id="L425">    final Field[] keyFields = id.getTypeClass().getDeclaredFields();</span>
+<span class="nc bnc" id="L426" title="All 2 branches missed.">    for (int i = 0; i &lt; keyFields.length; i++) {</span>
+<span class="nc" id="L427">      id.getAttribute(keyFields[i].getName()).ifPresent(keyElements::add);</span>
+    }
+<span class="nc" id="L429">    return keyElements;</span>
+  }
+
+  private void checkTopLevelTypeConsistency() throws ODataJPAModelException {
+<span class="nc" id="L433">    final EdmAsEntitySet jpaAsEntitySet = this.jpaManagedType.getJavaType().getAnnotation(EdmAsEntitySet.class);</span>
+<span class="nc" id="L434">    final EdmEntityType jpaEntityType = this.jpaManagedType.getJavaType().getAnnotation(EdmEntityType.class);</span>
+<span class="nc bnc" id="L435" title="All 4 branches missed.">    if (jpaAsEntitySet != null &amp;&amp; jpaEntityType != null)</span>
+<span class="nc" id="L436">      throw new ODataJPAModelException(INVALID_TOP_LEVEL_SETTING, getInternalName());</span>
+<span class="nc" id="L437">  }</span>
+
+  private List&lt;CsdlAnnotation&gt; determineAnnotations() throws ODataJPAModelException {
+<span class="nc" id="L440">    getAnnotations(edmAnnotations, this.jpaManagedType.getJavaType(), internalName);</span>
+<span class="nc" id="L441">    return edmAnnotations;</span>
+  }
+
+  private boolean determineAsEntitySet() {
+<span class="nc" id="L445">    final EdmAsEntitySet jpaAsEntitySet = this.jpaManagedType.getJavaType().getAnnotation(EdmAsEntitySet.class);</span>
+<span class="nc" id="L446">    final EdmEntityType jpaEntityType = this.jpaManagedType.getJavaType().getAnnotation(EdmEntityType.class);</span>
+<span class="nc bnc" id="L447" title="All 4 branches missed.">    return jpaAsEntitySet != null</span>
+        || jpaEntityType == null
+<span class="nc bnc" id="L449" title="All 2 branches missed.">        || jpaEntityType.as() == EdmTopLevelElementRepresentation.AS_ENTITY_SET</span>
+<span class="nc bnc" id="L450" title="All 2 branches missed.">        || jpaEntityType.as() == EdmTopLevelElementRepresentation.AS_ENTITY_SET_ONLY;</span>
+  }
+
+  private boolean determineAsSingleton() {
+<span class="nc" id="L454">    final EdmEntityType jpaEntityType = this.jpaManagedType.getJavaType().getAnnotation(EdmEntityType.class);</span>
+<span class="nc bnc" id="L455" title="All 4 branches missed.">    return jpaEntityType != null &amp;&amp; (jpaEntityType.as() == EdmTopLevelElementRepresentation.AS_SINGLETON</span>
+<span class="nc bnc" id="L456" title="All 2 branches missed.">        || jpaEntityType.as() == EdmTopLevelElementRepresentation.AS_SINGLETON_ONLY);</span>
+  }
+
+  private boolean determineAsTopLevelOnly() {
+<span class="nc" id="L460">    final EdmAsEntitySet jpaAsEntitySet = this.jpaManagedType.getJavaType().getAnnotation(EdmAsEntitySet.class);</span>
+<span class="nc" id="L461">    final EdmEntityType jpaEntityType = this.jpaManagedType.getJavaType().getAnnotation(EdmEntityType.class);</span>
+<span class="nc bnc" id="L462" title="All 4 branches missed.">    return jpaAsEntitySet != null</span>
+        || (jpaEntityType != null
+<span class="nc bnc" id="L464" title="All 2 branches missed.">            &amp;&amp; (jpaEntityType.as() == EdmTopLevelElementRepresentation.AS_ENTITY_SET_ONLY</span>
+<span class="nc bnc" id="L465" title="All 2 branches missed.">                || jpaEntityType.as() == EdmTopLevelElementRepresentation.AS_SINGLETON_ONLY));</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private Optional&lt;JPAQueryExtension&lt;EdmQueryExtensionProvider&gt;&gt; determineExtensionQueryProvide()
+      throws ODataJPAModelException {
+<span class="nc" id="L471">    extensionQueryProvider = Optional.of(Optional.empty());</span>
+<span class="nc" id="L472">    final EdmEntityType jpaEntityType = this.jpaManagedType.getJavaType().getAnnotation(EdmEntityType.class);</span>
+<span class="nc bnc" id="L473" title="All 2 branches missed.">    if (jpaEntityType != null) {</span>
+<span class="nc" id="L474">      final Class&lt;EdmQueryExtensionProvider&gt; provider = (Class&lt;EdmQueryExtensionProvider&gt;) jpaEntityType</span>
+<span class="nc" id="L475">          .extensionProvider();</span>
+<span class="nc" id="L476">      final Class&lt;?&gt; defaultProvider = EdmQueryExtensionProvider.class;</span>
+<span class="nc bnc" id="L477" title="All 4 branches missed.">      if (provider != null &amp;&amp; provider != defaultProvider)</span>
+<span class="nc" id="L478">        extensionQueryProvider = Optional.of(Optional.of(new JPAQueryExtensionProvider&lt;&gt;(</span>
+            provider)));
+    }
+<span class="nc bnc" id="L481" title="All 4 branches missed.">    if (!extensionQueryProvider.get().isPresent() &amp;&amp; getBaseType() != null)</span>
+<span class="nc" id="L482">      extensionQueryProvider = Optional.ofNullable(((IntermediateEntityType&lt;?&gt;) getBaseType()).getQueryExtention());</span>
+<span class="nc" id="L483">    return extensionQueryProvider.get();</span>
+  }
+
+  private void determineHasEtag() throws ODataJPAModelException {
+<span class="nc bnc" id="L487" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateProperty&gt; property : this.declaredPropertiesList.entrySet()) {</span>
+<span class="nc bnc" id="L488" title="All 2 branches missed.">      if (property.getValue().isEtag()) {</span>
+<span class="nc" id="L489">        etagPath = Optional.of(getPath(property.getValue().getExternalName(), false));</span>
+      }
+<span class="nc" id="L491">    }</span>
+<span class="nc bnc" id="L492" title="All 2 branches missed.">    if (getBaseType() instanceof IntermediateEntityType)</span>
+<span class="nc" id="L493">      etagPath = Optional.ofNullable(((IntermediateEntityType&lt;?&gt;) getBaseType()).getEtagPath());</span>
+<span class="nc" id="L494">  }</span>
+
+  private Optional&lt;JPAAttribute&gt; getKey(final String internalName) throws ODataJPAModelException {
+<span class="nc bnc" id="L497" title="All 2 branches missed.">    if (internalName == null)</span>
+<span class="nc" id="L498">      return Optional.empty();</span>
+<span class="nc bnc" id="L499" title="All 2 branches missed.">    for (final JPAAttribute attribute : getKey()) {</span>
+<span class="nc bnc" id="L500" title="All 2 branches missed.">      if (internalName.equals(attribute.getInternalName()))</span>
+<span class="nc" id="L501">        return Optional.of(attribute);</span>
+<span class="nc" id="L502">    }</span>
+<span class="nc" id="L503">    return Optional.empty();</span>
+  }
+
+  private Optional&lt;JPAAttribute&gt; getKey(final UriResourceProperty uriResourceItem) throws ODataJPAModelException {
+<span class="nc bnc" id="L507" title="All 2 branches missed.">    for (final JPAAttribute attribute : getKey()) {</span>
+<span class="nc bnc" id="L508" title="All 2 branches missed.">      if (attribute.getExternalName().equals(uriResourceItem.getProperty().getName()))</span>
+<span class="nc" id="L509">        return Optional.of(attribute);</span>
+<span class="nc" id="L510">    }</span>
+<span class="nc" id="L511">    return Optional.empty();</span>
+  }
+
+  private List&lt;CsdlProperty&gt; resolveEmbeddedId(final IntermediateEmbeddedIdProperty embeddedId)
+      throws ODataJPAModelException {
+<span class="nc" id="L516">    return ((IntermediateComplexType&lt;?&gt;) embeddedId.getStructuredType()).getEdmItem().getProperties();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

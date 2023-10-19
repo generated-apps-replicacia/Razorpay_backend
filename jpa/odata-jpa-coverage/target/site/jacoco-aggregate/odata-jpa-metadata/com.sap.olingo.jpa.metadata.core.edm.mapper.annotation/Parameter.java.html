@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>Parameter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.annotation</a> &gt; <span class="el_source">Parameter.java</span></div><h1>Parameter.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.annotation;
+
+import java.util.Objects;
+
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.geo.SRID;
+import org.apache.olingo.commons.api.edm.provider.CsdlParameter;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+<span class="nc" id="L13">public class Parameter extends CsdlParameter {</span>
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Name&quot;)
+  public CsdlParameter setName(final String name) {
+<span class="nc" id="L18">    Objects.requireNonNull(name, &quot;Name is a required attribute of parameter&quot;);</span>
+<span class="nc" id="L19">    return super.setName(name);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Type&quot;)
+  public CsdlParameter setType(final String type) {
+<span class="nc" id="L25">    Objects.requireNonNull(type, &quot;Type is a required attribute of parameters&quot;);</span>
+<span class="nc bnc" id="L26" title="All 2 branches missed.">    if (type.startsWith(&quot;Collection&quot;)) {</span>
+<span class="nc" id="L27">      setCollection(true);</span>
+<span class="nc" id="L28">      return super.setType(new FullQualifiedName(type.split(&quot;[()]&quot;)[1]));</span>
+    }
+<span class="nc" id="L30">    return super.setType(new FullQualifiedName(type));</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Nullable&quot;)
+  public CsdlParameter setNullable(final boolean nullable) {
+<span class="nc" id="L36">    return super.setNullable(nullable);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;MaxLength&quot;, isAttribute = true)
+  public CsdlParameter setMaxLength(Integer maxLength) {
+<span class="nc" id="L42">    return super.setMaxLength(maxLength);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Precision&quot;, isAttribute = true)
+  public CsdlParameter setPrecision(final Integer precision) {
+<span class="nc" id="L48">    return super.setPrecision(precision);</span>
+  }
+
+  @Override
+  @JacksonXmlProperty(localName = &quot;Scale&quot;, isAttribute = true)
+  public CsdlParameter setScale(final Integer scale) {
+<span class="nc" id="L54">    return super.setScale(scale);</span>
+  }
+
+  @JacksonXmlProperty(localName = &quot;SRID&quot;, isAttribute = true)
+  void setSrid(final String srid) {
+<span class="nc" id="L59">    Objects.requireNonNull(srid);</span>
+<span class="nc" id="L60">    super.setSrid(SRID.valueOf(srid));</span>
+<span class="nc" id="L61">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

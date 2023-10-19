@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAVisitor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAVisitor.java</span></div><h1>JPAVisitor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_FILTER;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_OPERATOR;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException.MessageKeys.NOT_SUPPORTED_TRANSIENT;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.INTERNAL_SERVER_ERROR;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.NOT_IMPLEMENTED;
+
+import java.util.List;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.Predicate;
+
+import org.apache.olingo.commons.api.edm.EdmEnumType;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceFunction;
+import org.apache.olingo.server.api.uri.UriResourceKind;
+import org.apache.olingo.server.api.uri.UriResourceNavigation;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+import org.apache.olingo.server.api.uri.queryoption.expression.BinaryOperatorKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+import org.apache.olingo.server.api.uri.queryoption.expression.Literal;
+import org.apache.olingo.server.api.uri.queryoption.expression.Member;
+import org.apache.olingo.server.api.uri.queryoption.expression.MethodKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.UnaryOperatorKind;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPADataBaseFunction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEnumerationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.api.JPAServiceDebugger;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException;
+import com.sap.olingo.jpa.processor.core.query.Util;
+
+class JPAVisitor implements JPAExpressionVisitor { // NOSONAR
+
+  /**
+   *
+   */
+  private final JPAFilterComplierAccess jpaComplier;
+  private final JPAServiceDebugger debugger;
+
+  /**
+   * @param jpaFilterCrossComplier
+   */
+<span class="nc" id="L59">  JPAVisitor(final JPAFilterComplierAccess jpaFilterCrossComplier) {</span>
+<span class="nc" id="L60">    this.jpaComplier = jpaFilterCrossComplier;</span>
+<span class="nc" id="L61">    this.debugger = jpaComplier.getDebugger();</span>
+<span class="nc" id="L62">  }</span>
+
+  @Override
+  public OData getOdata() {
+<span class="nc" id="L66">    return jpaComplier.getOdata();</span>
+  }
+
+  @Override
+  public From&lt;?, ?&gt; getRoot() {
+<span class="nc" id="L71">    return jpaComplier.getRoot();</span>
+  }
+
+  @Override
+  public JPAOperator visitAlias(final String aliasName) throws ExpressionVisitException, ODataApplicationException {
+
+<span class="nc" id="L77">    throw new ODataJPAFilterException(NOT_SUPPORTED_FILTER, NOT_IMPLEMENTED, &quot;Alias&quot;);</span>
+  }
+
+  @Override
+  public JPAOperator visitBinaryOperator(final BinaryOperatorKind operator, final JPAOperator left,
+      final JPAOperator right) throws ExpressionVisitException, ODataApplicationException {
+
+<span class="nc" id="L84">    final int handle = debugger.startRuntimeMeasurement(this, &quot;visitBinaryOperator&quot;); // NOSONAR</span>
+    try {
+<span class="nc bnc" id="L86" title="All 4 branches missed.">      if (operator == BinaryOperatorKind.AND || operator == BinaryOperatorKind.OR) {</span>
+        // Connecting operations have to be handled first, as JPANavigationOperation do not need special treatment
+<span class="nc" id="L88">        return new JPABooleanOperatorImp(this.jpaComplier.getConverter(), operator, (JPAExpression) left,</span>
+            (JPAExpression) right);
+      }
+<span class="nc bnc" id="L91" title="All 4 branches missed.">      if (left instanceof JPANavigationOperation || right instanceof JPANavigationOperation)</span>
+<span class="nc" id="L92">        return handleBinaryWithNavigation(operator, left, right);</span>
+<span class="nc bnc" id="L93" title="All 4 branches missed.">      if (hasNavigation(left) || hasNavigation(right))</span>
+<span class="nc" id="L94">        return new JPANavigationOperation(this.jpaComplier, operator, left, right);</span>
+<span class="nc bnc" id="L95" title="All 14 branches missed.">      if (operator == BinaryOperatorKind.EQ</span>
+          || operator == BinaryOperatorKind.NE
+          || operator == BinaryOperatorKind.GE
+          || operator == BinaryOperatorKind.GT
+          || operator == BinaryOperatorKind.LT
+          || operator == BinaryOperatorKind.LE
+          || operator == BinaryOperatorKind.HAS) {
+<span class="nc" id="L102">        return new JPAComparisonOperatorImp&lt;&gt;(this.jpaComplier.getConverter(), operator, left, right);</span>
+      }
+<span class="nc bnc" id="L104" title="All 10 branches missed.">      if (operator == BinaryOperatorKind.ADD</span>
+          || operator == BinaryOperatorKind.SUB
+          || operator == BinaryOperatorKind.MUL
+          || operator == BinaryOperatorKind.DIV
+          || operator == BinaryOperatorKind.MOD) {
+<span class="nc" id="L109">        return new JPAArithmeticOperatorImp(this.jpaComplier.getConverter(), operator, left, right);</span>
+      }
+    } finally {
+<span class="nc" id="L112">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+<span class="nc" id="L114">    throw new ODataJPAFilterException(NOT_SUPPORTED_OPERATOR, NOT_IMPLEMENTED, operator.name());</span>
+  }
+
+  @Override
+  public JPAOperator visitBinaryOperator(final BinaryOperatorKind operator, final JPAOperator left,
+      final List&lt;JPAOperator&gt; right)
+      throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L121">    throw new ODataJPAFilterException(NOT_SUPPORTED_OPERATOR, NOT_IMPLEMENTED, operator.name());</span>
+  }
+
+  @Override
+  public JPAEnumerationOperator visitEnum(final EdmEnumType type, final List&lt;String&gt; enumValues)
+      throws ExpressionVisitException, ODataApplicationException {
+
+<span class="nc" id="L128">    final int handle = debugger.startRuntimeMeasurement(this, &quot;visitEnum&quot;);</span>
+<span class="nc" id="L129">    final JPAEnumerationAttribute jpaEnumerationAttribute = this.jpaComplier.getSd().getEnumType(type);</span>
+    try {
+<span class="nc bnc" id="L131" title="All 2 branches missed.">      if (jpaEnumerationAttribute == null)</span>
+<span class="nc" id="L132">        throw new IllegalArgumentException(type.getFullQualifiedName().getFullQualifiedNameAsString() + &quot; unknown&quot;);</span>
+<span class="nc bnc" id="L133" title="All 4 branches missed.">      if (!jpaEnumerationAttribute.isFlags() &amp;&amp; enumValues.size() &gt; 1)</span>
+<span class="nc" id="L134">        throw new ODataJPAFilterException(NOT_SUPPORTED_FILTER, NOT_IMPLEMENTED,</span>
+            &quot;Collection of Enumerations if not flags&quot;);
+<span class="nc" id="L136">    } catch (final ODataJPAModelException | IllegalArgumentException e) {</span>
+<span class="nc" id="L137">      throw new ODataJPAFilterException(e, INTERNAL_SERVER_ERROR);</span>
+    } finally {
+<span class="nc" id="L139">      debugger.stopRuntimeMeasurement(handle);</span>
+    }
+<span class="nc" id="L141">    return new JPAEnumerationOperator(this.jpaComplier.getSd().getEnumType(type), enumValues);</span>
+  }
+
+  @Override
+  public JPAOperator visitLambdaExpression(final String lambdaFunction, final String lambdaVariable,
+      final org.apache.olingo.server.api.uri.queryoption.expression.Expression expression)
+      throws ExpressionVisitException, ODataApplicationException {
+
+<span class="nc" id="L149">    throw new ODataJPAFilterException(NOT_SUPPORTED_FILTER, NOT_IMPLEMENTED, &quot;Lambda Expression&quot;);</span>
+  }
+
+  @Override
+  public JPAOperator visitLambdaReference(final String variableName) throws ExpressionVisitException,
+      ODataApplicationException {
+
+<span class="nc" id="L156">    throw new ODataJPAFilterException(NOT_SUPPORTED_FILTER, NOT_IMPLEMENTED, &quot;Lambda Reference&quot;);</span>
+  }
+
+  @Override
+  public JPAOperator visitLiteral(final Literal literal) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L161">    final int handle = debugger.startRuntimeMeasurement(this, &quot;visitBinaryOperator&quot;);</span>
+<span class="nc" id="L162">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L163">    return new JPALiteralOperator(this.jpaComplier.getOdata(), literal);</span>
+  }
+
+  @Override
+  public JPAOperator visitMember(final Member member) throws ExpressionVisitException, ODataApplicationException {
+
+<span class="nc" id="L169">    final int handle = debugger.startRuntimeMeasurement(this, &quot;visitMember&quot;);</span>
+<span class="nc" id="L170">    final JPAPath attributePath = determineAttributePath(this.jpaComplier.getJpaEntityType(), member,</span>
+<span class="nc" id="L171">        jpaComplier.getAssociation());</span>
+<span class="nc" id="L172">    checkTransient(attributePath);</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">    if (getLambdaType(member.getResourcePath()) == UriResourceKind.lambdaAny) {</span>
+<span class="nc" id="L174">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L175">      return new JPALambdaAnyOperation(this.jpaComplier, member);</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">    } else if (getLambdaType(member.getResourcePath()) == UriResourceKind.lambdaAll) {</span>
+<span class="nc" id="L177">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L178">      return new JPALambdaAllOperation(this.jpaComplier, member);</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">    } else if (isAggregation(member.getResourcePath())) {</span>
+<span class="nc" id="L180">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L181">      return new JPAAggregationOperationImp(jpaComplier.getRoot(), jpaComplier.getConverter());</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">    } else if (isCustomFunction(member.getResourcePath())) {</span>
+<span class="nc" id="L183">      final UriResource resource = member.getResourcePath().getUriResourceParts().get(0);</span>
+<span class="nc" id="L184">      final JPADataBaseFunction jpaFunction = (JPADataBaseFunction) this.jpaComplier.getSd().getFunction(</span>
+<span class="nc" id="L185">          ((UriResourceFunction) resource).getFunction());</span>
+<span class="nc" id="L186">      final List&lt;UriParameter&gt; odataParams = ((UriResourceFunction) resource).getParameters();</span>
+<span class="nc" id="L187">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L188">      return new JPAFunctionOperator(this, odataParams, jpaFunction);</span>
+    }
+<span class="nc" id="L190">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L191">    return new JPAMemberOperator(this.jpaComplier.getRoot(), member, jpaComplier</span>
+<span class="nc" id="L192">        .getAssociation(), this.jpaComplier.getGroups(), attributePath);</span>
+  }
+
+  @Override
+  public JPAOperator visitMethodCall(final MethodKind methodCall, final List&lt;JPAOperator&gt; parameters)
+      throws ExpressionVisitException, ODataApplicationException {
+
+<span class="nc" id="L199">    final int handle = debugger.startRuntimeMeasurement(this, &quot;visitMethodCall&quot;);</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">    if (!parameters.isEmpty()) {</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">      if (parameters.get(0) instanceof JPANavigationOperation ||</span>
+<span class="nc bnc" id="L202" title="All 4 branches missed.">          (parameters.size() == 2 &amp;&amp; parameters.get(1) instanceof JPANavigationOperation))</span>
+<span class="nc" id="L203">        throw new ODataJPAFilterException(NOT_SUPPORTED_FILTER, NOT_IMPLEMENTED,</span>
+            &quot;Nested method calls together with navigation&quot;);
+<span class="nc bnc" id="L205" title="All 6 branches missed.">      if (hasNavigation(parameters.get(0)) || (parameters.size() == 2 &amp;&amp; hasNavigation(parameters.get(1)))) {</span>
+<span class="nc" id="L206">        return new JPANavigationOperation(this.jpaComplier, methodCall, parameters);</span>
+      }
+    }
+<span class="nc" id="L209">    JPAMethodCall method = new JPAMethodCallImp(this.jpaComplier.getConverter(), methodCall, parameters);</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">    if (method.get() instanceof Predicate)</span>
+<span class="nc" id="L211">      method = new JPAMethodBasedExpression(this.jpaComplier.getConverter(), methodCall, parameters);</span>
+<span class="nc" id="L212">    debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L213">    return method;</span>
+  }
+
+  @Override
+  public JPAOperator visitTypeLiteral(final EdmType type) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L218">    throw new ODataJPAFilterException(NOT_SUPPORTED_FILTER, NOT_IMPLEMENTED, &quot;Type Literal&quot;);</span>
+  }
+
+  @Override
+  public JPAOperator visitUnaryOperator(final UnaryOperatorKind operator, final JPAOperator operand)
+      throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L224">    final int handle = debugger.startRuntimeMeasurement(this, &quot;visitBinaryOperator&quot;);</span>
+<span class="nc bnc" id="L225" title="All 2 branches missed.">    if (operator == UnaryOperatorKind.NOT) {</span>
+<span class="nc" id="L226">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L227">      return new JPAUnaryBooleanOperatorImp(this.jpaComplier.getConverter(), operator, (JPAExpression) operand);</span>
+    } else {
+<span class="nc" id="L229">      debugger.stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L230">      throw new ODataJPAFilterException(NOT_SUPPORTED_OPERATOR, NOT_IMPLEMENTED, operator.name());</span>
+    }
+  }
+
+  CriteriaBuilder getCriteriaBuilder() {
+<span class="nc" id="L235">    return jpaComplier.getConverter().cb;</span>
+  }
+
+  UriResourceKind getLambdaType(final UriInfoResource member) {
+<span class="nc bnc" id="L239" title="All 2 branches missed.">    for (final UriResource r : member.getUriResourceParts()) {</span>
+<span class="nc bnc" id="L240" title="All 2 branches missed.">      if (r.getKind() == UriResourceKind.lambdaAny</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">          || r.getKind() == UriResourceKind.lambdaAll)</span>
+<span class="nc" id="L242">        return r.getKind();</span>
+<span class="nc" id="L243">    }</span>
+<span class="nc" id="L244">    return null;</span>
+  }
+
+  JPAServiceDocument getSd() {
+<span class="nc" id="L248">    return jpaComplier.getSd();</span>
+  }
+
+  boolean hasNavigation(final JPAOperator operand) {
+<span class="nc bnc" id="L252" title="All 2 branches missed.">    if (operand instanceof JPAMemberOperator) {</span>
+<span class="nc" id="L253">      final List&lt;UriResource&gt; uriResourceParts = ((JPAMemberOperator) operand).getMember().getResourcePath()</span>
+<span class="nc" id="L254">          .getUriResourceParts();</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">      for (int i = uriResourceParts.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">        if (uriResourceParts.get(i) instanceof UriResourceNavigation</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">            || (uriResourceParts.get(i) instanceof UriResourceProperty</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">                &amp;&amp; ((UriResourceProperty) uriResourceParts.get(i)).isCollection()))</span>
+<span class="nc" id="L259">          return true;</span>
+      }
+    }
+<span class="nc" id="L262">    return false;</span>
+  }
+
+  private JPAOperator handleBinaryWithNavigation(final BinaryOperatorKind operator, final JPAOperator left,
+      final JPAOperator right) throws ODataJPAFilterException {
+<span class="nc bnc" id="L267" title="All 4 branches missed.">    if (left instanceof JPANavigationOperation &amp;&amp; right instanceof JPANavigationOperation)</span>
+<span class="nc" id="L268">      throw new ODataJPAFilterException(NOT_SUPPORTED_FILTER, NOT_IMPLEMENTED,</span>
+          &quot;Binary operations comparing two navigation&quot;);
+
+<span class="nc bnc" id="L271" title="All 2 branches missed.">    if (left instanceof JPANavigationOperation) {</span>
+<span class="nc" id="L272">      return new JPANavigationOperation(operator, (JPANavigationOperation) left, (JPALiteralOperator) right,</span>
+          jpaComplier);
+    }
+<span class="nc" id="L275">    return new JPANavigationOperation(operator, (JPANavigationOperation) right, (JPALiteralOperator) left, jpaComplier);</span>
+  }
+
+  private boolean isAggregation(final UriInfoResource resourcePath) {
+
+<span class="nc bnc" id="L280" title="All 2 branches missed.">    return (resourcePath.getUriResourceParts().size() == 1</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">        &amp;&amp; resourcePath.getUriResourceParts().get(0).getKind() == UriResourceKind.count);</span>
+  }
+
+  private boolean isCustomFunction(final UriInfoResource resourcePath) {
+
+<span class="nc bnc" id="L286" title="All 2 branches missed.">    return (!resourcePath.getUriResourceParts().isEmpty()</span>
+<span class="nc bnc" id="L287" title="All 2 branches missed.">        &amp;&amp; resourcePath.getUriResourceParts().get(0) instanceof UriResourceFunction);</span>
+  }
+
+  private @Nullable JPAPath determineAttributePath(@Nullable final JPAEntityType jpaEntityType,
+      @Nonnull final Member member, @Nullable final JPAAssociationPath jpaAssociationPath)
+      throws ODataApplicationException {
+
+<span class="nc bnc" id="L294" title="All 2 branches missed.">    if (jpaEntityType == null)</span>
+<span class="nc" id="L295">      return null;</span>
+<span class="nc" id="L296">    final String attributePathName = Util.determinePropertyNavigationPath(member.getResourcePath()</span>
+<span class="nc" id="L297">        .getUriResourceParts());</span>
+<span class="nc" id="L298">    JPAPath selectItemPath = null;</span>
+    try {
+<span class="nc" id="L300">      selectItemPath = jpaEntityType.getPath(attributePathName);</span>
+<span class="nc bnc" id="L301" title="All 4 branches missed.">      if (selectItemPath == null &amp;&amp; jpaAssociationPath != null) {</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">        selectItemPath = jpaEntityType.getPath(attributePathName.isEmpty()</span>
+<span class="nc" id="L303">            ? jpaAssociationPath.getAlias()</span>
+<span class="nc" id="L304">            : (jpaAssociationPath.getAlias() + JPAPath.PATH_SEPARATOR + attributePathName));</span>
+      }
+<span class="nc" id="L306">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L307">      throw new ODataJPAFilterException(e, INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L308">    }</span>
+<span class="nc" id="L309">    return selectItemPath;</span>
+  }
+
+  private void checkTransient(@Nullable final JPAPath attributePath) throws ODataApplicationException {
+
+<span class="nc bnc" id="L314" title="All 2 branches missed.">    if (attributePath != null) {</span>
+<span class="nc" id="L315">      final Optional&lt;JPAAttribute&gt; transientProperty = attributePath.getPath()</span>
+<span class="nc" id="L316">          .stream()</span>
+<span class="nc" id="L317">          .map(e -&gt; (JPAAttribute) e)</span>
+<span class="nc" id="L318">          .filter(JPAAttribute::isTransient)</span>
+<span class="nc" id="L319">          .findFirst();</span>
+<span class="nc bnc" id="L320" title="All 2 branches missed.">      if (transientProperty.isPresent())</span>
+<span class="nc" id="L321">        throw new ODataJPAFilterException(NOT_SUPPORTED_TRANSIENT, NOT_IMPLEMENTED, attributePath.toString());</span>
+    }
+<span class="nc" id="L323">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

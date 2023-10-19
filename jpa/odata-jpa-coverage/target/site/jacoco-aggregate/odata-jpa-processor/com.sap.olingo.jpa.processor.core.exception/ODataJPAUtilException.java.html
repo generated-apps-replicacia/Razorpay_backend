@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ODataJPAUtilException.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.exception</a> &gt; <span class="el_source">ODataJPAUtilException.java</span></div><h1>ODataJPAUtilException.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.exception;
+
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAMessageKey;
+
+/*
+ * Copied from org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPAModelException
+ * See also org.apache.olingo.odata2.jpa.processor.core.exception.ODataJPAMessageServiceDefault
+ */
+public class ODataJPAUtilException extends ODataJPAProcessException {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -7188499882306858747L;
+
+<span class="nc" id="L17">  public enum MessageKeys implements ODataJPAMessageKey {</span>
+<span class="nc" id="L18">    UNKNOWN_NAVI_PROPERTY,</span>
+<span class="nc" id="L19">    UNKNOWN_ENTITY_TYPE;</span>
+
+    @Override
+    public String getKey() {
+<span class="nc" id="L23">      return name();</span>
+    }
+
+  }
+
+  private static final String BUNDLE_NAME = &quot;processor-exceptions-i18n&quot;;
+
+  public ODataJPAUtilException(final Throwable e, final HttpStatusCode statusCode) {
+<span class="nc" id="L31">    super(e, statusCode);</span>
+<span class="nc" id="L32">  }</span>
+
+  public ODataJPAUtilException(final MessageKeys messageKey, final HttpStatusCode statusCode,
+      final Throwable cause, final String... params) {
+<span class="nc" id="L36">    super(messageKey.getKey(), statusCode, cause, params);</span>
+<span class="nc" id="L37">  }</span>
+
+  public ODataJPAUtilException(final MessageKeys messageKey, final HttpStatusCode statusCode) {
+<span class="nc" id="L40">    super(messageKey.getKey(), statusCode);</span>
+<span class="nc" id="L41">  }</span>
+
+  public ODataJPAUtilException(final MessageKeys messageKey, final HttpStatusCode statusCode,
+      final String... params) {
+<span class="nc" id="L45">    super(messageKey.getKey(), statusCode, params);</span>
+<span class="nc" id="L46">  }</span>
+
+  public ODataJPAUtilException(final MessageKeys messageKey, final HttpStatusCode statusCode, final Throwable e) {
+<span class="nc" id="L49">    super(messageKey.getKey(), statusCode, e);</span>
+<span class="nc" id="L50">  }</span>
+
+  @Override
+  protected String getBundleName() {
+<span class="nc" id="L54">    return BUNDLE_NAME;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAEnumerationOperator.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAEnumerationOperator.java</span></div><h1>JPAEnumerationOperator.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import java.util.List;
+
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.ODataApplicationException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEnumerationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException;
+
+public final class JPAEnumerationOperator implements JPAEnumerationBasedOperator {
+
+  private final JPAEnumerationAttribute jpaAttribute;
+  private final List&lt;String&gt; value;
+
+  JPAEnumerationOperator(JPAEnumerationAttribute jpaEnumerationAttribute, List&lt;String&gt; enumValues) {
+<span class="nc" id="L18">    super();</span>
+<span class="nc" id="L19">    this.jpaAttribute = jpaEnumerationAttribute;</span>
+<span class="nc" id="L20">    this.value = enumValues;</span>
+<span class="nc" id="L21">  }</span>
+
+  /**
+   * Returns either an instance of an enumeration or an array of enumerations. This is sufficient for &lt;i&gt;eq&lt;/i&gt;,
+   * &lt;i&gt;ne&lt;/i&gt; and &lt;i&gt;has&lt;/i&gt; operations, but will not work with any operation that requires a &lt;code&gt;comparable&lt;/code&gt;
+   * like &lt;i&gt;gt&lt;/i&gt;. As of now such operations are already blocked by Olingo in ExpressionParser.checkType().&lt;br&gt;
+   * In case in the future these operations shall be supported this method has to return an array of
+   * &lt;code&gt;comparable&lt;/code&gt;, which goes with an incompatible change of annotation EdmEnumeration, as converters are
+   * required using such an array.
+   */
+  @Override
+  public Object get() throws ODataApplicationException {
+    try {
+<span class="nc" id="L34">      return jpaAttribute.convert(value);</span>
+<span class="nc" id="L35">    } catch (ODataJPAModelException e) {</span>
+<span class="nc" id="L36">      throw new ODataJPAFilterException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  @Override
+  public boolean isNull() {
+<span class="nc bnc" id="L42" title="All 2 branches missed.">    return value == null;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.sap.olingo.jpa.processor.core.filter.JPAEnumerationBasedOperator#getValue()
+   */
+  @Override
+  public Number getValue() throws ODataJPAFilterException {
+    try {
+<span class="nc" id="L53">      return jpaAttribute.valueOf(value);</span>
+<span class="nc" id="L54">    } catch (ODataJPAModelException e) {</span>
+<span class="nc" id="L55">      throw new ODataJPAFilterException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  @Override
+  public String getName() {
+<span class="nc" id="L61">    return &quot;&quot;;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

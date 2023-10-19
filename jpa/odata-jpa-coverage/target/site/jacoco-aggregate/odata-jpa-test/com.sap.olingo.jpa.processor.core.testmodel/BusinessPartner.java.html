@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>BusinessPartner.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.testmodel</a> &gt; <span class="el_source">BusinessPartner.java</span></div><h1>BusinessPartner.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.testmodel;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+
+import javax.persistence.AssociationOverride;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.DiscriminatorColumn;
+import javax.persistence.Embedded;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.Inheritance;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
+import javax.persistence.PrePersist;
+import javax.persistence.Table;
+import javax.persistence.Version;
+
+import org.apache.olingo.commons.api.edm.provider.annotation.CsdlConstantExpression.ConstantExpressionType;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmAnnotation;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmDescriptionAssociation;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunction;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunctions;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmIgnore;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmParameter;
+
+@Inheritance
+@DiscriminatorColumn(name = &quot;\&quot;Type\&quot;&quot;)
+@Entity(name = &quot;BusinessPartner&quot;)
+@Table(schema = &quot;\&quot;OLINGO\&quot;&quot;, name = &quot;\&quot;BusinessPartner\&quot;&quot;)
+@EdmEntityType(extensionProvider = EmptyQueryExtensionProvider.class)
+@EdmFunctions({
+    @EdmFunction(
+        name = &quot;CountRoles&quot;,
+        functionName = &quot;COUNT_ROLES&quot;,
+        returnType = @EdmFunction.ReturnType(isCollection = true),
+        parameter = { @EdmParameter(name = &quot;Amount&quot;, parameterName = &quot;a&quot;, type = String.class),
+        }),
+
+    @EdmFunction(
+        name = &quot;max&quot;,
+        functionName = &quot;MAX&quot;,
+        isBound = false,
+        hasFunctionImport = false,
+        returnType = @EdmFunction.ReturnType(type = BigDecimal.class, isCollection = false),
+        parameter = { @EdmParameter(name = &quot;Path&quot;, parameterName = &quot;path&quot;, type = String.class),
+        }),
+
+    @EdmFunction(
+        name = &quot;IsPrime&quot;,
+        functionName = &quot;IS_PRIME&quot;,
+        isBound = false,
+        hasFunctionImport = true,
+        returnType = @EdmFunction.ReturnType(type = Boolean.class, isNullable = false),
+        parameter = { @EdmParameter(name = &quot;Number&quot;, type = BigDecimal.class, precision = 32, scale = 0) }),
+
+})
+
+public abstract class BusinessPartner implements KeyAccess {
+  @Id
+  @Column(name = &quot;\&quot;ID\&quot;&quot;)
+  protected String iD;
+
+  @Version
+  @Column(name = &quot;\&quot;ETag\&quot;&quot;, nullable = false)
+  protected long eTag;
+
+  @Column(name = &quot;\&quot;Type\&quot;&quot;, length = 1, insertable = false, updatable = false, nullable = false)
+  protected String type;
+
+  @Column(name = &quot;\&quot;CreatedAt\&quot;&quot;, precision = 2, insertable = false, updatable = false)
+  @Convert(converter = DateTimeConverter.class)
+  private LocalDateTime creationDateTime;
+
+  @EdmIgnore
+  @Column(name = &quot;\&quot;CustomString1\&quot;&quot;)
+  @Convert(converter = StringConverter.class)
+  private String customString1;
+
+  @EdmIgnore
+  @Column(name = &quot;\&quot;CustomString2\&quot;&quot;)
+  private String customString2;
+
+  @EdmIgnore
+  @Column(name = &quot;\&quot;CustomNum1\&quot;&quot;, precision = 16, scale = 5)
+  private BigDecimal customNum1;
+
+  @EdmIgnore
+  @Column(name = &quot;\&quot;CustomNum2\&quot;&quot;, precision = 34)
+  private BigDecimal customNum2;
+
+  @Column(name = &quot;\&quot;Country\&quot;&quot;, length = 4)
+  private String country;
+
+  @EdmAnnotation(term = &quot;Core.IsLanguageDependent&quot;, constantExpression = @EdmAnnotation.ConstantExpression(
+      type = ConstantExpressionType.Bool, value = &quot;true&quot;))
+  @EdmDescriptionAssociation(languageAttribute = &quot;key/language&quot;, descriptionAttribute = &quot;name&quot;,
+      valueAssignments = {
+          @EdmDescriptionAssociation.valueAssignment(attribute = &quot;key/codePublisher&quot;, value = &quot;ISO&quot;),
+          @EdmDescriptionAssociation.valueAssignment(attribute = &quot;key/codeID&quot;, value = &quot;3166-1&quot;) })
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+  @JoinColumn(name = &quot;\&quot;DivisionCode\&quot;&quot;, referencedColumnName = &quot;\&quot;Country\&quot;&quot;)
+  private Collection&lt;AdministrativeDivisionDescription&gt; locationName;
+
+  @Embedded
+  protected CommunicationData communicationData;
+
+<span class="nc" id="L117">  @Embedded</span>
+  @AssociationOverride(name = &quot;countryName&quot;,
+      joinColumns = @JoinColumn(referencedColumnName = &quot;\&quot;Address.Country\&quot;&quot;, name = &quot;\&quot;ISOCode\&quot;&quot;))
+  @AssociationOverride(name = &quot;regionName&quot;,
+      joinColumns = {
+          @JoinColumn(referencedColumnName = &quot;\&quot;Address.RegionCodePublisher\&quot;&quot;, name = &quot;\&quot;CodePublisher\&quot;&quot;),
+          @JoinColumn(referencedColumnName = &quot;\&quot;Address.RegionCodeID\&quot;&quot;, name = &quot;\&quot;CodeID\&quot;&quot;),
+          @JoinColumn(referencedColumnName = &quot;\&quot;Address.Region\&quot;&quot;, name = &quot;\&quot;DivisionCode\&quot;&quot;) })
+  private PostalAddressData address = new PostalAddressData();
+
+<span class="nc" id="L127">  @Embedded</span>
+  private AdministrativeInformation administrativeInformation = new AdministrativeInformation();
+
+  @OneToMany(mappedBy = &quot;businessPartner&quot;, fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+  private Collection&lt;BusinessPartnerRole&gt; roles;
+
+  public BusinessPartner() { // NOSONAR
+<span class="nc" id="L134">    super();</span>
+<span class="nc" id="L135">  }</span>
+
+  @Override
+  public boolean equals(final Object obj) {
+<span class="nc bnc" id="L139" title="All 2 branches missed.">    if (this == obj)</span>
+<span class="nc" id="L140">      return true;</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">    if (obj == null)</span>
+<span class="nc" id="L142">      return false;</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">    if (getClass() != obj.getClass())</span>
+<span class="nc" id="L144">      return false;</span>
+<span class="nc" id="L145">    final BusinessPartner other = (BusinessPartner) obj;</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">    if (iD == null) {</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">      if (other.iD != null)</span>
+<span class="nc" id="L148">        return false;</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">    } else if (!iD.equals(other.iD)) {</span>
+<span class="nc" id="L150">      return false;</span>
+    }
+<span class="nc" id="L152">    return true;</span>
+  }
+
+  public PostalAddressData getAddress() {
+<span class="nc" id="L156">    return address;</span>
+  }
+
+  public AdministrativeInformation getAdministrativeInformation() {
+<span class="nc" id="L160">    return administrativeInformation;</span>
+  }
+
+  public CommunicationData getCommunicationData() {
+<span class="nc" id="L164">    return communicationData;</span>
+  }
+
+  public String getCountry() {
+<span class="nc" id="L168">    return country;</span>
+  }
+
+  public LocalDateTime getCreationDateTime() {
+<span class="nc" id="L172">    return creationDateTime;</span>
+  }
+
+  public BigDecimal getCustomNum1() {
+<span class="nc" id="L176">    return customNum1;</span>
+  }
+
+  public BigDecimal getCustomNum2() {
+<span class="nc" id="L180">    return customNum2;</span>
+  }
+
+  public String getCustomString1() {
+<span class="nc" id="L184">    return customString1;</span>
+  }
+
+  public String getCustomString2() {
+<span class="nc" id="L188">    return customString2;</span>
+  }
+
+  public long getETag() {
+<span class="nc" id="L192">    return eTag;</span>
+  }
+
+  public String getID() {
+<span class="nc" id="L196">    return iD;</span>
+  }
+
+  @Override
+  public Object getKey() {
+<span class="nc" id="L201">    return iD;</span>
+  }
+
+  public Collection&lt;BusinessPartnerRole&gt; getRoles() {
+<span class="nc bnc" id="L205" title="All 2 branches missed.">    if (roles == null)</span>
+<span class="nc" id="L206">      roles = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L207">    return roles;</span>
+  }
+
+  public String getType() {
+<span class="nc" id="L211">    return type;</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L216">    final int prime = 31;</span>
+<span class="nc" id="L217">    int result = 1;</span>
+<span class="nc bnc" id="L218" title="All 2 branches missed.">    result = prime * result + ((iD == null) ? 0 : iD.hashCode());</span>
+<span class="nc" id="L219">    return result;</span>
+  }
+
+  public void setAddress(final PostalAddressData address) {
+<span class="nc" id="L223">    this.address = address;</span>
+<span class="nc" id="L224">  }</span>
+
+  public void setAdministrativeInformation(final AdministrativeInformation administrativeInformation) {
+<span class="nc" id="L227">    this.administrativeInformation = administrativeInformation;</span>
+<span class="nc" id="L228">  }</span>
+
+  public void setCommunicationData(final CommunicationData communicationData) {
+<span class="nc" id="L231">    this.communicationData = communicationData;</span>
+<span class="nc" id="L232">  }</span>
+
+  public void setCountry(final String country) {
+<span class="nc" id="L235">    this.country = country;</span>
+<span class="nc" id="L236">  }</span>
+
+  public void setCreationDateTime(final LocalDateTime creationDateTime) {
+<span class="nc" id="L239">    this.creationDateTime = creationDateTime;</span>
+<span class="nc" id="L240">  }</span>
+
+  public void setCustomNum1(final BigDecimal customNum1) {
+<span class="nc" id="L243">    this.customNum1 = customNum1;</span>
+<span class="nc" id="L244">  }</span>
+
+  public void setCustomNum2(final BigDecimal customNum2) {
+<span class="nc" id="L247">    this.customNum2 = customNum2;</span>
+<span class="nc" id="L248">  }</span>
+
+  public void setCustomString1(final String customString1) {
+<span class="nc" id="L251">    this.customString1 = customString1;</span>
+<span class="nc" id="L252">  }</span>
+
+  public void setCustomString2(final String customString2) {
+<span class="nc" id="L255">    this.customString2 = customString2;</span>
+<span class="nc" id="L256">  }</span>
+
+  public void setETag(final long eTag) {
+<span class="nc" id="L259">    this.eTag = eTag;</span>
+<span class="nc" id="L260">  }</span>
+
+  public void setID(final String iD) {
+<span class="nc" id="L263">    this.iD = iD;</span>
+<span class="nc" id="L264">  }</span>
+
+  public void setRoles(final Collection&lt;BusinessPartnerRole&gt; roles) {
+<span class="nc" id="L267">    this.roles = roles;</span>
+<span class="nc" id="L268">  }</span>
+
+  public void setType(final String type) {
+<span class="nc" id="L271">    this.type = type;</span>
+<span class="nc" id="L272">  }</span>
+
+  @PrePersist
+  public void onCreate() {
+<span class="nc" id="L276">    administrativeInformation = new AdministrativeInformation();</span>
+<span class="nc" id="L277">    final ChangeInformation created = new ChangeInformation(&quot;99&quot;, Date.valueOf(LocalDate.now()));</span>
+<span class="nc" id="L278">    administrativeInformation.setCreated(created);</span>
+<span class="nc" id="L279">    administrativeInformation.setUpdated(created);</span>
+<span class="nc" id="L280">  }</span>
+
+  public Collection&lt;AdministrativeDivisionDescription&gt; getLocationName() {
+<span class="nc" id="L283">    return locationName;</span>
+  }
+
+  public void setLocationName(final Collection&lt;AdministrativeDivisionDescription&gt; locationName) {
+<span class="nc" id="L287">    this.locationName = locationName;</span>
+<span class="nc" id="L288">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

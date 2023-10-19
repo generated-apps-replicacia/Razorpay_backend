@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>AbstractJoinImp.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">AbstractJoinImp.java</span></div><h1>AbstractJoinImp.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.util.List;
+import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.Predicate;
+
+import com.sap.olingo.jpa.metadata.api.JPAJoinColumn;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAOnConditionItem;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.processor.cb.impl.PredicateImpl.BinaryExpressionPredicate;
+import com.sap.olingo.jpa.processor.cb.joiner.SqlConvertible;
+import com.sap.olingo.jpa.processor.cb.joiner.StringBuilderCollector;
+
+abstract class AbstractJoinImp&lt;Z, X&gt; extends FromImpl&lt;Z, X&gt; implements Join&lt;Z, X&gt; {
+
+  protected Predicate on;
+  protected final From&lt;?, Z&gt; related;
+
+  AbstractJoinImp(@Nonnull final JPAEntityType type, @Nonnull final From&lt;?, Z&gt; parent,
+      @Nonnull final AliasBuilder ab, @Nonnull final CriteriaBuilder cb) {
+<span class="nc" id="L28">    super(type, ab, cb);</span>
+<span class="nc" id="L29">    this.related = parent;</span>
+<span class="nc" id="L30">  }</span>
+
+  AbstractJoinImp(@Nonnull final JPAEntityType type, @Nonnull final From&lt;?, Z&gt; parent, final JPAPath path,
+      @Nonnull final AliasBuilder ab, @Nonnull final CriteriaBuilder cb) {
+<span class="nc" id="L34">    super(type, path, ab, cb);</span>
+<span class="nc" id="L35">    this.related = parent;</span>
+<span class="nc" id="L36">  }</span>
+
+  @Override
+  public StringBuilder asSQL(final StringBuilder statement) {
+
+<span class="nc" id="L41">    statement.append(&quot; &quot;)</span>
+<span class="nc" id="L42">        .append(SqlJoinType.byJoinType(getJoinType()))</span>
+<span class="nc" id="L43">        .append(&quot; &quot;);</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">    if (!getJoins().isEmpty())</span>
+<span class="nc" id="L45">      statement.append(OPENING_BRACKET);</span>
+<span class="nc" id="L46">    statement.append(st.getTableName());</span>
+<span class="nc" id="L47">    tableAlias.ifPresent(p -&gt; statement.append(&quot; &quot;).append(p));</span>
+<span class="nc" id="L48">    statement.append(getJoins().stream().collect(new StringBuilderCollector.ExpressionCollector(statement, &quot; &quot;)));</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">    if (!getJoins().isEmpty())</span>
+<span class="nc" id="L50">      statement.append(CLOSING_BRACKET);</span>
+<span class="nc" id="L51">    statement.append(&quot; ON &quot;);</span>
+<span class="nc" id="L52">    ((SqlConvertible) on).asSQL(statement);</span>
+<span class="nc" id="L53">    return statement;</span>
+  }
+
+  /**
+   * Return the predicate that corresponds to the ON
+   * restriction(s) on the join, or null if no ON condition
+   * has been specified.
+   * @return the ON restriction predicate
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public Predicate getOn() {
+<span class="nc" id="L65">    return on;</span>
+  }
+
+  /**
+   * Return the parent of the join.
+   * @return join parent
+   */
+  @Override
+  public From&lt;?, Z&gt; getParent() {
+<span class="nc" id="L74">    return related;</span>
+  }
+
+  /**
+   * Modify the join to restrict the result according to the
+   * specified ON condition and return the join object.
+   * Replaces the previous ON condition, if any.
+   * @param restriction a simple or compound boolean expression
+   * @return the modified join object
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public Join&lt;Z, X&gt; on(@Nonnull final Expression&lt;Boolean&gt; restriction) {
+<span class="nc" id="L87">    on = (Predicate) restriction;</span>
+<span class="nc" id="L88">    return this;</span>
+  }
+
+  /**
+   * Modify the join to restrict the result according to the
+   * specified ON condition and return the join object.
+   * Replaces the previous ON condition, if any.
+   * @param restrictions zero or more restriction predicates
+   * @return the modified join object
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public Join&lt;Z, X&gt; on(@Nonnull final Predicate... restrictions) {
+<span class="nc" id="L101">    on = PredicateImpl.and(restrictions);</span>
+<span class="nc" id="L102">    return this;</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L107">    return super.hashCode();</span>
+  }
+
+  @Override
+  public boolean equals(final Object obj) {
+<span class="nc" id="L112">    return super.equals(obj);</span>
+  }
+
+  protected void createOn(final List&lt;JPAOnConditionItem&gt; items, final JPAEntityType targetType) {
+<span class="nc bnc" id="L116" title="All 2 branches missed.">    for (final JPAOnConditionItem item : items) {</span>
+<span class="nc" id="L117">      final Predicate eq = createOnElement(item, targetType);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">      if (on == null)</span>
+<span class="nc" id="L119">        on = eq;</span>
+      else
+<span class="nc" id="L121">        on = new PredicateImpl.AndPredicate(on, eq);</span>
+<span class="nc" id="L122">    }</span>
+<span class="nc" id="L123">  }</span>
+
+  private Predicate createOnElement(final JPAOnConditionItem item, final JPAEntityType target) {
+<span class="nc" id="L126">    final Expression&lt;?&gt; left = new PathImpl&lt;&gt;(item.getLeftPath(), Optional.of((PathImpl&lt;?&gt;) related),</span>
+        ((PathImpl&lt;?&gt;) related).st, ((FromImpl&lt;?, ?&gt;) related).tableAlias);
+<span class="nc" id="L128">    final Expression&lt;?&gt; right = new PathImpl&lt;&gt;(item.getRightPath(), Optional.of(this),</span>
+        target, tableAlias);
+<span class="nc" id="L130">    return new PredicateImpl.BinaryExpressionPredicate(PredicateImpl.BinaryExpressionPredicate.Operation.EQ, left,</span>
+        right);
+  }
+
+  protected &lt;T extends JPAJoinColumn&gt; void createOn(final List&lt;T&gt; joinInformation) {
+<span class="nc bnc" id="L135" title="All 2 branches missed.">    for (final JPAJoinColumn column : joinInformation) {</span>
+<span class="nc" id="L136">      final Predicate eq = createOnElement(column);</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">      if (on == null)</span>
+<span class="nc" id="L138">        on = eq;</span>
+      else
+<span class="nc" id="L140">        on = new PredicateImpl.AndPredicate(on, eq);</span>
+<span class="nc" id="L141">    }</span>
+<span class="nc" id="L142">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private BinaryExpressionPredicate createOnElement(final JPAJoinColumn column) {
+<span class="nc" id="L146">    return new PredicateImpl.BinaryExpressionPredicate(PredicateImpl.BinaryExpressionPredicate.Operation.EQ,</span>
+<span class="nc" id="L147">        new ExpressionPath&lt;&gt;(column.getName(), ((FromImpl&lt;Z, X&gt;) related).tableAlias),</span>
+<span class="nc" id="L148">        new ExpressionPath&lt;&gt;(column.getReferencedColumnName(), tableAlias));</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

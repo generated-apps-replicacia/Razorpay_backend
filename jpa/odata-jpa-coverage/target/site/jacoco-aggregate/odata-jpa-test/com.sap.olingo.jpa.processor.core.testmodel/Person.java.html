@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>Person.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-test</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.testmodel</a> &gt; <span class="el_source">Person.java</span></div><h1>Person.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.testmodel;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
+import javax.persistence.OneToOne;
+import javax.persistence.Transient;
+
+import org.apache.olingo.commons.api.edm.provider.annotation.CsdlConstantExpression.ConstantExpressionType;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmAnnotation;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmFunction;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmParameter;
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmTransient;
+
+@Entity(name = &quot;Person&quot;)
+
+@EdmFunction(
+    name = &quot;CheckRights&quot;,
+    functionName = &quot;CHECK_RIGHTS&quot;,
+    hasFunctionImport = true,
+    isBound = false,
+    returnType = @EdmFunction.ReturnType(type = Boolean.class, isCollection = false),
+    parameter = {
+        @EdmParameter(name = &quot;R&quot;, parameterName = &quot;Right&quot;, type = AccessRights.class),
+        @EdmParameter(name = &quot;U&quot;, parameterName = &quot;UserRights&quot;, type = Integer.class) })
+
+@EdmFunction(
+    name = &quot;ReturnRights&quot;,
+    functionName = &quot;RETURN_RIGHTS&quot;,
+    hasFunctionImport = true,
+    isBound = false,
+    returnType = @EdmFunction.ReturnType(type = AccessRights.class, isCollection = false),
+    parameter = {
+        @EdmParameter(name = &quot;U&quot;, parameterName = &quot;UserRights&quot;, type = Integer.class) })
+
+@DiscriminatorValue(value = &quot;1&quot;)
+public class Person extends BusinessPartner {// #NOSONAR use equal method from BusinessPartner
+
+  @Column(name = &quot;\&quot;NameLine1\&quot;&quot;)
+  private String firstName;
+
+  @Column(name = &quot;\&quot;NameLine2\&quot;&quot;)
+  private String lastName;
+
+  @EdmTransient(requiredAttributes = { &quot;lastName&quot;, &quot;firstName&quot; }, calculator = FullNameCalculator.class)
+  @Transient
+  private String fullName;
+
+  @Convert(converter = DateConverter.class)
+  @Column(name = &quot;\&quot;BirthDay\&quot;&quot;)
+  private LocalDate birthDay;
+
+  @Convert(converter = AccessRightsConverter.class)
+  @Column(name = &quot;\&quot;AccessRights\&quot;&quot;)
+  private AccessRights[] accessRights;
+
+  @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+  @JoinColumn(name = &quot;\&quot;ID\&quot;&quot;, referencedColumnName = &quot;\&quot;ID\&quot;&quot;, insertable = false, updatable = false, nullable = true)
+  private PersonImage image;
+
+<span class="nc" id="L76">  @EdmAnnotation(term = &quot;Core.Description&quot;, qualifier = &quot;Address&quot;,</span>
+      constantExpression = @EdmAnnotation.ConstantExpression(type = ConstantExpressionType.String,
+          value = &quot;Address for inhouse Mail&quot;))
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(schema = &quot;\&quot;OLINGO\&quot;&quot;, name = &quot;\&quot;InhouseAddress\&quot;&quot;,
+      joinColumns = @JoinColumn(name = &quot;\&quot;ID\&quot;&quot;))
+  private List&lt;InhouseAddress&gt; inhouseAddress = new ArrayList&lt;&gt;();
+
+  @ManyToMany
+  @JoinTable(name = &quot;\&quot;SupportRelationship\&quot;&quot;, schema = &quot;\&quot;OLINGO\&quot;&quot;,
+      joinColumns = @JoinColumn(name = &quot;\&quot;PersonID\&quot;&quot;),
+      inverseJoinColumns = @JoinColumn(name = &quot;\&quot;OrganizationID\&quot;&quot;))
+  private List&lt;Organization&gt; supportedOrganizations;
+
+  @ManyToMany
+  @JoinTable(name = &quot;\&quot;Membership\&quot;&quot;, schema = &quot;\&quot;OLINGO\&quot;&quot;,
+      joinColumns = @JoinColumn(name = &quot;\&quot;PersonID\&quot;&quot;, referencedColumnName = &quot;\&quot;ID\&quot;&quot;),
+      inverseJoinColumns = @JoinColumn(name = &quot;\&quot;TeamID\&quot;&quot;, referencedColumnName = &quot;\&quot;TeamKey\&quot;&quot;))
+  private List&lt;Team&gt; teams;
+
+<span class="nc" id="L96">  public Person() {</span>
+<span class="nc" id="L97">    type = &quot;1&quot;;</span>
+<span class="nc" id="L98">  }</span>
+
+  public String getFirstName() {
+<span class="nc" id="L101">    return firstName;</span>
+  }
+
+  public String getLastName() {
+<span class="nc" id="L105">    return lastName;</span>
+  }
+
+  public LocalDate getBirthDay() {
+<span class="nc" id="L109">    return birthDay;</span>
+  }
+
+  public void setFirstName(final String firstName) {
+<span class="nc" id="L113">    this.firstName = firstName;</span>
+<span class="nc" id="L114">  }</span>
+
+  public void setLastName(final String lastName) {
+<span class="nc" id="L117">    this.lastName = lastName;</span>
+<span class="nc" id="L118">  }</span>
+
+  public void setBirthDay(final LocalDate birthDay) {
+<span class="nc" id="L121">    this.birthDay = birthDay;</span>
+<span class="nc" id="L122">  }</span>
+
+  public Short getAccessRights() {
+<span class="nc" id="L125">    return new AccessRightsConverter().convertToDatabaseColumn(accessRights);</span>
+  }
+
+  public List&lt;AccessRights&gt; getAccessRightsAsList() {
+<span class="nc bnc" id="L129" title="All 2 branches missed.">    return accessRights == null ? Collections.emptyList() : Arrays.asList(accessRights);</span>
+  }
+
+  public List&lt;InhouseAddress&gt; getInhouseAddress() {
+<span class="nc" id="L133">    return inhouseAddress;</span>
+  }
+
+  public void setInhouseAddress(final List&lt;InhouseAddress&gt; inhouseAddress) {
+<span class="nc" id="L137">    this.inhouseAddress = inhouseAddress;</span>
+<span class="nc" id="L138">  }</span>
+
+  public void addInhouseAddress(final InhouseAddress address) {
+<span class="nc" id="L141">    inhouseAddress.add(address);</span>
+<span class="nc" id="L142">  }</span>
+
+  public String getFullName() {
+<span class="nc" id="L145">    return new StringBuffer()</span>
+<span class="nc" id="L146">        .append(lastName)</span>
+<span class="nc" id="L147">        .append(&quot;, &quot;)</span>
+<span class="nc" id="L148">        .append(firstName)</span>
+<span class="nc" id="L149">        .toString();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

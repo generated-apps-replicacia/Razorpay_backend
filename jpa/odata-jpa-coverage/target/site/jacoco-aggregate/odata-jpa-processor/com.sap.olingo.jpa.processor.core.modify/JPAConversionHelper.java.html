@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAConversionHelper.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.modify</a> &gt; <span class="el_source">JPAConversionHelper.java</span></div><h1>JPAConversionHelper.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.modify;
+
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.ATTRIBUTE_NOT_FOUND;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.ENUMERATION_UNKNOWN;
+import static com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys.PARAMETER_NULL;
+import static org.apache.olingo.commons.api.data.ValueType.ENUM;
+import static org.apache.olingo.commons.api.data.ValueType.PRIMITIVE;
+import static org.apache.olingo.commons.api.http.HttpStatusCode.BAD_REQUEST;
+
+import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.AttributeConverter;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.impl.IntermediateEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.impl.IntermediateProperty;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.impl.IntermediateSimpleProperty;
+import org.apache.olingo.commons.api.data.ComplexValue;
+import org.apache.olingo.commons.api.data.Entity;
+import org.apache.olingo.commons.api.data.Parameter;
+import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.data.ValueType;
+import org.apache.olingo.commons.api.edm.EdmEntitySet;
+import org.apache.olingo.commons.api.edm.EdmProperty;
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpHeader;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.deserializer.DeserializerException;
+import org.apache.olingo.server.api.deserializer.ODataDeserializer;
+import org.apache.olingo.server.api.serializer.SerializerException;
+import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEnumerationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException.MessageKeys;
+import com.sap.olingo.jpa.processor.core.query.EdmBindingTargetInfo;
+import com.sap.olingo.jpa.processor.core.query.ExpressionUtil;
+import com.sap.olingo.jpa.processor.core.query.Util;
+
+/**
+ * Helper method for modifying requests.&lt;p&gt;
+ * Mainly created to increase testability
+ * @author Oliver Grande
+ *
+ */
+
+public class JPAConversionHelper {
+
+  private final Map&lt;Object, Map&lt;String, Object&gt;&gt; getterBuffer;
+
+  public static Object convertParameter(final Parameter param, final JPAServiceDocument sd)
+      throws ODataJPAModelException, ODataJPAProcessorException {
+<span class="nc bnc" id="L71" title="All 2 branches missed.">    if (param.getValueType() == ENUM) {</span>
+<span class="nc" id="L72">      final JPAEnumerationAttribute enumType = sd.getEnumType(param.getType());</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">      if (enumType == null)</span>
+<span class="nc" id="L74">        throw new ODataJPAProcessorException(ENUMERATION_UNKNOWN, BAD_REQUEST, param.getName());</span>
+<span class="nc" id="L75">      return enumType.enumOf((Number) param.getValue());</span>
+    } else {
+<span class="nc" id="L77">      return param.getValue();</span>
+    }
+  }
+
+  public JPAConversionHelper() {
+<span class="nc" id="L82">    super();</span>
+<span class="nc" id="L83">    this.getterBuffer = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L84">  }</span>
+
+  /**
+   * Creates a map of attribute name and the return value of there getter method. &lt;p&gt;
+   * It is assumed that the method name is composed from &lt;i&gt;get&lt;/&gt; and the
+   * name of the attribute and that the attribute name starts with a lower case
+   * letter.
+   * @param instance
+   * @return
+   * @throws ODataJPAProcessorException
+   */
+  public Map&lt;String, Object&gt; buildGetterMap(final Object instance) throws ODataJPAProcessorException {
+
+<span class="nc bnc" id="L97" title="All 2 branches missed.">    if (instance != null) {</span>
+<span class="nc" id="L98">      final ODataJPAProcessorException[] exception = { null };</span>
+<span class="nc" id="L99">      final Map&lt;String, Object&gt; getterMap = getterBuffer.computeIfAbsent(instance, k -&gt; {</span>
+        try {
+<span class="nc" id="L101">          return this.determineGetter(instance);</span>
+<span class="nc" id="L102">        } catch (final ODataJPAProcessorException e) {</span>
+<span class="nc" id="L103">          exception[0] = e;</span>
+<span class="nc" id="L104">          return new HashMap&lt;&gt;(1);</span>
+        }
+      });
+<span class="nc bnc" id="L107" title="All 2 branches missed.">      if (exception[0] == null)</span>
+<span class="nc" id="L108">        return getterMap;</span>
+      else
+<span class="nc" id="L110">        throw exception[0];</span>
+    } else {
+<span class="nc" id="L112">      throw new ODataJPAProcessorException(PARAMETER_NULL, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  /**
+   * Converts the payload of a request into the corresponding odata entity
+   * @param odata
+   * @param request
+   * @param requestFormat
+   * @param uriResourceParts
+   * @return
+   * @throws ODataJPAProcessorException
+   */
+  public Entity convertInputStream(final OData odata, final ODataRequest request, final ContentType requestFormat,
+      final List&lt;UriResource&gt; uriResourceParts) throws ODataJPAProcessorException {
+
+<span class="nc" id="L128">    final InputStream requestInputStream = request.getBody();</span>
+<span class="nc" id="L129">    final EdmBindingTargetInfo targetEntityInfo = Util.determineModifyEntitySetAndKeys(uriResourceParts);</span>
+    try {
+<span class="nc" id="L131">      final ODataDeserializer deserializer = createDeserializer(odata, requestFormat,</span>
+<span class="nc" id="L132">          request.getHeaders(HttpHeader.ODATA_VERSION));</span>
+<span class="nc" id="L133">      final UriResource lastPart = uriResourceParts.get(uriResourceParts.size() - 1);</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">      if (lastPart instanceof UriResourceProperty) {</span>
+        // Convert requests on property level into request on entity level
+<span class="nc" id="L136">        final Entity requestEntity = new Entity();</span>
+<span class="nc" id="L137">        final String startProperty = targetEntityInfo.getNavigationPath().split(JPAPath.PATH_SEPARATOR)[0];</span>
+<span class="nc" id="L138">        int i = uriResourceParts.size() - 1;</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">        for (; i &gt; 0; i--) {</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">          if (uriResourceParts.get(i) instanceof UriResourceProperty</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">              &amp;&amp; ((UriResourceProperty) uriResourceParts.get(i)).getProperty().getName().equals(startProperty)) {</span>
+<span class="nc" id="L142">            break;</span>
+          }
+        }
+<span class="nc" id="L145">        List&lt;Property&gt; properties = requestEntity.getProperties();</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        for (int j = i; j &lt; uriResourceParts.size() - 1; j++) {</span>
+          // NO $value supported yet
+<span class="nc bnc" id="L148" title="All 2 branches missed.">          if (!(uriResourceParts.get(i) instanceof UriResourceProperty)) {</span>
+<span class="nc" id="L149">            break;</span>
+          }
+<span class="nc" id="L151">          final EdmProperty edmProperty = ((UriResourceProperty) uriResourceParts.get(i)).getProperty();</span>
+<span class="nc" id="L152">          final Property intermediateProperty = new Property();</span>
+<span class="nc" id="L153">          intermediateProperty.setType(edmProperty.getType().getFullQualifiedName().getFullQualifiedNameAsString());</span>
+<span class="nc" id="L154">          intermediateProperty.setName(edmProperty.getName());</span>
+<span class="nc" id="L155">          intermediateProperty.setValue(ValueType.COMPLEX, new ComplexValue());</span>
+<span class="nc" id="L156">          properties.add(intermediateProperty);</span>
+<span class="nc" id="L157">          properties = ((ComplexValue) intermediateProperty.getValue()).getValue();</span>
+        }
+<span class="nc" id="L159">        properties.add(deserializer.property(requestInputStream, ((UriResourceProperty) lastPart).getProperty())</span>
+<span class="nc" id="L160">            .getProperty());</span>
+<span class="nc" id="L161">        return requestEntity;</span>
+      } else {
+<span class="nc" id="L163">        return deserializer.entity(requestInputStream, targetEntityInfo.getTargetEdmBindingTarget().getEntityType())</span>
+<span class="nc" id="L164">            .getEntity();</span>
+      }
+<span class="nc" id="L166">    } catch (final DeserializerException e) {</span>
+<span class="nc" id="L167">      throw new ODataJPAProcessorException(e, HttpStatusCode.BAD_REQUEST);</span>
+    }
+  }
+
+  /**
+   *
+   * @param odata
+   * @param request
+   * @param edmEntitySet
+   * @param et
+   * @param newPOJO
+   * @return
+   * @throws SerializerException
+   * @throws ODataJPAProcessorException
+   */
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public String convertKeyToLocal(final OData odata, final ODataRequest request, final EdmEntitySet edmEntitySet,
+      final JPAEntityType et, final Object newPOJO) throws SerializerException, ODataJPAProcessorException {
+
+<span class="nc bnc" id="L187" title="All 2 branches missed.">    if (newPOJO instanceof Map&lt;?, ?&gt;)</span>
+<span class="nc" id="L188">      return convertKeyToLocalMap(odata, request, edmEntitySet, et, (Map&lt;String, Object&gt;) newPOJO);</span>
+    else
+<span class="nc" id="L190">      return convertKeyToLocalEntity(odata, request, edmEntitySet, et, newPOJO);</span>
+  }
+
+  /**
+   * Creates nested map of attributes and there (new) values. Primitive values are instances of e.g. Integer. Embedded
+   * Types are returned as maps.
+   *
+   * @param odata
+   * @param st
+   * @param odataProperties
+   * @return
+   * @throws ODataJPAProcessException
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public Map&lt;String, Object&gt; convertProperties(final OData odata, final JPAStructuredType st,
+      final List&lt;Property&gt; odataProperties) throws ODataJPAProcessException {
+
+<span class="nc" id="L207">    final Map&lt;String, Object&gt; jpaAttributes = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L208">    String internalName = null;</span>
+<span class="nc" id="L209">    Object jpaAttribute = null;</span>
+    JPAPath path;
+<span class="nc bnc" id="L211" title="All 2 branches missed.">    for (final Property odataProperty : odataProperties) {</span>
+      try {
+<span class="nc" id="L213">        path = st.getPath(odataProperty.getName());</span>
+<span class="nc" id="L214">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L215">        throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L216">      }</span>
+<span class="nc bnc" id="L217" title="All 5 branches missed.">      switch (odataProperty.getValueType()) {</span>
+        case COMPLEX:
+          try {
+<span class="nc" id="L220">            final String name = path.getPath().get(0).getInternalName();</span>
+<span class="nc" id="L221">            final JPAStructuredType a = st.getAttribute(name)</span>
+<span class="nc" id="L222">                .orElseThrow(() -&gt; new ODataJPAProcessorException(ATTRIBUTE_NOT_FOUND,</span>
+                    HttpStatusCode.INTERNAL_SERVER_ERROR, name))
+<span class="nc" id="L224">                .getStructuredType();</span>
+<span class="nc" id="L225">            internalName = name;</span>
+<span class="nc" id="L226">            jpaAttribute = convertProperties(odata, a, ((ComplexValue) odataProperty.getValue()).getValue());</span>
+<span class="nc" id="L227">          } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L228">            throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L229">          }</span>
+          break;
+        case PRIMITIVE:
+        case ENUM:
+<span class="nc" id="L233">          final JPAAttribute attribute = path.getLeaf();</span>
+<span class="nc" id="L234">          internalName = attribute.getInternalName();</span>
+<span class="nc" id="L235">          jpaAttribute = processAttributeConverter(odataProperty.getValue(), attribute);</span>
+<span class="nc" id="L236">          break;</span>
+        case COLLECTION_PRIMITIVE:
+        case COLLECTION_ENUM:
+<span class="nc" id="L239">          final JPAAttribute attribute2 = path.getLeaf();</span>
+<span class="nc" id="L240">          internalName = attribute2.getInternalName();</span>
+<span class="nc" id="L241">          jpaAttribute = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L242" title="All 2 branches missed.">          for (final Object property : (List&lt;?&gt;) odataProperty.getValue())</span>
+<span class="nc" id="L243">            ((List&lt;Object&gt;) jpaAttribute).add(processAttributeConverter(property, attribute2));</span>
+
+<span class="nc" id="L245">          break;</span>
+        case COLLECTION_COMPLEX:
+<span class="nc" id="L247">          final String name = path.getPath().get(0).getInternalName();</span>
+<span class="nc" id="L248">          jpaAttribute = new ArrayList&lt;&gt;();</span>
+          try {
+<span class="nc" id="L250">            final JPAStructuredType a = st.getAttribute(name)</span>
+<span class="nc" id="L251">                .orElseThrow(() -&gt; new ODataJPAProcessorException(ATTRIBUTE_NOT_FOUND,</span>
+                    HttpStatusCode.INTERNAL_SERVER_ERROR, name))
+<span class="nc" id="L253">                .getStructuredType();</span>
+<span class="nc" id="L254">            internalName = name;</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">            for (final ComplexValue property : (List&lt;ComplexValue&gt;) odataProperty.getValue())</span>
+<span class="nc" id="L256">              ((List&lt;Object&gt;) jpaAttribute).add(convertProperties(odata, a, property.getValue()));</span>
+<span class="nc" id="L257">          } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L258">            throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L259">          }</span>
+          break;
+        default:
+<span class="nc" id="L262">          throw new ODataJPAProcessorException(MessageKeys.NOT_SUPPORTED_PROP_TYPE, HttpStatusCode.NOT_IMPLEMENTED,</span>
+<span class="nc" id="L263">              odataProperty.getValueType().name());</span>
+      }
+<span class="nc" id="L265">      jpaAttributes.put(internalName, jpaAttribute);</span>
+<span class="nc" id="L266">    }</span>
+<span class="nc" id="L267">    return jpaAttributes;</span>
+  }
+
+  /**
+   *
+   * @param keyPredicates
+   * @return
+   * @throws ODataJPAFilterException
+   * @throws ODataJPAProcessorException
+   */
+  public Map&lt;String, Object&gt; convertUriKeys(final OData odata, final JPAStructuredType st,
+      final List&lt;UriParameter&gt; keyPredicates) throws ODataJPAFilterException, ODataJPAProcessorException {
+
+<span class="nc" id="L280">    final Map&lt;String, Object&gt; result = new HashMap&lt;&gt;(keyPredicates.size());</span>
+    String internalName;
+<span class="nc bnc" id="L282" title="All 2 branches missed.">    for (final UriParameter key : keyPredicates) {</span>
+      try {
+<span class="nc" id="L284">        final JPAAttribute attribute = st.getPath(key.getName()).getLeaf();</span>
+<span class="nc" id="L285">        internalName = attribute.getInternalName();</span>
+<span class="nc" id="L286">        final Object jpaAttribute = ExpressionUtil.convertValueOnAttribute(odata, attribute, key.getText(), true);</span>
+<span class="nc" id="L287">        result.put(internalName, jpaAttribute);</span>
+<span class="nc" id="L288">      } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L289">        throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L290">      }</span>
+<span class="nc" id="L291">    }</span>
+<span class="nc" id="L292">    return result;</span>
+  }
+
+  /**
+   * Like {@link #buildGetterMap}, but without buffer
+   * @param instance
+   * @return
+   * @throws ODataJPAProcessorException
+   */
+  public Map&lt;String, Object&gt; determineGetter(final Object instance) throws ODataJPAProcessorException {
+    Map&lt;String, Object&gt; getterMap;
+<span class="nc" id="L303">    getterMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L304">    final Method[] methods = instance.getClass().getMethods();</span>
+<span class="nc bnc" id="L305" title="All 2 branches missed.">    for (final Method meth : methods) {</span>
+<span class="nc" id="L306">      final String methodName = meth.getName();</span>
+<span class="nc bnc" id="L307" title="All 4 branches missed.">      if (methodName.substring(0, 3).equals(&quot;get&quot;) &amp;&amp; methodName.length() &gt; 3) {</span>
+<span class="nc" id="L308">        final String attributeName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);</span>
+        try {
+<span class="nc" id="L310">          final Object value = meth.invoke(instance);</span>
+<span class="nc" id="L311">          getterMap.put(attributeName, value);</span>
+<span class="nc" id="L312">        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {</span>
+<span class="nc" id="L313">          throw new ODataJPAProcessorException(MessageKeys.ATTRIBUTE_RETRIEVAL_FAILED,</span>
+              HttpStatusCode.INTERNAL_SERVER_ERROR, e, attributeName);
+<span class="nc" id="L315">        }</span>
+      }
+    }
+<span class="nc" id="L318">    return getterMap;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public &lt;S, T&gt; Object processAttributeConverter(final Object value, final JPAAttribute attribute) {
+    Object jpaAttribute;
+<span class="nc bnc" id="L324" title="All 2 branches missed.">    if (attribute.getConverter() != null) {</span>
+<span class="nc" id="L325">      final AttributeConverter&lt;T, S&gt; converter = attribute.getConverter();</span>
+<span class="nc" id="L326">      jpaAttribute = converter.convertToEntityAttribute((S) value);</span>
+<span class="nc bnc" id="L327" title="All 2 branches missed.">    } else if (attribute.isEnum()) {</span>
+<span class="nc" id="L328">      jpaAttribute = findEnumConstantsByOrdinal(attribute.getType().getEnumConstants(), value);</span>
+    } else {
+<span class="nc bnc" id="L330" title="All 6 branches missed.">      if(attribute != null &amp;&amp; attribute.getType() != null &amp;&amp; attribute.getType().equals(Duration.class))</span>
+<span class="nc" id="L331">          jpaAttribute = Duration.ofSeconds((Long) value);</span>
+      else
+<span class="nc" id="L333">        jpaAttribute = value;</span>
+    }
+<span class="nc" id="L335">    return jpaAttribute;</span>
+  }
+
+  private void collectKeyProperties(final Map&lt;String, Object&gt; newPOJO, final List&lt;JPAPath&gt; keyPath,
+      final List&lt;Property&gt; properties)
+      throws ODataJPAProcessorException, ODataJPAModelException {
+
+<span class="nc bnc" id="L342" title="All 2 branches missed.">    if (keyPath.size() &gt; 1) {</span>
+
+<span class="nc bnc" id="L344" title="All 2 branches missed.">      for (final JPAPath key : keyPath) {</span>
+<span class="nc" id="L345">        final Object keyElement = newPOJO.get(key.getLeaf().getInternalName());</span>
+<span class="nc" id="L346">        final Property property = new Property(null, key.getLeaf().getExternalName());</span>
+<span class="nc" id="L347">        property.setValue(ValueType.PRIMITIVE, keyElement);</span>
+<span class="nc" id="L348">        properties.add(property);</span>
+<span class="nc" id="L349">      }</span>
+    } else {
+<span class="nc" id="L351">      final JPAPath key = keyPath.get(0);</span>
+<span class="nc bnc" id="L352" title="All 2 branches missed.">      if (key.getLeaf().isComplex()) {</span>
+        // EmbeddedId
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L355">        final Map&lt;String, Object&gt; embeddedId = (Map&lt;String, Object&gt;) newPOJO.get(key.getLeaf().getInternalName());</span>
+<span class="nc" id="L356">        collectKeyProperties(embeddedId, key.getLeaf().getStructuredType().getPathList(), properties);</span>
+<span class="nc" id="L357">      } else {</span>
+<span class="nc" id="L358">        final Property property = new Property(null, key.getLeaf().getExternalName());</span>
+<span class="nc" id="L359">        property.setValue(ValueType.PRIMITIVE, newPOJO.get(key.getLeaf().getInternalName()));</span>
+<span class="nc" id="L360">        properties.add(property);</span>
+      }
+    }
+<span class="nc" id="L363">  }</span>
+
+  private void collectKeyProperties(final Object newPOJO, final List&lt;JPAPath&gt; keyPath, final List&lt;Property&gt; properties)
+      throws ODataJPAProcessorException, ODataJPAModelException {
+
+<span class="nc" id="L368">    final Map&lt;String, Object&gt; getter = buildGetterMap(newPOJO);</span>
+<span class="nc bnc" id="L369" title="All 2 branches missed.">    if (keyPath.size() &gt; 1) {</span>
+
+<span class="nc bnc" id="L371" title="All 2 branches missed.">      for (final JPAPath key : keyPath) {</span>
+<span class="nc" id="L372">        final Property property = new Property(null, key.getLeaf().getExternalName());</span>
+<span class="nc" id="L373">        property.setValue(ValueType.PRIMITIVE, getter.get(key.getLeaf().getInternalName()));</span>
+<span class="nc" id="L374">        properties.add(property);</span>
+<span class="nc" id="L375">      }</span>
+    } else {
+<span class="nc" id="L377">      final JPAPath key = keyPath.get(0);</span>
+<span class="nc bnc" id="L378" title="All 2 branches missed.">      if (key.getLeaf().isComplex()) {</span>
+        // EmbeddedId
+<span class="nc" id="L380">        final Object embeddedId = getter.get(key.getLeaf().getInternalName());</span>
+<span class="nc" id="L381">        collectKeyProperties(embeddedId, key.getLeaf().getStructuredType().getPathList(), properties);</span>
+<span class="nc" id="L382">      } else {</span>
+<span class="nc" id="L383">        final Property property = new Property(null, key.getLeaf().getExternalName());</span>
+<span class="nc" id="L384">        property.setValue(ValueType.PRIMITIVE, getter.get(key.getLeaf().getInternalName()));</span>
+<span class="nc" id="L385">        properties.add(property);</span>
+      }
+    }
+<span class="nc" id="L388">  }</span>
+
+  private String convertKeyToLocalEntity(final OData odata, final ODataRequest request, final EdmEntitySet edmEntitySet,
+      final JPAEntityType et, final Object newPOJO) throws SerializerException, ODataJPAProcessorException {
+
+<span class="nc" id="L393">    final Entity createdEntity = new Entity();</span>
+
+    try {
+<span class="nc" id="L396">      final List&lt;JPAPath&gt; keyPath = et.getKeyPath();</span>
+<span class="nc" id="L397">      final List&lt;Property&gt; properties = createdEntity.getProperties();</span>
+
+<span class="nc" id="L399">      collectKeyProperties(newPOJO, keyPath, properties);</span>
+<span class="nc" id="L400">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L401">      throw new ODataJPAProcessorException(e, HttpStatusCode.BAD_REQUEST);</span>
+<span class="nc" id="L402">    }</span>
+
+<span class="nc" id="L404">    return request.getRawBaseUri() + '/'</span>
+<span class="nc" id="L405">        + odata.createUriHelper().buildCanonicalURL(edmEntitySet, createdEntity);</span>
+  }
+
+  private String convertKeyToLocalMap(final OData odata, final ODataRequest request,
+      final EdmEntitySet edmEntitySet, final JPAEntityType et, final Map&lt;String, Object&gt; newPOJO)
+      throws SerializerException, ODataJPAProcessorException {
+
+<span class="nc" id="L412">    final Entity createdEntity = new Entity();</span>
+
+    try {
+<span class="nc" id="L415">      final List&lt;Property&gt; properties = createdEntity.getProperties();</span>
+<span class="nc" id="L416">      final List&lt;JPAPath&gt; keyPath = et.getKeyPath();</span>
+<span class="nc" id="L417">      collectKeyProperties(newPOJO, keyPath, properties);</span>
+<span class="nc" id="L418">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L419">      throw new ODataJPAProcessorException(e, HttpStatusCode.BAD_REQUEST);</span>
+<span class="nc" id="L420">    }</span>
+
+<span class="nc" id="L422">    return request.getRawBaseUri() + '/'</span>
+<span class="nc" id="L423">        + odata.createUriHelper().buildCanonicalURL(edmEntitySet, createdEntity);</span>
+  }
+
+  private ODataDeserializer createDeserializer(final OData odata, final ContentType requestFormat,
+      final List&lt;String&gt; version) throws DeserializerException {
+<span class="nc" id="L428">    return odata.createDeserializer(requestFormat, version);</span>
+  }
+
+  private &lt;T&gt; Object findEnumConstantsByOrdinal(final T[] enumConstants, final Object value) {
+<span class="nc bnc" id="L432" title="All 2 branches missed.">    for (int i = 0; i &lt; enumConstants.length; i++) {</span>
+<span class="nc bnc" id="L433" title="All 2 branches missed.">      if (((Enum&lt;?&gt;) enumConstants[i]).ordinal() == (Integer) value)</span>
+<span class="nc" id="L434">        return enumConstants[i];</span>
+    }
+<span class="nc" id="L436">    return null;</span>
+  }
+
+  public Entity createMediaEntity(Map&lt;String, List&lt;String&gt;&gt; allHeaders, String toContentTypeString, byte[] mediaContent, IntermediateEntityType et) {
+<span class="nc" id="L440">    Entity entity = new Entity();</span>
+<span class="nc" id="L441">    Map&lt;String, IntermediateProperty&gt; declaredPropertiesMap = et.getDeclaredPropertiesList();</span>
+<span class="nc bnc" id="L442" title="All 2 branches missed.">    for (String declaredPropertyName: declaredPropertiesMap.keySet()) {</span>
+<span class="nc" id="L443">      IntermediateSimpleProperty intermediateSimpleProperty = (IntermediateSimpleProperty) declaredPropertiesMap.get(declaredPropertyName);</span>
+<span class="nc bnc" id="L444" title="All 2 branches missed.">      if(declaredPropertyName.equals(et.getStreamProperty().getInternalName())</span>
+<span class="nc bnc" id="L445" title="All 2 branches missed.">              || declaredPropertyName.equals(et.getStreamProperty().getStreamInfo().contentTypeAttribute()))</span>
+<span class="nc" id="L446">          continue;</span>
+<span class="nc bnc" id="L447" title="All 2 branches missed.">      if(allHeaders.get(declaredPropertyName.toLowerCase()) != null</span>
+<span class="nc bnc" id="L448" title="All 2 branches missed.">               &amp;&amp; !allHeaders.get(declaredPropertyName.toLowerCase()).isEmpty()) {</span>
+<span class="nc" id="L449">         entity.addProperty(new Property(null, intermediateSimpleProperty.getExternalName(),  PRIMITIVE, allHeaders.get(declaredPropertyName.toLowerCase()).get(0)));</span>
+       }
+<span class="nc" id="L451">    }</span>
+<span class="nc" id="L452">    entity.addProperty(new Property(null, declaredPropertiesMap.get(et.getStreamProperty().getStreamInfo().contentTypeAttribute()).getExternalName(),</span>
+            PRIMITIVE, toContentTypeString));
+<span class="nc" id="L454">    entity.addProperty(new Property(null, declaredPropertiesMap.get(et.getStreamProperty().getInternalName()).getExternalName(), PRIMITIVE, mediaContent));</span>
+<span class="nc" id="L455">    return entity;</span>
+  }
+
+  public Entity deleteMediaEntity(IntermediateEntityType et) {
+<span class="nc" id="L459">    Entity entity = new Entity();</span>
+<span class="nc" id="L460">    Map&lt;String, IntermediateProperty&gt; declaredPropertiesMap = et.getDeclaredPropertiesList();</span>
+<span class="nc" id="L461">    entity.addProperty(new Property(null, declaredPropertiesMap.get(et.getStreamProperty().getStreamInfo().contentTypeAttribute()).getExternalName(),</span>
+            PRIMITIVE, null));
+<span class="nc" id="L463">    entity.addProperty(new Property(null, declaredPropertiesMap.get(et.getStreamProperty().getInternalName()).getExternalName(), PRIMITIVE, null));</span>
+<span class="nc" id="L464">    return entity;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

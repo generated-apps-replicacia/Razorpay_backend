@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateSchema.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateSchema.java</span></div><h1>IntermediateSchema.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import javax.annotation.Nonnull;
+import javax.persistence.metamodel.Attribute;
+import javax.persistence.metamodel.EmbeddableType;
+import javax.persistence.metamodel.EntityType;
+import javax.persistence.metamodel.Metamodel;
+import javax.persistence.metamodel.PluralAttribute;
+
+import org.apache.olingo.commons.api.edm.EdmEnumType;
+import org.apache.olingo.commons.api.edm.provider.CsdlAction;
+import org.apache.olingo.commons.api.edm.provider.CsdlComplexType;
+import org.apache.olingo.commons.api.edm.provider.CsdlEntityType;
+import org.apache.olingo.commons.api.edm.provider.CsdlEnumType;
+import org.apache.olingo.commons.api.edm.provider.CsdlFunction;
+import org.apache.olingo.commons.api.edm.provider.CsdlSchema;
+import org.reflections8.Reflections;
+
+import com.sap.olingo.jpa.metadata.core.edm.annotation.EdmEnumeration;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEnumerationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAFunction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+/**
+ * &lt;p&gt;For details about Schema metadata see:
+ * &lt;a href=
+ * &quot;https://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406397946&quot;
+ * &gt;OData Version 4.0 Part 3 - 5 Schema &lt;/a&gt;
+ * @author Oliver Grande
+ *
+ */
+final class IntermediateSchema extends IntermediateModelElement {
+  private final Metamodel jpaMetamodel;
+  private final Map&lt;String, IntermediateComplexType&lt;?&gt;&gt; complexTypeListInternalKey;
+  private final Map&lt;String, IntermediateEntityType&lt;?&gt;&gt; entityTypeListInternalKey;
+  private final Map&lt;String, IntermediateFunction&gt; functionListInternalKey;
+  private final Map&lt;String, IntermediateJavaAction&gt; actionListInternalKey;
+  private final Map&lt;String, IntermediateEnumerationType&gt; enumTypeListInternalKey;
+  private IntermediateEntityContainer container;
+  private final Reflections reflections;
+  private CsdlSchema edmSchema;
+
+  IntermediateSchema(final JPAEdmNameBuilder nameBuilder, final Metamodel jpaMetamodel, final Reflections reflections)
+      throws ODataJPAModelException {
+
+<span class="nc" id="L56">    super(nameBuilder, nameBuilder.getNamespace());</span>
+<span class="nc" id="L57">    this.reflections = reflections;</span>
+<span class="nc" id="L58">    this.jpaMetamodel = jpaMetamodel;</span>
+<span class="nc" id="L59">    this.enumTypeListInternalKey = buildEnumerationTypeList();</span>
+<span class="nc" id="L60">    this.complexTypeListInternalKey = buildComplexTypeList();</span>
+<span class="nc" id="L61">    this.entityTypeListInternalKey = buildEntityTypeList();</span>
+<span class="nc" id="L62">    this.functionListInternalKey = buildFunctionList();</span>
+<span class="nc" id="L63">    this.actionListInternalKey = buildActionList();</span>
+<span class="nc" id="L64">  }</span>
+
+  public IntermediateEnumerationType getEnumerationType(final Class&lt;?&gt; enumType) {
+<span class="nc bnc" id="L67" title="All 2 branches missed.">    if (enumType.isArray())</span>
+<span class="nc" id="L68">      return this.enumTypeListInternalKey.get(enumType.getComponentType().getSimpleName());</span>
+<span class="nc" id="L69">    return this.enumTypeListInternalKey.get(enumType.getSimpleName());</span>
+  }
+
+  public JPAEnumerationAttribute getEnumerationType(final EdmEnumType type) {
+<span class="nc bnc" id="L73" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateEnumerationType&gt; enumeration : this.enumTypeListInternalKey.entrySet()) {</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">      if (enumeration.getValue().getExternalFQN().equals(type.getFullQualifiedName()))</span>
+<span class="nc" id="L75">        return enumeration.getValue();</span>
+<span class="nc" id="L76">    }</span>
+<span class="nc" id="L77">    return null;</span>
+  }
+
+  public IntermediateEnumerationType getEnumerationType(final String externalName) {
+<span class="nc bnc" id="L81" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateEnumerationType&gt; enumeration : this.enumTypeListInternalKey.entrySet()) {</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">      if (enumeration.getValue().getExternalName().equals(externalName))</span>
+<span class="nc" id="L83">        return enumeration.getValue();</span>
+<span class="nc" id="L84">    }</span>
+<span class="nc" id="L85">    return null;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  protected synchronized void lazyBuildEdmItem() throws ODataJPAModelException {
+<span class="nc" id="L91">    edmSchema = new CsdlSchema();</span>
+<span class="nc" id="L92">    edmSchema.setNamespace(nameBuilder.getNamespace());</span>
+<span class="nc" id="L93">    edmSchema.setEnumTypes((List&lt;CsdlEnumType&gt;) extractEdmModelElements(enumTypeListInternalKey));</span>
+<span class="nc" id="L94">    edmSchema.setComplexTypes((List&lt;CsdlComplexType&gt;) extractEdmModelElements(complexTypeListInternalKey));</span>
+<span class="nc" id="L95">    edmSchema.setEntityTypes((List&lt;CsdlEntityType&gt;) extractEdmModelElements(entityTypeListInternalKey));</span>
+<span class="nc" id="L96">    edmSchema.setFunctions((List&lt;CsdlFunction&gt;) extractEdmModelElements(functionListInternalKey));</span>
+<span class="nc" id="L97">    edmSchema.setActions((List&lt;CsdlAction&gt;) extractEdmModelElements(actionListInternalKey));</span>
+//  edm:Annotations
+//  edm:Annotation
+//  edm:Term
+//  edm:TypeDefinition
+    // MUST be the last thing that is done !!!!
+<span class="nc bnc" id="L103" title="All 2 branches missed.">    if (container != null)</span>
+<span class="nc" id="L104">      edmSchema.setEntityContainer(container.getEdmItem());</span>
+
+<span class="nc" id="L106">  }</span>
+
+  JPAAction getAction(final String externalName) {
+<span class="nc bnc" id="L109" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateJavaAction&gt; action : actionListInternalKey.entrySet()) {</span>
+<span class="nc bnc" id="L110" title="All 4 branches missed.">      if (action.getValue().getExternalName().equals(externalName) &amp;&amp; !action.getValue().ignore())</span>
+<span class="nc" id="L111">        return action.getValue();</span>
+<span class="nc" id="L112">    }</span>
+<span class="nc" id="L113">    return null;</span>
+  }
+
+  @Nonnull
+  List&lt;JPAAction&gt; getActions() {
+<span class="nc" id="L118">    final ArrayList&lt;JPAAction&gt; actions = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateJavaAction&gt; action : actionListInternalKey.entrySet()) {</span>
+<span class="nc" id="L120">      actions.add(action.getValue());</span>
+<span class="nc" id="L121">    }</span>
+<span class="nc" id="L122">    return actions;</span>
+  }
+
+  IntermediateStructuredType&lt;?&gt; getComplexType(final Class&lt;?&gt; targetClass) {
+<span class="nc" id="L126">    return complexTypeListInternalKey.get(IntNameBuilder.buildStructuredTypeName(targetClass));</span>
+  }
+
+  JPAStructuredType getComplexType(final String externalName) {
+<span class="nc bnc" id="L130" title="All 2 branches missed.">    for (final Map.Entry&lt;String, IntermediateComplexType&lt;?&gt;&gt; complexType : complexTypeListInternalKey.entrySet()) {</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">      if (complexType.getValue().getExternalName().equals(externalName))</span>
+<span class="nc" id="L132">        return complexType.getValue();</span>
+<span class="nc" id="L133">    }</span>
+<span class="nc" id="L134">    return null;</span>
+  }
+
+  @Override
+  CsdlSchema getEdmItem() throws ODataJPAModelException {
+<span class="nc bnc" id="L139" title="All 2 branches missed.">    if (edmSchema == null)</span>
+<span class="nc" id="L140">      lazyBuildEdmItem();</span>
+<span class="nc" id="L141">    return edmSchema;</span>
+  }
+
+  IntermediateStructuredType&lt;?&gt; getEntityType(final Class&lt;?&gt; targetClass) {
+<span class="nc" id="L145">    return entityTypeListInternalKey.get(IntNameBuilder.buildStructuredTypeName(targetClass));</span>
+  }
+
+  JPAEntityType getEntityType(final String externalName) {
+
+<span class="nc bnc" id="L150" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateEntityType&lt;?&gt;&gt; et : entityTypeListInternalKey.entrySet()) {</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">      if (et.getValue().getExternalName().equals(externalName))</span>
+<span class="nc" id="L152">        return et.getValue();</span>
+<span class="nc" id="L153">    }</span>
+<span class="nc" id="L154">    return null;</span>
+  }
+
+  JPAEntityType getEntityType(final String dbCatalog, final String dbSchema, final String dbTableName) {
+<span class="nc bnc" id="L158" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateEntityType&lt;?&gt;&gt; et : entityTypeListInternalKey.entrySet()) {</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">      if (et.getValue().dbEquals(dbCatalog, dbSchema, dbTableName))</span>
+<span class="nc" id="L160">        return et.getValue();</span>
+<span class="nc" id="L161">    }</span>
+<span class="nc" id="L162">    return null;</span>
+  }
+
+  List&lt;IntermediateEntityType&lt;?&gt;&gt; getEntityTypes() {
+<span class="nc" id="L166">    final List&lt;IntermediateEntityType&lt;?&gt;&gt; entityTypes = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateEntityType&lt;?&gt;&gt; et : entityTypeListInternalKey.entrySet()) {</span>
+<span class="nc" id="L168">      entityTypes.add(et.getValue());</span>
+<span class="nc" id="L169">    }</span>
+<span class="nc" id="L170">    return entityTypes;</span>
+  }
+
+  JPAFunction getFunction(final String externalName) {
+<span class="nc bnc" id="L174" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateFunction&gt; func : functionListInternalKey.entrySet()) {</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">      if (func.getValue().getExternalName().equals(externalName)</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">          &amp;&amp; !func.getValue().ignore())</span>
+<span class="nc" id="L177">        return func.getValue();</span>
+<span class="nc" id="L178">    }</span>
+<span class="nc" id="L179">    return null;</span>
+
+  }
+
+  @Nonnull
+  List&lt;JPAFunction&gt; getFunctions() {
+<span class="nc" id="L185">    final ArrayList&lt;JPAFunction&gt; functions = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateFunction&gt; func : functionListInternalKey.entrySet()) {</span>
+<span class="nc" id="L187">      functions.add(func.getValue());</span>
+<span class="nc" id="L188">    }</span>
+<span class="nc" id="L189">    return functions;</span>
+  }
+
+  IntermediateStructuredType&lt;?&gt; getStructuredType(final PluralAttribute&lt;?, ?, ?&gt; jpaAttribute) {
+<span class="nc" id="L193">    IntermediateStructuredType&lt;?&gt; type = complexTypeListInternalKey.get(IntNameBuilder.buildStructuredTypeName(</span>
+<span class="nc" id="L194">        jpaAttribute.getElementType().getJavaType()));</span>
+<span class="nc bnc" id="L195" title="All 2 branches missed.">    if (type == null)</span>
+<span class="nc" id="L196">      type = entityTypeListInternalKey.get(IntNameBuilder.buildStructuredTypeName(jpaAttribute.getElementType()</span>
+<span class="nc" id="L197">          .getJavaType()));</span>
+<span class="nc" id="L198">    return type;</span>
+  }
+
+  IntermediateStructuredType&lt;?&gt; getStructuredType(final Attribute&lt;?, ?&gt; jpaAttribute) {
+<span class="nc" id="L202">    IntermediateStructuredType&lt;?&gt; type = complexTypeListInternalKey.get(IntNameBuilder.buildStructuredTypeName(</span>
+<span class="nc" id="L203">        jpaAttribute.getJavaType()));</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">    if (type == null)</span>
+<span class="nc" id="L205">      type = entityTypeListInternalKey.get(IntNameBuilder.buildStructuredTypeName(jpaAttribute.getJavaType()));</span>
+<span class="nc" id="L206">    return type;</span>
+  }
+
+  IntermediateStructuredType&lt;?&gt; getStructuredType(final Class&lt;?&gt; targetClass) {
+<span class="nc" id="L210">    IntermediateStructuredType&lt;?&gt; type = entityTypeListInternalKey</span>
+<span class="nc" id="L211">        .get(IntNameBuilder.buildStructuredTypeName(targetClass));</span>
+<span class="nc bnc" id="L212" title="All 2 branches missed.">    if (type == null)</span>
+<span class="nc" id="L213">      type = complexTypeListInternalKey.get(IntNameBuilder.buildStructuredTypeName(targetClass));</span>
+<span class="nc" id="L214">    return type;</span>
+  }
+
+  void setContainer(final IntermediateEntityContainer container) {
+<span class="nc" id="L218">    this.container = container;</span>
+<span class="nc" id="L219">  }</span>
+
+  private Map&lt;String, IntermediateJavaAction&gt; buildActionList() throws ODataJPAModelException {
+<span class="nc" id="L222">    final HashMap&lt;String, IntermediateJavaAction&gt; actionList = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L223">    final IntermediateActionFactory factory = new IntermediateActionFactory();</span>
+<span class="nc" id="L224">    actionList.putAll(factory.create(nameBuilder, reflections, this));</span>
+<span class="nc" id="L225">    return actionList;</span>
+  }
+
+  private Map&lt;String, IntermediateComplexType&lt;?&gt;&gt; buildComplexTypeList() {
+<span class="nc" id="L229">    final HashMap&lt;String, IntermediateComplexType&lt;?&gt;&gt; ctList = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L231" title="All 2 branches missed.">    for (final EmbeddableType&lt;?&gt; embeddable : this.jpaMetamodel.getEmbeddables()) {</span>
+<span class="nc" id="L232">      final IntermediateComplexType&lt;?&gt; ct = new IntermediateComplexType&lt;&gt;(nameBuilder, embeddable, this);</span>
+<span class="nc" id="L233">      ctList.put(ct.internalName, ct);</span>
+<span class="nc" id="L234">    }</span>
+<span class="nc" id="L235">    return ctList;</span>
+  }
+
+  private Map&lt;String, IntermediateEntityType&lt;?&gt;&gt; buildEntityTypeList() {
+<span class="nc" id="L239">    final HashMap&lt;String, IntermediateEntityType&lt;?&gt;&gt; etList = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L241" title="All 2 branches missed.">    for (final EntityType&lt;?&gt; entity : this.jpaMetamodel.getEntities()) {</span>
+<span class="nc" id="L242">      final IntermediateEntityType&lt;?&gt; et = new IntermediateEntityType&lt;&gt;(nameBuilder, entity, this);</span>
+<span class="nc" id="L243">      etList.put(et.internalName, et);</span>
+<span class="nc" id="L244">    }</span>
+<span class="nc" id="L245">    return etList;</span>
+  }
+
+  private &lt;T extends Enum&lt;?&gt;&gt; Map&lt;String, IntermediateEnumerationType&gt; buildEnumerationTypeList() {
+<span class="nc" id="L249">    final HashMap&lt;String, IntermediateEnumerationType&gt; enumList = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">    if (reflections != null) {</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">      for (final Class&lt;?&gt; enumeration : reflections.getTypesAnnotatedWith(EdmEnumeration.class)) {</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        if (enumeration.isEnum()) {</span>
+          @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc" id="L254">          final IntermediateEnumerationType e = new IntermediateEnumerationType(nameBuilder, (Class&lt;T&gt;) enumeration);</span>
+<span class="nc" id="L255">          enumList.put(e.getInternalName(), e);</span>
+        }
+<span class="nc" id="L257">      }</span>
+    }
+<span class="nc" id="L259">    return enumList;</span>
+  }
+
+  private Map&lt;String, IntermediateFunction&gt; buildFunctionList() throws ODataJPAModelException {
+<span class="nc" id="L263">    final HashMap&lt;String, IntermediateFunction&gt; funcList = new HashMap&lt;&gt;();</span>
+    // 1. Option: Create Function from Entity Annotations
+<span class="nc" id="L265">    final IntermediateFunctionFactory&lt;?&gt; factory = new IntermediateFunctionFactory&lt;&gt;();</span>
+<span class="nc bnc" id="L266" title="All 2 branches missed.">    for (final EntityType&lt;?&gt; entity : this.jpaMetamodel.getEntities()) {</span>
+
+<span class="nc" id="L268">      funcList.putAll(factory.create(nameBuilder, entity, this));</span>
+<span class="nc" id="L269">    }</span>
+    // 2. Option: Create Function from Java Classes
+<span class="nc" id="L271">    funcList.putAll(factory.create(nameBuilder, reflections, this));</span>
+<span class="nc" id="L272">    return funcList;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

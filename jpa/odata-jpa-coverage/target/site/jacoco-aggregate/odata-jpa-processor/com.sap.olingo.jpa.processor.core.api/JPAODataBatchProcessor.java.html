@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAODataBatchProcessor.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api</a> &gt; <span class="el_source">JPAODataBatchProcessor.java</span></div><h1>JPAODataBatchProcessor.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api;
+
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import javax.persistence.OptimisticLockException;
+import javax.persistence.RollbackException;
+
+import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.format.PreferenceName;
+import org.apache.olingo.commons.api.http.HttpHeader;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ODataLibraryException;
+import org.apache.olingo.server.api.ODataRequest;
+import org.apache.olingo.server.api.ODataResponse;
+import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.batch.BatchFacade;
+import org.apache.olingo.server.api.deserializer.batch.BatchOptions;
+import org.apache.olingo.server.api.deserializer.batch.BatchRequestPart;
+import org.apache.olingo.server.api.deserializer.batch.ODataResponsePart;
+import org.apache.olingo.server.api.prefer.Preferences;
+import org.apache.olingo.server.api.processor.BatchProcessor;
+
+import com.sap.olingo.jpa.processor.core.api.JPAODataTransactionFactory.JPAODataTransaction;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPATransactionException;
+
+/**
+ *
+ * &lt;a href=
+ * &quot;https://docs.oasis-open.org/odata/odata/v4.0/os/part1-protocol/odata-v4.0-os-part1-protocol.html#_Toc372793748&quot;&gt;
+ * 11.7 Batch Requests &lt;/a&gt;
+ *
+ * @author Oliver Grande
+ *
+ */
+public class JPAODataBatchProcessor implements BatchProcessor {
+
+  protected final JPAODataRequestContextAccess requestContext;
+  protected final JPAODataSessionContextAccess serviceContext;
+  protected OData odata;
+  protected ServiceMetadata serviceMetadata;
+
+  public JPAODataBatchProcessor(final JPAODataSessionContextAccess serviceContext,
+<span class="nc" id="L50">      final JPAODataRequestContextAccess requestContext) {</span>
+<span class="nc" id="L51">    this.requestContext = requestContext;</span>
+<span class="nc" id="L52">    this.serviceContext = serviceContext;</span>
+<span class="nc" id="L53">  }</span>
+
+  @Override
+  public final void init(final OData odata, final ServiceMetadata serviceMetadata) {
+<span class="nc" id="L57">    this.odata = odata;</span>
+<span class="nc" id="L58">    this.serviceMetadata = serviceMetadata;</span>
+<span class="nc" id="L59">  }</span>
+
+  @Override
+  public final void processBatch(final BatchFacade facade, final ODataRequest request, final ODataResponse response)
+      throws ODataApplicationException, ODataLibraryException {
+
+<span class="nc" id="L65">    final int handle = requestContext.getDebugger().startRuntimeMeasurement(this, &quot;processBatch&quot;);</span>
+<span class="nc" id="L66">    final String boundary = facade.extractBoundaryFromContentType(request.getHeader(HttpHeader.CONTENT_TYPE));</span>
+<span class="nc" id="L67">    final BatchOptions options = BatchOptions.with()</span>
+<span class="nc" id="L68">        .rawBaseUri(request.getRawBaseUri())</span>
+<span class="nc" id="L69">        .rawServiceResolutionUri(request.getRawServiceResolutionUri())</span>
+<span class="nc" id="L70">        .build();</span>
+<span class="nc" id="L71">    final List&lt;BatchRequestPart&gt; requestParts = odata.createFixedFormatDeserializer()</span>
+<span class="nc" id="L72">        .parseBatchRequest(request.getBody(), boundary, options);</span>
+<span class="nc" id="L73">    final List&lt;ODataResponsePart&gt; responseParts = executeBatchParts(facade, requestParts,</span>
+<span class="nc" id="L74">        continueOnError(odata.createPreferences(request.getHeaders(HttpHeader.PREFER))));</span>
+
+<span class="nc" id="L76">    final String responseBoundary = &quot;batch_&quot; + UUID.randomUUID().toString();</span>
+<span class="nc" id="L77">    final InputStream responseContent = odata.createFixedFormatSerializer().batchResponse(responseParts,</span>
+        responseBoundary);
+
+<span class="nc" id="L80">    response.setHeader(HttpHeader.CONTENT_TYPE, ContentType.MULTIPART_MIXED + &quot;;boundary=&quot; + responseBoundary);</span>
+<span class="nc" id="L81">    response.setContent(responseContent);</span>
+<span class="nc" id="L82">    response.setStatusCode(HttpStatusCode.ACCEPTED.getStatusCode());</span>
+<span class="nc" id="L83">    requestContext.getDebugger().stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L84">  }</span>
+
+  protected List&lt;ODataResponsePart&gt; executeBatchParts(final BatchFacade facade,
+      final List&lt;BatchRequestPart&gt; requestParts, final boolean continueOnError) throws ODataApplicationException,
+      ODataLibraryException {
+
+<span class="nc" id="L90">    final List&lt;ODataResponsePart&gt; responseParts = new ArrayList&lt;&gt;(requestParts.size());</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">    for (final BatchRequestPart part : requestParts) {</span>
+<span class="nc" id="L92">      final ODataResponsePart resp = facade.handleBatchRequest(part);</span>
+<span class="nc" id="L93">      responseParts.add(resp);</span>
+<span class="nc" id="L94">      final List&lt;ODataResponse&gt; responses = resp.getResponses();</span>
+<span class="nc" id="L95">      responses.get(responses.size() - 1).getStatusCode();</span>
+<span class="nc bnc" id="L96" title="All 4 branches missed.">      if (requestHasFailed(responses) &amp;&amp; !continueOnError)</span>
+<span class="nc" id="L97">        return responseParts;</span>
+<span class="nc" id="L98">    }</span>
+<span class="nc" id="L99">    return responseParts;</span>
+  }
+
+  /**
+   * Processing one change set of a $batch request. &lt;p&gt;
+   * &lt;i&gt;OData Version 4.0 Part 1: Protocol Plus Errata 02 11.7.4 Responding
+   * to a Batch Request&lt;/i&gt; states: &lt;br&gt;
+   * &lt;cite&gt;All operations in a change set represent a single change unit so a
+   * service MUST successfully process and apply all the requests in the
+   * change set or else apply none of them. It is up to the service
+   * implementation to define rollback semantics to undo any requests
+   * within a change set that may have been applied before another request
+   * in that same change set failed and thereby apply this all-or-nothing
+   * requirement. The service MAY execute the requests within a change set
+   * in any order and MAY return the responses to the individual requests
+   * in any order. The service MUST include the Content-ID header in each
+   * response with the same value that the client specified in the
+   * corresponding request, so clients can correlate requests and
+   * responses.&lt;/cite&gt;
+   * &lt;p&gt;
+   * This requires that the batch processor can create transactions. To do so it takes an instance of
+   * {@link JPAODataTransactionFactory } from the request context and requests a new transaction. In case this is not
+   * possible a exception with http status code 501 &lt;i&gt;Not Implemented&lt;/i&gt; will be raised.
+   */
+  @Override
+  public final ODataResponsePart processChangeSet(final BatchFacade facade, final List&lt;ODataRequest&gt; requests)
+      throws ODataApplicationException, ODataLibraryException {
+    /*
+     * To keep things simple, we dispatch the requests within the Change Set
+     * to the other processor interfaces.
+     */
+<span class="nc" id="L130">    final int handle = requestContext.getDebugger().startRuntimeMeasurement(this, &quot;processChangeSet&quot;);</span>
+<span class="nc" id="L131">    final List&lt;ODataResponse&gt; responses = new ArrayList&lt;&gt;();</span>
+    try {
+<span class="nc" id="L133">      final JPAODataTransaction t = requestContext.getTransactionFactory().createTransaction();</span>
+      try {
+<span class="nc bnc" id="L135" title="All 2 branches missed.">        for (final ODataRequest request : requests) {</span>
+          // Actual request dispatching to the other processor interfaces.
+<span class="nc" id="L137">          final ODataResponse response = facade.handleODataRequest(request);</span>
+
+          // Determine if an error occurred while executing the request.
+          // Exceptions thrown by the processors get caught and result in
+          // a proper OData response.
+<span class="nc" id="L142">          final int statusCode = response.getStatusCode();</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">          if (statusCode &lt; HttpStatusCode.BAD_REQUEST.getStatusCode()) {</span>
+            // The request has been executed successfully. Return the
+            // response as a part of the change set
+<span class="nc" id="L146">            responses.add(response);</span>
+          } else {
+<span class="nc" id="L148">            t.rollback();</span>
+            /*
+             * In addition the response must be provided as follows:
+             *
+             * OData Version 4.0 Part 1: Protocol Plus Errata 02 11.7.4
+             * Responding to a Batch Request
+             *
+             * When a request within a change set fails, the change set
+             * response is not represented using the multipart/mixed
+             * media type. Instead, a single response, using the
+             * application/http media type and a
+             * Content-Transfer-Encoding header with a value of binary,
+             * is returned that applies to all requests in the change
+             * set and MUST be formatted according to the Error Handling
+             * defined for the particular response format.
+             *
+             * This can be simply done by passing the response of the
+             * failed ODataRequest to a new instance of
+             * ODataResponsePart and setting the second parameter
+             * &quot;isChangeSet&quot; to false.
+             */
+<span class="nc" id="L169">            requestContext.getDebugger().stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L170">            return new ODataResponsePart(response, false);</span>
+          }
+<span class="nc" id="L172">        }</span>
+<span class="nc" id="L173">        requestContext.getCUDRequestHandler().validateChanges(requestContext.getEntityManager());</span>
+<span class="nc" id="L174">        t.commit();</span>
+<span class="nc" id="L175">        requestContext.getDebugger().stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L176">        return new ODataResponsePart(responses, true);</span>
+<span class="nc" id="L177">      } catch (ODataApplicationException | ODataLibraryException e) {</span>
+        // In case of ODataLibraryException the batch request is malformed or the processor implementation is not
+        // correct. Throwing an exception will stop the whole batch request not only the Change Set!
+<span class="nc" id="L180">        t.rollback();</span>
+<span class="nc" id="L181">        requestContext.getDebugger().stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L182">        throw e;</span>
+<span class="nc" id="L183">      } catch (final RollbackException e) {</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">        if (e.getCause() instanceof OptimisticLockException) {</span>
+<span class="nc" id="L185">          requestContext.getDebugger().stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L186">          throw new ODataJPAProcessorException(e.getCause().getCause(), HttpStatusCode.PRECONDITION_FAILED);</span>
+        }
+<span class="nc" id="L188">        requestContext.getDebugger().stopRuntimeMeasurement(handle);</span>
+<span class="nc" id="L189">        throw new ODataJPAProcessorException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+      }
+<span class="nc" id="L191">    } catch (final ODataJPATransactionException e) {</span>
+<span class="nc" id="L192">      throw new ODataJPAProcessorException(e, HttpStatusCode.NOT_IMPLEMENTED);</span>
+    }
+  }
+
+  /**
+   * OData Version 4.0 Part 1: Protocol Plus Errata 02 11.7.2 Batch Request Body states: &lt;p&gt;
+   * &lt;cite&gt;
+   * The service MUST process the requests within a batch request sequentially. Processing stops on the first error
+   * unless the odata.continue-on-error preference is specified. &lt;/cite&gt;
+   * &lt;p&gt;
+   *
+   * &lt;i&gt;odata.continue-on-error&lt;/i&gt; is explained in OData Version 4.0 Part 1: Protocol Plus Errata 02 8.2.8.3 Preference
+   * odata.continue-on-error and states:&lt;p&gt;
+   * &lt;cite&gt;
+   * The odata.continue-on-error preference on a batch request is used to request that, upon encountering a request
+   * within the batch that returns an error, the service return the error for that request and continue processing
+   * additional requests within the batch. The syntax of the odata.continue-on-error preference is specified in
+   * [OData-ABNF].
+   *
+   * If not specified, upon encountering an error the service MUST return the error within the batch and stop processing
+   * additional requests within the batch.
+   *
+   * A service MAY specify the support for the odata.continue-on-error preference using an annotation with term
+   * Capabilities.BatchContinueOnErrorSupported, see [OData-VocCap]. &lt;/cite&gt;
+   * &lt;p&gt;
+   * So four cases have to be distinguished:
+   * &lt;ul&gt;
+   * &lt;li&gt;No header&lt;/li&gt;
+   * &lt;li&gt;Header given without value&lt;/li&gt;
+   * &lt;li&gt;Header given as true&lt;/li&gt;
+   * &lt;li&gt;Header given as false&lt;/li&gt;
+   * &lt;/ul&gt;
+   * @param preferences
+   * @return
+   */
+  final boolean continueOnError(final Preferences preferences) {
+    // Syntax: [ &quot;odata.&quot; ] &quot;continue-on-error&quot; [ EQ-h booleanValue ] ; &quot;true&quot; / &quot;false&quot;
+<span class="nc" id="L229">    return Optional.ofNullable(preferences.getPreference(PreferenceName.CONTINUE_ON_ERROR.getName()))</span>
+<span class="nc bnc" id="L230" title="All 2 branches missed.">        .map(p -&gt; p.getValue() == null ? Boolean.TRUE : Boolean.valueOf(p.getValue()))</span>
+<span class="nc" id="L231">        .orElse(false);</span>
+
+  }
+
+  private boolean requestHasFailed(final List&lt;ODataResponse&gt; responses) {
+<span class="nc bnc" id="L236" title="All 2 branches missed.">    return responses.get(responses.size() - 1).getStatusCode() &gt;= HttpStatusCode.BAD_REQUEST.getStatusCode();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

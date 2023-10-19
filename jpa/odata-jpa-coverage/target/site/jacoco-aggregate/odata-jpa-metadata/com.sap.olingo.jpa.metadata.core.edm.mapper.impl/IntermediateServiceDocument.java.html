@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>IntermediateServiceDocument.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">IntermediateServiceDocument.java</span></div><h1>IntermediateServiceDocument.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+
+import javax.annotation.CheckForNull;
+import javax.persistence.metamodel.Metamodel;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.olingo.commons.api.edm.EdmAction;
+import org.apache.olingo.commons.api.edm.EdmBindingTarget;
+import org.apache.olingo.commons.api.edm.EdmComplexType;
+import org.apache.olingo.commons.api.edm.EdmEnumType;
+import org.apache.olingo.commons.api.edm.EdmFunction;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.apache.olingo.commons.api.edm.provider.CsdlEntityContainer;
+import org.apache.olingo.commons.api.edm.provider.CsdlSchema;
+import org.apache.olingo.commons.api.edm.provider.CsdlTerm;
+import org.apache.olingo.commons.api.edmx.EdmxReference;
+import org.reflections8.Reflections;
+import org.reflections8.scanners.SubTypesScanner;
+import org.reflections8.scanners.TypeAnnotationsScanner;
+import org.reflections8.util.ConfigurationBuilder;
+import org.reflections8.util.FilterBuilder;
+
+import com.sap.olingo.jpa.metadata.api.JPAEdmMetadataPostProcessor;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEdmNameBuilder;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntitySet;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEnumerationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAFunction;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAProtectionInfo;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+/**
+ * http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/schemas/edmx.xsd
+ * A Service Document can contain multiple schemas, but only
+ * one Entity Container. This container is assigned to one of the schemas.&lt;p&gt;
+ * http://services.odata.org/V4/Northwind/Northwind.svc/$metadata
+ */
+class IntermediateServiceDocument implements JPAServiceDocument {
+
+<span class="nc" id="L52">  private static final Log LOGGER = LogFactory.getLog(IntermediateServiceDocument.class);</span>
+  private final Metamodel jpaMetamodel;
+  private final JPAEdmNameBuilder nameBuilder;
+  private final IntermediateEntityContainer container;
+  private final Map&lt;String, IntermediateSchema&gt; schemaListInternalKey;
+  private final IntermediateReferences references;
+  private final JPAEdmMetadataPostProcessor pP;
+  private final Reflections reflections;
+  private Map&lt;String, JPAProtectionInfo&gt; claims;
+
+  IntermediateServiceDocument(final String namespace, final Metamodel jpaMetamodel,
+      final JPAEdmMetadataPostProcessor postProcessor, final String[] packageName) throws ODataJPAModelException {
+
+<span class="nc" id="L65">    this(new JPADefaultEdmNameBuilder(namespace), jpaMetamodel, postProcessor, packageName);</span>
+<span class="nc" id="L66">  }</span>
+
+  /**
+   * @param customJPANameBuilder
+   * @param metamodel
+   * @param postProcessor
+   * @param packageName
+   * @throws ODataJPAModelException
+   */
+  IntermediateServiceDocument(final JPAEdmNameBuilder nameBuilder, final Metamodel jpaMetamodel,
+<span class="nc" id="L76">      final JPAEdmMetadataPostProcessor postProcessor, final String[] packageName) throws ODataJPAModelException {</span>
+
+<span class="nc bnc" id="L78" title="All 2 branches missed.">    this.pP = postProcessor != null ? postProcessor : new DefaultEdmPostProcessor();</span>
+<span class="nc" id="L79">    IntermediateModelElement.setPostProcessor(pP);</span>
+
+<span class="nc" id="L81">    this.reflections = createReflections(packageName);</span>
+<span class="nc" id="L82">    this.references = new IntermediateReferences();</span>
+<span class="nc" id="L83">    pP.provideReferences(this.references);</span>
+<span class="nc" id="L84">    this.nameBuilder = nameBuilder;</span>
+<span class="nc" id="L85">    this.jpaMetamodel = jpaMetamodel;</span>
+<span class="nc" id="L86">    this.schemaListInternalKey = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L87">    buildIntermediateSchemas();</span>
+<span class="nc" id="L88">    this.container = new IntermediateEntityContainer(nameBuilder, schemaListInternalKey);</span>
+<span class="nc" id="L89">    setContainer();</span>
+<span class="nc" id="L90">  }</span>
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getAllSchemas()
+   */
+  @Override
+  public List&lt;CsdlSchema&gt; getAllSchemas() throws ODataJPAModelException {
+<span class="nc" id="L99">    final List&lt;CsdlSchema&gt; allSchemas = getEdmSchemas();</span>
+<span class="nc" id="L100">    allSchemas.addAll(references.getSchemas());</span>
+<span class="nc" id="L101">    return allSchemas;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getEdmEntityContainer()
+   */
+  @Override
+  public CsdlEntityContainer getEdmEntityContainer() throws ODataJPAModelException {
+<span class="nc" id="L111">    return container.getEdmItem();</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getEdmSchemas()
+   */
+  @Override
+  public List&lt;CsdlSchema&gt; getEdmSchemas() throws ODataJPAModelException {
+<span class="nc" id="L121">    return extractEdmSchemas();</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getEntity(org.apache.olingo.commons.api.edm.
+   * EdmType)
+   */
+  @Override
+  public JPAEntityType getEntity(final EdmType edmType) throws ODataJPAModelException {
+<span class="nc" id="L133">    final IntermediateSchema schema = schemaListInternalKey.get(edmType.getNamespace());</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">    if (schema != null)</span>
+<span class="nc" id="L135">      return schema.getEntityType(edmType.getName());</span>
+<span class="nc" id="L136">    return null;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getEntity(java.lang.Class)
+   */
+  @Override
+  public JPAEntityType getEntity(final Class&lt;?&gt; entityClass) throws ODataJPAModelException {
+<span class="nc bnc" id="L147" title="All 2 branches missed.">    for (final Entry&lt;String, IntermediateSchema&gt; schema : schemaListInternalKey.entrySet()) {</span>
+<span class="nc" id="L148">      final JPAEntityType et = (JPAEntityType) schema.getValue().getEntityType(entityClass);</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">      if (et != null)</span>
+<span class="nc" id="L150">        return et;</span>
+<span class="nc" id="L151">    }</span>
+<span class="nc" id="L152">    return null;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument#getComplexType(org.apache.olingo.commons.api.edm
+   * .EdmComplexType)
+   */
+  @Override
+  public JPAStructuredType getComplexType(final EdmComplexType edmType) {
+<span class="nc" id="L164">    final IntermediateSchema schema = schemaListInternalKey.get(edmType.getNamespace());</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">    if (schema != null)</span>
+<span class="nc" id="L166">      return schema.getComplexType(edmType.getName());</span>
+<span class="nc" id="L167">    return null;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getEntity(org.apache.olingo.commons.api.edm.
+   * FullQualifiedName)
+   */
+  @Override
+  public JPAEntityType getEntity(final FullQualifiedName typeName) {
+<span class="nc" id="L179">    final IntermediateSchema schema = schemaListInternalKey.get(typeName.getNamespace());</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">    if (schema != null)</span>
+<span class="nc" id="L181">      return schema.getEntityType(typeName.getName());</span>
+<span class="nc" id="L182">    return null;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getEntity(java.lang.String)
+   */
+  @Override
+  public JPAEntityType getEntity(final String edmTargetName) throws ODataJPAModelException {
+<span class="nc" id="L192">    final IntermediateTopLevelEntity target = determineTopLevelEntity(edmTargetName);</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">    return target != null ? target.getEntityType() : null;</span>
+  }
+
+  @CheckForNull
+  private IntermediateTopLevelEntity determineTopLevelEntity(final String edmTargetName) throws ODataJPAModelException {
+<span class="nc" id="L198">    final Optional&lt;IntermediateTopLevelEntity&gt; target = Optional.ofNullable(container.getEntitySet(edmTargetName));</span>
+<span class="nc" id="L199">    return target.orElse(container.getSingleton(edmTargetName));</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getEntitySet(com.sap.olingo.jpa.metadata.core.
+   * edm.mapper.api.JPAEntityType)
+   */
+  @Override
+  public JPAEntitySet getEntitySet(final JPAEntityType entityType) throws ODataJPAModelException {
+<span class="nc" id="L211">    return container.getEntitySet(entityType);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getFunction(org.apache.olingo.commons.api.edm.
+   * EdmFunction)
+   */
+  @Override
+  public JPAFunction getFunction(final EdmFunction function) {
+<span class="nc" id="L223">    final IntermediateSchema schema = schemaListInternalKey.get(function.getNamespace());</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">    if (schema != null)</span>
+<span class="nc" id="L225">      return schema.getFunction(function.getName());</span>
+<span class="nc" id="L226">    return null;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getAction(org.apache.olingo.commons.api.edm.
+   * EdmFunction)
+   */
+  @Override
+  public JPAAction getAction(final EdmAction action) {
+<span class="nc" id="L238">    final IntermediateSchema schema = schemaListInternalKey.get(action.getNamespace());</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">    if (schema != null)</span>
+<span class="nc" id="L240">      return schema.getAction(action.getName());</span>
+<span class="nc" id="L241">    return null;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getReferences()
+   */
+  @Override
+  public List&lt;EdmxReference&gt; getReferences() {
+<span class="nc" id="L251">    return references.getEdmReferences();</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAServiceDocument#getTerm(org.apache.olingo.commons.api.edm.
+   * FullQualifiedName)
+   */
+  @Override
+  public CsdlTerm getTerm(final FullQualifiedName termName) {
+<span class="nc" id="L262">    return this.references.getTerm(termName);</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * org.apache.olingo.server.api.etag.CustomETagSupport#hasETag(org.apache.olingo.commons.api.edm.EdmBindingTarget)
+   */
+  @Override
+  public boolean hasETag(final EdmBindingTarget entitySetOrSingleton) {
+    try {
+<span class="nc" id="L274">      return getEntity(entitySetOrSingleton.getEntityType().getFullQualifiedName()).hasEtag();</span>
+<span class="nc" id="L275">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L276">      LOGGER.debug(&quot;Error during binding target determination&quot;, e);</span>
+<span class="nc" id="L277">      return false;</span>
+    }
+  }
+
+  /**
+   * Currently not supported =&gt; method always returns false
+   */
+  @Override
+  public boolean hasMediaETag(final EdmBindingTarget entitySetOrSingleton) {
+    // TODO Not Supported yet
+<span class="nc" id="L287">    return false;</span>
+  }
+
+  @Override
+  public JPAEdmNameBuilder getNameBuilder() {
+<span class="nc" id="L292">    return nameBuilder;</span>
+  }
+
+  private void buildIntermediateSchemas() throws ODataJPAModelException {
+<span class="nc" id="L296">    final IntermediateSchema schema = new IntermediateSchema(nameBuilder, jpaMetamodel, reflections);</span>
+<span class="nc" id="L297">    schemaListInternalKey.put(schema.internalName, schema);</span>
+<span class="nc" id="L298">  }</span>
+
+  private Reflections createReflections(final String... packageName) {
+<span class="nc bnc" id="L301" title="All 4 branches missed.">    if (packageName != null &amp;&amp; packageName.length &gt; 0) {</span>
+<span class="nc" id="L302">      final ConfigurationBuilder configBuilder = new ConfigurationBuilder();</span>
+<span class="nc" id="L303">      configBuilder.setScanners(new SubTypesScanner(false), new TypeAnnotationsScanner());</span>
+<span class="nc" id="L304">      configBuilder.forPackages(packageName);</span>
+<span class="nc" id="L305">      configBuilder.filterInputsBy(new FilterBuilder().includePackage(packageName));</span>
+<span class="nc" id="L306">      return new Reflections(configBuilder);</span>
+    } else {
+<span class="nc" id="L308">      return null;</span>
+    }
+  }
+
+  private List&lt;CsdlSchema&gt; extractEdmSchemas() throws ODataJPAModelException {
+<span class="nc" id="L313">    final List&lt;CsdlSchema&gt; schemas = new ArrayList&lt;&gt;();</span>
+    try {
+<span class="nc bnc" id="L315" title="All 2 branches missed.">      if (schemaListInternalKey.isEmpty())</span>
+<span class="nc" id="L316">        buildIntermediateSchemas();</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">      for (final IntermediateSchema schema : schemaListInternalKey.values()) {</span>
+<span class="nc" id="L318">        schemas.add(schema.getEdmItem());</span>
+<span class="nc" id="L319">      }</span>
+<span class="nc" id="L320">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L321">      schemaListInternalKey.clear();</span>
+<span class="nc" id="L322">      throw e;</span>
+<span class="nc" id="L323">    }</span>
+<span class="nc" id="L324">    return schemas;</span>
+  }
+
+  private void setContainer() {
+<span class="nc bnc" id="L328" title="All 2 branches missed.">    for (final IntermediateSchema schema : schemaListInternalKey.values()) {</span>
+<span class="nc" id="L329">      schema.setContainer(container);</span>
+      // OData allows to combine multiple schemas in one metadata document. The container has to be added to one of
+      // those.
+      // We pick the first that we can get:
+<span class="nc" id="L333">      break; // NOSONAR</span>
+    }
+<span class="nc" id="L335">  }</span>
+
+  @Override
+  public JPAEnumerationAttribute getEnumType(final EdmEnumType type) {
+<span class="nc" id="L339">    final IntermediateSchema schema = schemaListInternalKey.get(type.getFullQualifiedName().getNamespace());</span>
+<span class="nc bnc" id="L340" title="All 2 branches missed.">    if (schema != null)</span>
+<span class="nc" id="L341">      return schema.getEnumerationType(type);</span>
+<span class="nc" id="L342">    return null;</span>
+  }
+
+  @Override
+  public JPAEnumerationAttribute getEnumType(final String fqnAsString) {
+<span class="nc" id="L347">    final FullQualifiedName fqn = new FullQualifiedName(fqnAsString);</span>
+<span class="nc" id="L348">    final IntermediateSchema schema = schemaListInternalKey.get(fqn.getNamespace());</span>
+<span class="nc bnc" id="L349" title="All 2 branches missed.">    if (schema != null)</span>
+<span class="nc" id="L350">      return schema.getEnumerationType(fqn.getName());</span>
+<span class="nc" id="L351">    return null;</span>
+  }
+
+  @Override
+  public Map&lt;String, JPAProtectionInfo&gt; getClaims() throws ODataJPAModelException {
+<span class="nc bnc" id="L356" title="All 2 branches missed.">    if (claims == null) {</span>
+<span class="nc" id="L357">      claims = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">      for (final IntermediateSchema schema : schemaListInternalKey.values()) {</span>
+<span class="nc bnc" id="L359" title="All 2 branches missed.">        for (final IntermediateEntityType&lt;?&gt; et : schema.getEntityTypes()) {</span>
+<span class="nc bnc" id="L360" title="All 2 branches missed.">          for (final JPAProtectionInfo protection : et.getProtections()) {</span>
+<span class="nc" id="L361">            claims.put(protection.getClaimName(), protection);</span>
+<span class="nc" id="L362">          }</span>
+<span class="nc" id="L363">        }</span>
+<span class="nc" id="L364">      }</span>
+    }
+<span class="nc" id="L366">    return claims;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

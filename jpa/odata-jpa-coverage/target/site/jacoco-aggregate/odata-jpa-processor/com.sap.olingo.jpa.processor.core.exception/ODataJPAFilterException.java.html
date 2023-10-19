@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ODataJPAFilterException.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.exception</a> &gt; <span class="el_source">ODataJPAFilterException.java</span></div><h1>ODataJPAFilterException.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.exception;
+
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAMessageKey;
+
+public class ODataJPAFilterException extends ODataJPAProcessException {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -7188499882306858747L;
+
+<span class="nc" id="L13">  public enum MessageKeys implements ODataJPAMessageKey {</span>
+<span class="nc" id="L14">    NOT_SUPPORTED_OPERATOR,</span>
+<span class="nc" id="L15">    NOT_SUPPORTED_FILTER,</span>
+<span class="nc" id="L16">    NOT_SUPPORTED_OPERATOR_TYPE,</span>
+<span class="nc" id="L17">    NOT_SUPPORTED_FUNCTION_COLLECTION,</span>
+<span class="nc" id="L18">    NOT_SUPPORTED_FUNCTION_NOT_SCALAR,</span>
+<span class="nc" id="L19">    NOT_SUPPORTED_TRANSIENT,</span>
+<span class="nc" id="L20">    NOT_ALLOWED_MEMBER;</span>
+
+    @Override
+    public String getKey() {
+<span class="nc" id="L24">      return name();</span>
+    }
+
+  }
+
+  private static final String BUNDLE_NAME = &quot;processor-exceptions-i18n&quot;;
+
+  public ODataJPAFilterException(final Throwable e, final HttpStatusCode statusCode) {
+<span class="nc" id="L32">    super(e, statusCode);</span>
+<span class="nc" id="L33">  }</span>
+
+  public ODataJPAFilterException(final MessageKeys messageKey, final HttpStatusCode statusCode,
+      final Throwable cause, final String... params) {
+<span class="nc" id="L37">    super(messageKey.getKey(), statusCode, cause, params);</span>
+<span class="nc" id="L38">  }</span>
+
+  public ODataJPAFilterException(final MessageKeys messageKey, final HttpStatusCode statusCode) {
+<span class="nc" id="L41">    super(messageKey.getKey(), statusCode);</span>
+<span class="nc" id="L42">  }</span>
+
+  public ODataJPAFilterException(final MessageKeys messageKey, final HttpStatusCode statusCode,
+      final String... params) {
+<span class="nc" id="L46">    super(messageKey.getKey(), statusCode, params);</span>
+<span class="nc" id="L47">  }</span>
+
+  public ODataJPAFilterException(final MessageKeys messageKey, final HttpStatusCode statusCode, final Throwable e) {
+<span class="nc" id="L50">    super(messageKey.getKey(), statusCode, e);</span>
+<span class="nc" id="L51">  }</span>
+
+  @Override
+  protected String getBundleName() {
+<span class="nc" id="L55">    return BUNDLE_NAME;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

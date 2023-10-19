@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ExpressionUtil.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.query</a> &gt; <span class="el_source">ExpressionUtil.java</span></div><h1>ExpressionUtil.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.query;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.From;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.Path;
+
+import org.apache.olingo.commons.api.edm.EdmPrimitiveType;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeException;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.provider.CsdlProperty;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.server.api.OData;
+import org.apache.olingo.server.api.uri.UriParameter;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPADescriptionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAParameterFacet;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPATypeConverter;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAFilterException;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAQueryException;
+
+public final class ExpressionUtil {
+  public static final int CONTAINS_ONLY_LANGU = 1;
+  public static final int CONTAINS_LANGU_COUNTRY = 2;
+  public static final String SELECT_ITEM_SEPARATOR = &quot;,&quot;;
+
+  private ExpressionUtil() {}
+
+  public static Expression&lt;Boolean&gt; createEQExpression(final OData odata, final CriteriaBuilder cb,
+      final From&lt;?, ?&gt; root, final JPAEntityType jpaEntity, final UriParameter keyPredicate)
+      throws ODataJPAFilterException, ODataJPAModelException {
+
+<span class="nc" id="L46">    final JPAPath path = jpaEntity.getPath(keyPredicate.getName());</span>
+<span class="nc" id="L47">    final JPAAttribute attribute = path.getLeaf();</span>
+
+<span class="nc" id="L49">    return cb.equal(convertToCriteriaPath(root, path.getPath()), convertValueOnAttribute(odata, attribute, keyPredicate</span>
+<span class="nc" id="L50">        .getText()));</span>
+
+  }
+
+  /**
+   * Converts the jpaPath into a Criteria Path.
+   * @param joinTables
+   * @param root
+   * @param jpaPath
+   * @return
+   */
+  public static Path&lt;?&gt; convertToCriteriaPath(final Map&lt;String, From&lt;?, ?&gt;&gt; joinTables, final From&lt;?, ?&gt; root,
+      final List&lt;JPAElement&gt; jpaPath) {
+<span class="nc" id="L63">    Path&lt;?&gt; p = root;</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">    for (final JPAElement jpaPathElement : jpaPath)</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">      if (jpaPathElement instanceof JPADescriptionAttribute) {</span>
+<span class="nc" id="L66">        final Join&lt;?, ?&gt; join = (Join&lt;?, ?&gt;) joinTables.get(jpaPathElement.getInternalName());</span>
+<span class="nc" id="L67">        p = join.get(((JPADescriptionAttribute) jpaPathElement).getDescriptionAttribute().getInternalName());</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">      } else if (jpaPathElement instanceof JPACollectionAttribute) {</span>
+<span class="nc" id="L69">        p = joinTables.get(jpaPathElement.getExternalName());</span>
+      } else {
+<span class="nc" id="L71">        p = p.get(jpaPathElement.getInternalName());</span>
+      }
+<span class="nc" id="L73">    return p;</span>
+  }
+
+  public static Path&lt;?&gt; convertToCriteriaPath(final From&lt;?, ?&gt; root, final List&lt;JPAElement&gt; jpaPath) {
+<span class="nc" id="L77">    Path&lt;?&gt; p = root;</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">    for (final JPAElement jpaPathElement : jpaPath)</span>
+<span class="nc" id="L79">      p = p.get(jpaPathElement.getInternalName());</span>
+<span class="nc" id="L80">    return p;</span>
+  }
+
+  /**
+   * Converts a OData attribute into an JPA path. Sets the alias to the alias of the OData path of the attribute.
+   * @param root From the path be derived from
+   * @param et OData Entity Type
+   * @param jpaAttributes Attribute to be converted into an JPA path
+   * @return
+   * @throws ODataJPAQueryException
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public static List&lt;Path&lt;Object&gt;&gt; convertToCriteriaPathList(final From&lt;?, ?&gt; root, final JPAEntityType et,
+      final List&lt;JPAAttribute&gt; jpaAttributes) throws ODataJPAQueryException {
+
+    try {
+<span class="nc" id="L96">      final List&lt;Path&lt;Object&gt;&gt; result = new ArrayList&lt;&gt;(jpaAttributes.size());</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">      for (final JPAAttribute attribute : jpaAttributes) {</span>
+<span class="nc" id="L98">        final JPAPath path = et.getPath(attribute.getExternalName());</span>
+<span class="nc" id="L99">        final Path&lt;Object&gt; p = (Path&lt;Object&gt;) convertToCriteriaPath(root, path.getPath());</span>
+<span class="nc" id="L100">        p.alias(path.getAlias());</span>
+<span class="nc" id="L101">        result.add(p);</span>
+<span class="nc" id="L102">      }</span>
+<span class="nc" id="L103">      return result;</span>
+<span class="nc" id="L104">    } catch (final ODataJPAModelException e) {</span>
+<span class="nc" id="L105">      throw new ODataJPAQueryException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  public static Object convertValueOnAttribute(final OData odata, final JPAAttribute attribute, final String value)
+      throws ODataJPAFilterException {
+<span class="nc" id="L111">    return convertValueOnAttribute(odata, attribute, value, true);</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  public static &lt;T&gt; Object convertValueOnAttribute(final OData odata, final JPAAttribute attribute, final String value,
+      final Boolean isUri) throws ODataJPAFilterException {
+
+    try {
+<span class="nc" id="L119">      final CsdlProperty edmProperty = (CsdlProperty) attribute.getProperty();</span>
+<span class="nc" id="L120">      final EdmPrimitiveTypeKind edmTypeKind = JPATypeConverter.convertToEdmSimpleType(attribute);</span>
+
+      // TODO literal does not convert decimals without scale properly
+<span class="nc" id="L123">      String targetValue = null;</span>
+<span class="nc" id="L124">      final EdmPrimitiveType edmType = odata.createPrimitiveTypeInstance(edmTypeKind);</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">      if (Boolean.TRUE.equals(isUri)) {</span>
+<span class="nc" id="L126">        targetValue = edmType.fromUriLiteral(value);</span>
+      } else {
+<span class="nc" id="L128">        targetValue = value;</span>
+      }
+      // Converter
+<span class="nc bnc" id="L131" title="All 2 branches missed.">      if (attribute.getConverter() != null) {</span>
+<span class="nc" id="L132">        final AttributeConverter&lt;?, T&gt; dbConverter = attribute.getConverter();</span>
+<span class="nc" id="L133">        return dbConverter.convertToEntityAttribute(</span>
+<span class="nc" id="L134">            (T) edmType.valueOfString(targetValue, edmProperty.isNullable(), edmProperty.getMaxLength(),</span>
+<span class="nc" id="L135">                edmProperty.getPrecision(), edmProperty.getScale(), true, attribute.getType()));</span>
+      } else {
+<span class="nc" id="L137">        return edmType.valueOfString(targetValue, edmProperty.isNullable(), edmProperty.getMaxLength(),</span>
+<span class="nc" id="L138">            edmProperty.getPrecision(), edmProperty.getScale(), true, attribute.getType());</span>
+      }
+<span class="nc" id="L140">    } catch (EdmPrimitiveTypeException | ODataJPAModelException e) {</span>
+<span class="nc" id="L141">      throw new ODataJPAFilterException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  public static Object convertValueOnFacet(final OData odata, final JPAParameterFacet returnType, final String value)
+      throws ODataJPAFilterException {
+    try {
+<span class="nc" id="L148">      final EdmPrimitiveTypeKind edmTypeKind = EdmPrimitiveTypeKind.valueOfFQN(returnType.getTypeFQN());</span>
+<span class="nc" id="L149">      final EdmPrimitiveType edmType = odata.createPrimitiveTypeInstance(edmTypeKind);</span>
+      String targetValue;
+
+<span class="nc" id="L152">      targetValue = edmType.fromUriLiteral(value);</span>
+<span class="nc" id="L153">      return edmType.valueOfString(targetValue, true, returnType.getMaxLength(), returnType.getPrecision(), returnType</span>
+<span class="nc" id="L154">          .getScale(), true, returnType.getType());</span>
+<span class="nc" id="L155">    } catch (EdmPrimitiveTypeException | ODataJPAModelException e) {</span>
+<span class="nc" id="L156">      throw new ODataJPAFilterException(e, HttpStatusCode.INTERNAL_SERVER_ERROR);</span>
+    }
+  }
+
+  public static Locale determineFallbackLocale(final Map&lt;String, List&lt;String&gt;&gt; headers) {
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html (14.4 accept language header
+    // example: Accept-Language : da, en-gb;q=0.8, en;q=0.7)
+<span class="nc" id="L163">    final List&lt;String&gt; languageHeaders = headers.get(&quot;accept-language&quot;);</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">    if (languageHeaders != null) {</span>
+<span class="nc" id="L165">      final String languageHeader = languageHeaders.get(0);</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">      if (languageHeader != null) {</span>
+<span class="nc" id="L167">        final String[] localeList = languageHeader.split(SELECT_ITEM_SEPARATOR);</span>
+<span class="nc" id="L168">        final String locale = localeList[0];</span>
+<span class="nc" id="L169">        final String[] languCountry = locale.split(&quot;-&quot;);</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (languCountry.length == CONTAINS_LANGU_COUNTRY)</span>
+<span class="nc" id="L171">          return new Locale(languCountry[0], languCountry[1]);</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">        else if (languCountry.length == CONTAINS_ONLY_LANGU)</span>
+<span class="nc" id="L173">          return new Locale(languCountry[0]);</span>
+        else
+<span class="nc" id="L175">          return Locale.ENGLISH;</span>
+      }
+    }
+<span class="nc" id="L178">    return Locale.ENGLISH;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

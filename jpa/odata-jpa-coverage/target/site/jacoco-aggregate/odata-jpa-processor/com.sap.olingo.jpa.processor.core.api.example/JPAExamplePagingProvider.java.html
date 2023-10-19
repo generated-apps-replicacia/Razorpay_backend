@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAExamplePagingProvider.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.api.example</a> &gt; <span class="el_source">JPAExamplePagingProvider.java</span></div><h1>JPAExamplePagingProvider.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.api.example;
+
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
+import java.util.UUID;
+
+import javax.persistence.EntityManager;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfo;
+import org.apache.olingo.server.api.uri.UriResource;
+import org.apache.olingo.server.api.uri.UriResourceEntitySet;
+
+import com.sap.olingo.jpa.processor.core.api.JPAODataPage;
+import com.sap.olingo.jpa.processor.core.api.JPAODataPagingProvider;
+import com.sap.olingo.jpa.processor.core.query.JPACountQuery;
+
+public class JPAExamplePagingProvider implements JPAODataPagingProvider {
+
+  private static final int DEFAULT_BUFFER_SIZE = 100;
+  private final Map&lt;String, Integer&gt; maxPageSizes;
+  private final Map&lt;String, CacheEntry&gt; pageCache;
+  private final int cacheSize;
+  private final Queue&lt;String&gt; index;
+
+  public JPAExamplePagingProvider(final Map&lt;String, Integer&gt; pageSizes) {
+<span class="nc" id="L29">    this(pageSizes, DEFAULT_BUFFER_SIZE);</span>
+<span class="nc" id="L30">  }</span>
+
+<span class="nc" id="L32">  public JPAExamplePagingProvider(final Map&lt;String, Integer&gt; pageSizes, final int bufferSize) {</span>
+<span class="nc" id="L33">    maxPageSizes = pageSizes;</span>
+<span class="nc" id="L34">    pageCache = new HashMap&lt;&gt;(bufferSize);</span>
+<span class="nc" id="L35">    cacheSize = bufferSize;</span>
+<span class="nc" id="L36">    index = new LinkedList&lt;&gt;();</span>
+<span class="nc" id="L37">  }</span>
+
+  @Override
+  public JPAODataPage getNextPage(final String skipToken) {
+<span class="nc" id="L41">    final CacheEntry previousPage = pageCache.get(skipToken.replace(&quot;'&quot;, &quot;&quot;));</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">    if (previousPage != null) {</span>
+      // Calculate next page
+<span class="nc" id="L44">      final Integer skip = previousPage.getPage().getSkip() + previousPage.getPage().getTop();</span>
+      // Create a new skip token if next page is not the last one
+<span class="nc" id="L46">      String nextToken = null;</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">      if (skip + previousPage.getPage().getTop() &lt; previousPage.getMaxTop())</span>
+<span class="nc" id="L48">        nextToken = UUID.randomUUID().toString();</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">      final int top = (int) ((skip + previousPage.getPage().getTop()) &lt; previousPage.getMaxTop() ? previousPage</span>
+<span class="nc" id="L50">          .getPage().getTop() : previousPage.getMaxTop() - skip);</span>
+<span class="nc" id="L51">      final JPAODataPage page = new JPAODataPage(previousPage.getPage().getUriInfo(),</span>
+<span class="nc" id="L52">          skip, top, nextToken);</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">      if (nextToken != null)</span>
+<span class="nc" id="L54">        addToCache(page, previousPage.getMaxTop());</span>
+<span class="nc" id="L55">      return page;</span>
+    }
+    // skip token not found =&gt; let JPA Processor handle this
+<span class="nc" id="L58">    return null;</span>
+  }
+
+  @Override
+  public JPAODataPage getFirstPage(final UriInfo uriInfo, final Integer preferredPageSize,
+      final JPACountQuery countQuery, final EntityManager em) throws ODataApplicationException {
+
+<span class="nc" id="L65">    final UriResource root = uriInfo.getUriResourceParts().get(0);</span>
+    // Paging will only be done for Entity Sets
+<span class="nc bnc" id="L67" title="All 2 branches missed.">    if (root instanceof UriResourceEntitySet) {</span>
+      // Check if Entity Set shall be packaged
+<span class="nc" id="L69">      final Integer maxSize = maxPageSizes.get(((UriResourceEntitySet) root).getEntitySet().getName());</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">      if (maxSize != null) {</span>
+        // Read $top and $skip
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        final Integer skipValue = uriInfo.getSkipOption() != null ? uriInfo.getSkipOption().getValue() : 0;</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        final Integer topValue = uriInfo.getTopOption() != null ? uriInfo.getTopOption().getValue() : null;</span>
+        // Determine end of list
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        final Long count = topValue != null ? (topValue + skipValue) : countQuery.countResults();</span>
+        // Determine page size
+<span class="nc bnc" id="L77" title="All 4 branches missed.">        final Integer size = preferredPageSize != null &amp;&amp; preferredPageSize &lt; maxSize ? preferredPageSize : maxSize;</span>
+        // Create a unique skip token if needed
+<span class="nc" id="L79">        String skipToken = null;</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (size &lt; count)</span>
+<span class="nc" id="L81">          skipToken = UUID.randomUUID().toString();</span>
+        // Create page information
+<span class="nc bnc" id="L83" title="All 4 branches missed.">        final JPAODataPage page = new JPAODataPage(uriInfo, skipValue, topValue != null &amp;&amp; topValue &lt; size ? topValue</span>
+<span class="nc" id="L84">            : size, skipToken);</span>
+        // Cache page to be able to fulfill next link based request
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (skipToken != null)</span>
+<span class="nc" id="L87">          addToCache(page, count);</span>
+<span class="nc" id="L88">        return page;</span>
+      }
+    }
+<span class="nc" id="L91">    return null;</span>
+  }
+
+  private void addToCache(final JPAODataPage page, final Long count) {
+<span class="nc bnc" id="L95" title="All 2 branches missed.">    if (pageCache.size() == cacheSize)</span>
+<span class="nc" id="L96">      pageCache.remove(index.poll());</span>
+
+<span class="nc" id="L98">    pageCache.put((String) page.getSkipToken(), new CacheEntry(count, page));</span>
+<span class="nc" id="L99">    index.add((String) page.getSkipToken());</span>
+<span class="nc" id="L100">  }</span>
+
+  private static class CacheEntry {
+    private final Long maxTop;
+    private final JPAODataPage page;
+
+    CacheEntry(final Long count, final JPAODataPage page) {
+<span class="nc" id="L107">      super();</span>
+<span class="nc" id="L108">      this.maxTop = count;</span>
+<span class="nc" id="L109">      this.page = page;</span>
+<span class="nc" id="L110">    }</span>
+
+    public Long getMaxTop() {
+<span class="nc" id="L113">      return maxTop;</span>
+    }
+
+    public JPAODataPage getPage() {
+<span class="nc" id="L117">      return page;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

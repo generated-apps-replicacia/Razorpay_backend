@@ -1,0 +1,1707 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>CriteriaBuilderImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor-cb</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.cb.impl</a> &gt; <span class="el_source">CriteriaBuilderImpl.java</span></div><h1>CriteriaBuilderImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.cb.impl;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.persistence.Tuple;
+import javax.persistence.criteria.CollectionJoin;
+import javax.persistence.criteria.CompoundSelection;
+import javax.persistence.criteria.CriteriaDelete;
+import javax.persistence.criteria.CriteriaUpdate;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.ListJoin;
+import javax.persistence.criteria.MapJoin;
+import javax.persistence.criteria.Order;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import javax.persistence.criteria.Selection;
+import javax.persistence.criteria.SetJoin;
+import javax.persistence.criteria.Subquery;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAServiceDocument;
+import com.sap.olingo.jpa.processor.cb.ProcessorCriteriaBuilder;
+import com.sap.olingo.jpa.processor.cb.ProcessorCriteriaQuery;
+import com.sap.olingo.jpa.processor.cb.exeptions.NotImplementedException;
+import com.sap.olingo.jpa.processor.cb.impl.ExpressionImpl.ParameterExpression;
+import com.sap.olingo.jpa.processor.cb.impl.PredicateImpl.BinaryExpressionPredicate.Operation;
+import com.sap.olingo.jpa.processor.cb.joiner.SqlConvertible;
+
+class CriteriaBuilderImpl implements ProcessorCriteriaBuilder { // NOSONAR
+
+  private final JPAServiceDocument sd;
+  private final ParameterBuffer parameter;
+
+<span class="nc" id="L49">  CriteriaBuilderImpl(final JPAServiceDocument sd, final ParameterBuffer parameterBuffer) {</span>
+<span class="nc" id="L50">    this.sd = sd;</span>
+<span class="nc" id="L51">    this.parameter = parameterBuffer;</span>
+<span class="nc" id="L52">  }</span>
+
+  /**
+   * Create an expression that returns the absolute value
+   * of its argument.
+   * @param x expression
+   * @return absolute value
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; abs(@Nonnull final Expression&lt;N&gt; x) {
+<span class="nc" id="L62">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an all expression over the subquery results.
+   * @param subquery subquery
+   * @return all expression
+   */
+  @Override
+  public &lt;Y&gt; Expression&lt;Y&gt; all(@Nonnull final Subquery&lt;Y&gt; subquery) {
+<span class="nc" id="L72">    return new ExpressionImpl.SubQuery&lt;&gt;(subquery, SqlSubQuery.ALL);</span>
+  }
+
+  @Override
+  public Predicate and(final Expression&lt;Boolean&gt; x, final Expression&lt;Boolean&gt; y) {
+<span class="nc" id="L77">    return new PredicateImpl.AndPredicate(x, y);</span>
+  }
+
+  @Override
+  public Predicate and(final Predicate... restrictions) {
+<span class="nc" id="L82">    return PredicateImpl.and(restrictions);</span>
+  }
+
+  /**
+   * Create an any expression over the subquery results.
+   * This expression is equivalent to a &lt;code&gt;some&lt;/code&gt; expression.
+   * @param subquery subquery
+   * @return any expression
+   */
+  @Override
+  public &lt;Y&gt; Expression&lt;Y&gt; any(@Nonnull final Subquery&lt;Y&gt; subquery) {
+<span class="nc" id="L93">    return new ExpressionImpl.SubQuery&lt;&gt;(subquery, SqlSubQuery.ANY);</span>
+  }
+
+  /**
+   * Create an array-valued selection item.
+   * @param selections selection items
+   * @return array-valued compound selection
+   * @throws IllegalArgumentException if an argument is a
+   * tuple- or array-valued selection item
+   */
+  @Override
+  public CompoundSelection&lt;Object[]&gt; array(@Nonnull final Selection&lt;?&gt;... selections) {
+<span class="nc" id="L105">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an ordering by the ascending value of the expression.
+   * @param x expression used to define the ordering
+   * @return ascending ordering corresponding to the expression
+   */
+  @Override
+  public Order asc(@Nonnull final Expression&lt;?&gt; x) {
+<span class="nc" id="L115">    return new OrderImpl(true, Objects.requireNonNull((SqlConvertible) x));</span>
+  }
+
+  /**
+   * Create an aggregate expression applying the avg operation.
+   * @param x expression representing input value to avg operation
+   * @return avg expression
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;Double&gt; avg(@Nonnull final Expression&lt;N&gt; x) {
+<span class="nc" id="L125">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * between the second and third arguments in value.
+   * @param v expression
+   * @param x expression
+   * @param y expression
+   * @return between predicate
+   */
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate between(@Nonnull final Expression&lt;? extends Y&gt; v,
+      @Nonnull final Expression&lt;? extends Y&gt; x, @Nonnull final Expression&lt;? extends Y&gt; y) {
+<span class="nc" id="L139">    return new PredicateImpl.BetweenExpressionPredicate((ExpressionImpl&lt;?&gt;) v, x, y);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * between the second and third arguments in value.
+   * @param v expression
+   * @param x value
+   * @param y value
+   * @return between predicate
+   */
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate between(@Nonnull final Expression&lt;? extends Y&gt; v,
+      @Nonnull final Y x, @Nonnull final Y y) {
+<span class="nc" id="L153">    return between(v, literal(x, v), literal(y, v));</span>
+  }
+
+  /**
+   * Create a coalesce expression.
+   * @return coalesce expression
+   */
+  @Override
+  public &lt;T&gt; Coalesce&lt;T&gt; coalesce() {
+<span class="nc" id="L162">    return new ExpressionImpl.CoalesceExpression&lt;&gt;();</span>
+  }
+
+  /**
+   * Create an expression that returns null if all its arguments
+   * evaluate to null, and the value of the first non-null argument
+   * otherwise.
+   * @param x expression
+   * @param y expression
+   * @return coalesce expression
+   */
+  @Override
+  public &lt;Y&gt; Expression&lt;Y&gt; coalesce(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Expression&lt;? extends Y&gt; y) {
+<span class="nc" id="L176">    return new ExpressionImpl.CoalesceExpression&lt;Y&gt;().value(x).value(y);</span>
+  }
+
+  /**
+   * Create an expression that returns null if all its arguments
+   * evaluate to null, and the value of the first non-null argument
+   * otherwise.
+   * @param x expression
+   * @param y value
+   * @return coalesce expression
+   */
+  @Override
+  public &lt;Y&gt; Expression&lt;Y&gt; coalesce(@Nonnull final Expression&lt;? extends Y&gt; x, @Nonnull final Y y) {
+<span class="nc" id="L189">    return new ExpressionImpl.CoalesceExpression&lt;Y&gt;().value(x).value(literal(y));</span>
+  }
+
+  /**
+   * Create an expression for string concatenation.
+   * @param x string expression
+   * @param y string expression
+   * @return expression corresponding to concatenation
+   */
+  @Override
+  public Expression&lt;String&gt; concat(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; y) {
+<span class="nc" id="L200">    return new ExpressionImpl.ConcatExpression(x, y);</span>
+  }
+
+  /**
+   * Create an expression for string concatenation.
+   * @param x string expression
+   * @param y string
+   * @return expression corresponding to concatenation
+   */
+  @Override
+  public Expression&lt;String&gt; concat(@Nonnull final Expression&lt;String&gt; x, @Nonnull final String y) {
+<span class="nc" id="L211">    return new ExpressionImpl.ConcatExpression(x, literal(y));</span>
+  }
+
+  /**
+   * Create an expression for string concatenation.
+   * @param x string
+   * @param y string expression
+   * @return expression corresponding to concatenation
+   */
+  @Override
+  public Expression&lt;String&gt; concat(@Nonnull final String x, @Nonnull final Expression&lt;String&gt; y) {
+<span class="nc" id="L222">    return new ExpressionImpl.ConcatExpression(literal(x), y);</span>
+  }
+
+  /**
+   * Create a conjunction (with zero conjuncts).
+   * A conjunction with zero conjuncts is true.
+   * @return and predicate
+   */
+  @Override
+  public Predicate conjunction() {
+<span class="nc" id="L232">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a selection item corresponding to a constructor.
+   * This method is used to specify a constructor that will be
+   * applied to the results of the query execution. If the
+   * constructor is for an entity class, the resulting entities
+   * will be in the new state after the query is executed.
+   * @param resultClass class whose instance is to be constructed
+   * @param selections arguments to the constructor
+   * @return compound selection item
+   * @throws IllegalArgumentException if an argument is a
+   * tuple- or array-valued selection item
+   */
+  @Override
+  public &lt;Y&gt; CompoundSelection&lt;Y&gt; construct(@Nonnull final Class&lt;Y&gt; resultClass,
+      @Nonnull final Selection&lt;?&gt;... selections) {
+<span class="nc" id="L250">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an aggregate expression applying the count operation.
+   * @param x expression representing input value to count
+   * operation
+   * @return count expression
+   */
+  @Override
+  public Expression&lt;Long&gt; count(@Nonnull final Expression&lt;?&gt; x) {
+<span class="nc" id="L261">    return new ExpressionImpl.AggregationExpression&lt;&gt;(SqlAggregation.COUNT, x);</span>
+  }
+
+  /**
+   * Create an aggregate expression applying the count distinct
+   * operation.
+   * @param x expression representing input value to count distinct operation
+   * @return count distinct expression
+   */
+  @Override
+  public Expression&lt;Long&gt; countDistinct(@Nonnull final Expression&lt;?&gt; x) {
+<span class="nc" id="L272">    return count(new ExpressionImpl.DistinctExpression&lt;&gt;(x));</span>
+  }
+
+  @Override
+  public &lt;T&gt; CriteriaDelete&lt;T&gt; createCriteriaDelete(final Class&lt;T&gt; targetEntity) {
+<span class="nc" id="L277">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public &lt;T&gt; CriteriaUpdate&lt;T&gt; createCriteriaUpdate(final Class&lt;T&gt; targetEntity) {
+<span class="nc" id="L282">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public ProcessorCriteriaQuery&lt;Object&gt; createQuery() {
+<span class="nc" id="L287">    return new CriteriaQueryImpl&lt;&gt;(Object.class, sd, this);</span>
+  }
+
+  @Override
+  public &lt;T&gt; ProcessorCriteriaQuery&lt;T&gt; createQuery(final Class&lt;T&gt; resultClass) {
+<span class="nc" id="L292">    return new CriteriaQueryImpl&lt;&gt;(resultClass, sd, this);</span>
+  }
+
+  @Override
+  public ProcessorCriteriaQuery&lt;Tuple&gt; createTupleQuery() {
+<span class="nc" id="L297">    return new CriteriaQueryImpl&lt;&gt;(Tuple.class, sd, this);</span>
+  }
+
+  @Override
+  public Expression&lt;Date&gt; currentDate() {
+<span class="nc" id="L302">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;Time&gt; currentTime() {
+<span class="nc" id="L307">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;Timestamp&gt; currentTimestamp() {
+<span class="nc" id="L312">    return new ExpressionImpl.TimeExpression&lt;&gt;(SqlTimeFunctions.TIMESTAMP);</span>
+  }
+
+  /**
+   * Create an ordering by the descending value of the expression.
+   * @param x expression used to define the ordering
+   * @return descending ordering corresponding to the expression
+   */
+  @Override
+  public Order desc(@Nonnull final Expression&lt;?&gt; x) {
+<span class="nc" id="L322">    return new OrderImpl(false, Objects.requireNonNull((SqlConvertible) x));</span>
+  }
+
+  /**
+   * Create an expression that returns the difference
+   * between its arguments.
+   * @param x expression
+   * @param y expression
+   * @return difference
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; diff(@Nonnull final Expression&lt;? extends N&gt; x,
+      @Nonnull final Expression&lt;? extends N&gt; y) {
+<span class="nc" id="L335">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, y, SqlArithmetic.DIFF);</span>
+  }
+
+  /**
+   * Create an expression that returns the difference
+   * between its arguments.
+   * @param x expression
+   * @param y value
+   * @return difference
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; diff(@Nonnull final Expression&lt;? extends N&gt; x, @Nonnull final N y) {
+<span class="nc" id="L347">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, literal(y), SqlArithmetic.DIFF);</span>
+  }
+
+  /**
+   * Create an expression that returns the difference
+   * between its arguments.
+   * @param x value
+   * @param y expression
+   * @return difference
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; diff(@Nonnull final N x, @Nonnull final Expression&lt;? extends N&gt; y) {
+<span class="nc" id="L359">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(literal(x), y, SqlArithmetic.DIFF);</span>
+  }
+
+  /**
+   * Create a disjunction (with zero disjuncts).
+   * A disjunction with zero disjuncts is false.
+   * @return or predicate
+   */
+  @Override
+  public Predicate disjunction() {
+<span class="nc" id="L369">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate for testing the arguments for equality.
+   * @param x expression
+   * @param y expression
+   * @return equality predicate
+   */
+  @Override
+  public Predicate equal(@Nonnull final Expression&lt;?&gt; x, @Nonnull final Expression&lt;?&gt; y) {// NOSONAR
+<span class="nc" id="L380">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.EQ);</span>
+  }
+
+  /**
+   * Create a predicate for testing the arguments for equality.
+   * @param x expression
+   * @param y object
+   * @return equality predicate
+   */
+  @Override
+  public Predicate equal(@Nonnull final Expression&lt;?&gt; x, final Object y) { // NOSONAR
+<span class="nc" id="L391">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.EQ);</span>
+  }
+
+  /**
+   * Create a predicate testing the existence of a subquery result.
+   * @param subquery subquery whose result is to be tested
+   * @return exists predicate
+   */
+  @Override
+  public Predicate exists(@Nonnull final Subquery&lt;?&gt; subquery) {
+<span class="nc" id="L401">    return new PredicateImpl.SubQuery(subquery, SqlSubQuery.EXISTS);</span>
+  }
+
+  /**
+   * Create an expression for the execution of a database
+   * function.
+   * @param name function name
+   * @param type expected result type
+   * @param args function arguments
+   * @return expression
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public &lt;T&gt; Expression&lt;T&gt; function(@Nonnull final String name, @Nonnull final Class&lt;T&gt; type,
+      final Expression&lt;?&gt;... args) {
+<span class="nc bnc" id="L416" title="All 2 branches missed.">    final List&lt;Expression&lt;Object&gt;&gt; parameters = args == null ? Collections.emptyList() : Arrays.asList(args).stream()</span>
+<span class="nc" id="L417">        .map(</span>
+<span class="nc" id="L418">            p -&gt; ((Expression&lt;Object&gt;) p)).collect(Collectors.toList());</span>
+<span class="nc" id="L419">    return new ExpressionImpl.FunctionExpression&lt;&gt;(name, type, parameters);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * greater than or equal to the second.
+   * @param x expression
+   * @param y expression
+   * @return greater-than-or-equal predicate
+   */
+  @Override
+  public Predicate ge(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Expression&lt;? extends Number&gt; y) {
+<span class="nc" id="L431">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.GE);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * greater than or equal to the second.
+   * @param x expression
+   * @param y expression
+   * @return greater-than-or-equal predicate
+   */
+  @Override
+  public Predicate ge(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Number y) {
+<span class="nc" id="L443">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.GE);</span>
+  }
+
+  public ParameterBuffer getParameter() {
+<span class="nc" id="L447">    return parameter;</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * greater than the second.
+   * @param x expression
+   * @param y expression
+   * @return greater-than predicate
+   */
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate greaterThan(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Expression&lt;? extends Y&gt; y) {
+<span class="nc" id="L460">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.GT);</span>
+  }
+
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate greaterThan(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Y y) {
+<span class="nc" id="L466">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.GT);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * greater than or equal to the second.
+   * @param x expression
+   * @param y expression
+   * @return greater-than-or-equal predicate
+   */
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate greaterThanOrEqualTo(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Expression&lt;? extends Y&gt; y) {
+<span class="nc" id="L479">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.GE);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * greater than or equal to the second.
+   * @param x expression
+   * @param y value
+   * @return greater-than-or-equal predicate
+   */
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate greaterThanOrEqualTo(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Y y) {
+<span class="nc" id="L492">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.GE);</span>
+  }
+
+  /**
+   * Create an aggregate expression for finding the greatest of
+   * the values (strings, dates, etc).
+   * @param x expression representing input value to greatest
+   * operation
+   * @return greatest expression
+   */
+  @Override
+  public &lt;X extends Comparable&lt;? super X&gt;&gt; Expression&lt;X&gt; greatest(@Nonnull final Expression&lt;X&gt; x) {
+<span class="nc" id="L504">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * greater than the second.
+   * @param x expression
+   * @param y expression
+   * @return greater-than predicate
+   */
+  @Override
+  public Predicate gt(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Expression&lt;? extends Number&gt; y) {
+<span class="nc" id="L516">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.GT);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * greater than the second.
+   * @param x expression
+   * @param y value
+   * @return greater-than predicate
+   */
+  @Override
+  public Predicate gt(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Number y) {
+<span class="nc" id="L528">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.GT);</span>
+  }
+
+  /**
+   * Create predicate to test whether given expression
+   * is contained in a list of values.
+   * @param expression to be tested against list of values
+   * @return in predicate
+   */
+  @Override
+  public &lt;T&gt; In&lt;T&gt; in(final Expression&lt;? extends T&gt; expression) {
+    // e.g.: return new Expressions.In&lt;&gt;(expression); //NOSONAR
+<span class="nc" id="L540">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create predicate to test whether given expression
+   * is contained in a list of values.
+   * @param paths to be tested against list of values
+   * @return in predicate
+   */
+  @Override
+  public &lt;T&gt; In&lt;T&gt; in(final List&lt;Path&lt;? extends T&gt;&gt; paths, final Subquery&lt;?&gt; subquery) {
+<span class="nc" id="L551">    return new PredicateImpl.In&lt;&gt;(paths, subquery);</span>
+  }
+
+  /**
+   * Create a predicate that tests whether a collection is empty.&lt;br&gt;
+   * Example: &quot;WHERE employee.projects IS EMPTY&quot;
+   * @param collection expression
+   * @return is-empty predicate
+   */
+  @Override
+  public &lt;C extends Collection&lt;?&gt;&gt; Predicate isEmpty(@Nonnull final Expression&lt;C&gt; collection) {
+<span class="nc" id="L562">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate testing for a false value.
+   * @param x expression to be tested
+   * @return predicate
+   */
+  @Override
+  public Predicate isFalse(@Nonnull final Expression&lt;Boolean&gt; x) {
+<span class="nc" id="L572">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate that tests whether an element is
+   * a member of a collection (property).
+   * If the collection is empty, the predicate will be false.
+   * @param elem element expression
+   * @param collection expression
+   * @return is-member predicate
+   */
+  @Override
+  public &lt;E, C extends Collection&lt;E&gt;&gt; Predicate isMember(@Nonnull final E elem,
+      @Nonnull final Expression&lt;C&gt; collection) {
+<span class="nc" id="L586">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate that tests whether an element is
+   * a member of a collection (property).
+   * If the collection is empty, the predicate will be false.
+   * @param elem element
+   * @param collection expression
+   * @return is-member predicate
+   */
+  @Override
+  public &lt;E, C extends Collection&lt;E&gt;&gt; Predicate isMember(@Nonnull final Expression&lt;E&gt; elem,
+      @Nonnull final Expression&lt;C&gt; collection) {
+<span class="nc" id="L600">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate that tests whether a collection is not empty.&lt;br&gt;
+   * Example: WHERE projects.employees IS NOT EMPTY
+   * @param collection expression
+   * @return is-not-empty predicate
+   */
+  @Override
+  public &lt;C extends Collection&lt;?&gt;&gt; Predicate isNotEmpty(@Nonnull final Expression&lt;C&gt; collection) {
+<span class="nc" id="L611">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate that tests whether an element is not a member of a collection.
+   * If the collection is empty, the predicate will be true.&lt;br&gt;
+   * Example:
+   * @param elem element
+   * @param collection expression
+   * @return is-not-member predicate
+   */
+  @Override
+  public &lt;E, C extends Collection&lt;E&gt;&gt; Predicate isNotMember(@Nonnull final E elem,
+      @Nonnull final Expression&lt;C&gt; collection) {
+<span class="nc" id="L625">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate that tests whether an element is
+   * not a member of a collection.
+   * If the collection is empty, the predicate will be true.
+   * @param elem element expression
+   * @param collection expression
+   * @return is-not-member predicate
+   */
+  @Override
+  public &lt;E, C extends Collection&lt;E&gt;&gt; Predicate isNotMember(@Nonnull final Expression&lt;E&gt; elem,
+      @Nonnull final Expression&lt;C&gt; collection) {
+<span class="nc" id="L639">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate to test whether the expression is not null.
+   * @param x expression
+   * @return is-not-null predicate
+   */
+  @Override
+  public Predicate isNotNull(@Nonnull final Expression&lt;?&gt; x) {
+<span class="nc" id="L649">    return new PredicateImpl.NullPredicate(x, SqlNullCheck.NOT_NULL);</span>
+  }
+
+  /**
+   * Create a predicate to test whether the expression is null.
+   * @param x expression
+   * @return is-null predicate
+   */
+  @Override
+  public Predicate isNull(@Nonnull final Expression&lt;?&gt; x) {
+<span class="nc" id="L659">    return new PredicateImpl.NullPredicate(x, SqlNullCheck.NULL);</span>
+  }
+
+  /**
+   * Create a predicate testing for a true value.
+   * @param x expression to be tested
+   * @return predicate
+   */
+  @Override
+  public Predicate isTrue(final Expression&lt;Boolean&gt; x) {
+<span class="nc" id="L669">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an expression that returns the keys of a map.
+   * @param map map
+   * @return set expression
+   */
+  @Override
+  public &lt;K, M extends Map&lt;K, ?&gt;&gt; Expression&lt;Set&lt;K&gt;&gt; keys(@Nonnull final M map) {
+<span class="nc" id="L679">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * less than or equal to the second.
+   * @param x expression
+   * @param y expression
+   * @return less-than-or-equal predicate
+   */
+  @Override
+  public Predicate le(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Expression&lt;? extends Number&gt; y) {
+<span class="nc" id="L691">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.LE);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * less than or equal to the second.
+   * @param x expression
+   * @param y value
+   * @return less-than-or-equal predicate
+   */
+  @Override
+  public Predicate le(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Number y) {
+<span class="nc" id="L703">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.LE);</span>
+  }
+
+  /**
+   * Create an aggregate expression for finding the least of
+   * the values (strings, dates, etc).
+   * @param x expression representing input value to least
+   * operation
+   * @return least expression
+   */
+  @Override
+  public &lt;X extends Comparable&lt;? super X&gt;&gt; Expression&lt;X&gt; least(@Nonnull final Expression&lt;X&gt; x) {
+<span class="nc" id="L715">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create expression to return length of a string.
+   * @param x string expression
+   * @return length expression
+   */
+  @Override
+  public Expression&lt;Integer&gt; length(@Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L725">    return new ExpressionImpl.UnaryFunctionalExpression&lt;&gt;(x, SqlStringFunctions.LENGTH);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * less than the second.
+   * @param x expression
+   * @param y expression
+   * @return less-than predicate
+   */
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate lessThan(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Expression&lt;? extends Y&gt; y) {
+<span class="nc" id="L738">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.LT);</span>
+  }
+
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate lessThan(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Y y) {
+<span class="nc" id="L744">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.LT);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * less than or equal to the second.
+   * @param x expression
+   * @param y expression
+   * @return less-than-or-equal predicate
+   */
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate lessThanOrEqualTo(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Expression&lt;? extends Y&gt; y) {
+<span class="nc" id="L757">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.LE);</span>
+  }
+
+  @Override
+  public &lt;Y extends Comparable&lt;? super Y&gt;&gt; Predicate lessThanOrEqualTo(@Nonnull final Expression&lt;? extends Y&gt; x,
+      @Nonnull final Y y) {
+<span class="nc" id="L763">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.LE);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * satisfies the given pattern.
+   * @param x string expression
+   * @param pattern string expression
+   * @return like predicate
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public Predicate like(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern) {
+<span class="nc" id="L776">    return new PredicateImpl.LikePredicate(Objects.requireNonNull(x),</span>
+<span class="nc" id="L777">        (ParameterExpression&lt;String, ?&gt;) Objects.requireNonNull(pattern));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * satisfies the given pattern.
+   * @param x string expression
+   * @param pattern string expression
+   * @param escapeChar escape character
+   * @return like predicate
+   */
+  @Override
+  public Predicate like(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern,
+      final char escapeChar) {
+<span class="nc" id="L791">    return like(x, pattern, literal(escapeChar));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * satisfies the given pattern.
+   * @param x string expression
+   * @param pattern string expression
+   * @param escapeChar escape character expression
+   * @return like predicate
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  @Override
+  public Predicate like(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern,
+      final Expression&lt;Character&gt; escapeChar) {
+
+<span class="nc" id="L807">    return new PredicateImpl.LikePredicate(Objects.requireNonNull(x),</span>
+<span class="nc" id="L808">        (ParameterExpression&lt;String, ?&gt;) Objects.requireNonNull(pattern),</span>
+<span class="nc" id="L809">        Optional.ofNullable((ParameterExpression&lt;Character, ?&gt;) (escapeChar)));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * satisfies the given pattern.
+   * @param x string expression
+   * @param pattern string
+   * @return like predicate
+   */
+  @Override
+  public Predicate like(@Nonnull final Expression&lt;String&gt; x, @Nonnull final String pattern) {
+<span class="nc" id="L821">    return like(x, literal(pattern, x));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * satisfies the given pattern.
+   * @param x string expression
+   * @param pattern string expression
+   * @param escapeChar escape character
+   * @return like predicate
+   */
+  @Override
+  public Predicate like(@Nonnull final Expression&lt;String&gt; x, @Nonnull final String pattern,
+      final char escapeChar) {
+<span class="nc" id="L835">    return like(x, literal(pattern, x), literal(escapeChar));</span>
+  }
+
+  @Override
+  public Predicate like(final Expression&lt;String&gt; x, final String pattern, final Expression&lt;Character&gt; escapeChar) {
+<span class="nc" id="L840">    return like(x, literal(pattern, x), escapeChar);</span>
+  }
+
+  /**
+   * Create an expression for a literal.
+   * @param value value represented by the expression
+   * @return expression literal
+   * @throws IllegalArgumentException if value is null
+   */
+  @Override
+  public &lt;T&gt; Expression&lt;T&gt; literal(@Nonnull final T value) {
+<span class="nc bnc" id="L851" title="All 2 branches missed.">    if (value == null) // NOSONAR</span>
+<span class="nc" id="L852">      throw new IllegalArgumentException(&quot;Literal value must not be null&quot;);</span>
+<span class="nc" id="L853">    return parameter.addValue(value);</span>
+  }
+
+  private &lt;T&gt; Expression&lt;T&gt; literal(@Nonnull final T value, @Nonnull final Expression&lt;?&gt; x) {
+<span class="nc" id="L857">    return parameter.addValue(value, x);</span>
+  }
+
+  /**
+   * Create expression to locate the position of one string
+   * within another, returning position of first character
+   * if found.
+   * The first position in a string is denoted by 1. If the
+   * string to be located is not found, 0 is returned.
+   * @param x expression for string to be searched
+   * @param pattern expression for string to be located
+   * @return expression corresponding to position
+   */
+  @Override
+  public Expression&lt;Integer&gt; locate(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern) {
+<span class="nc" id="L872">    return new ExpressionImpl.LocateExpression(x, pattern, null);</span>
+  }
+
+  /**
+   * Create expression to locate the position of one string
+   * within another, returning position of first character
+   * if found.
+   * The first position in a string is denoted by 1. If the
+   * string to be located is not found, 0 is returned.
+   * @param x expression for string to be searched
+   * @param pattern expression for string to be located
+   * @param from expression for position at which to start search
+   * @return expression corresponding to position
+   */
+  @Override
+  public Expression&lt;Integer&gt; locate(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern,
+      @Nonnull final Expression&lt;Integer&gt; from) {
+<span class="nc" id="L889">    return new ExpressionImpl.LocateExpression(x, pattern, from);</span>
+  }
+
+  /**
+   * Create expression to locate the position of one string
+   * within another, returning position of first character
+   * if found.
+   * The first position in a string is denoted by 1. If the
+   * string to be located is not found, 0 is returned.
+   * @param x expression for string to be searched
+   * @param pattern string to be located
+   * @return expression corresponding to position
+   */
+  @Override
+  public Expression&lt;Integer&gt; locate(@Nonnull final Expression&lt;String&gt; x, @Nonnull final String pattern) {
+<span class="nc" id="L904">    return new ExpressionImpl.LocateExpression(x, literal(pattern, x), null);</span>
+  }
+
+  /**
+   * Create expression to locate the position of one string
+   * within another, returning position of first character
+   * if found.
+   * The first position in a string is denoted by 1. If the
+   * string to be located is not found, 0 is returned.
+   * @param x expression for string to be searched
+   * @param pattern string to be located
+   * @param from position at which to start search
+   * @return expression corresponding to position
+   */
+  @Override
+  public Expression&lt;Integer&gt; locate(@Nonnull final Expression&lt;String&gt; x, @Nonnull final String pattern,
+      final int from) {
+<span class="nc" id="L921">    return new ExpressionImpl.LocateExpression(x, literal(pattern), literal(from));</span>
+  }
+
+  /**
+   * Create expression for converting a string to lowercase.
+   * @param x string expression
+   * @return expression to convert to lowercase
+   */
+  @Override
+  public Expression&lt;String&gt; lower(@Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L931">    return new ExpressionImpl.UnaryFunctionalExpression&lt;&gt;(x, SqlStringFunctions.LOWER);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * less than the second.
+   * @param x expression
+   * @param y expression
+   * @return less-than predicate
+   */
+  @Override
+  public Predicate lt(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Expression&lt;? extends Number&gt; y) {
+<span class="nc" id="L943">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.LT);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the first argument is
+   * less than the second.
+   * @param x expression
+   * @param y value
+   * @return less-than predicate
+   */
+  @Override
+  public Predicate lt(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Number y) {
+<span class="nc" id="L955">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.LT);</span>
+  }
+
+  /**
+   * Create an aggregate expression applying the numerical max
+   * operation.
+   * @param x expression representing input value to max operation
+   * @return max expression
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; max(@Nonnull final Expression&lt;N&gt; x) {
+<span class="nc" id="L966">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an aggregate expression applying the numerical min
+   * operation.
+   * @param x expression representing input value to min operation
+   * @return min expression
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; min(@Nonnull final Expression&lt;N&gt; x) {
+<span class="nc" id="L977">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an expression that returns the modulus
+   * of its arguments.
+   * @param x expression
+   * @param y expression
+   * @return modulus
+   */
+  @Override
+  public Expression&lt;Integer&gt; mod(@Nonnull final Expression&lt;Integer&gt; x, @Nonnull final Expression&lt;Integer&gt; y) {
+<span class="nc" id="L989">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, y, SqlArithmetic.MOD);</span>
+  }
+
+  /**
+   * Create an expression that returns the modulus
+   * of its arguments.
+   * @param x expression
+   * @param y value
+   * @return modulus
+   */
+  @Override
+  public Expression&lt;Integer&gt; mod(@Nonnull final Expression&lt;Integer&gt; x, @Nonnull final Integer y) {
+<span class="nc" id="L1001">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, literal(y), SqlArithmetic.MOD);</span>
+  }
+
+  /**
+   * Create an expression that returns the modulus
+   * of its arguments.
+   * @param x value
+   * @param y expression
+   * @return modulus
+   */
+  @Override
+  public Expression&lt;Integer&gt; mod(@Nonnull final Integer x, @Nonnull final Expression&lt;Integer&gt; y) {
+<span class="nc" id="L1013">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(literal(x), y, SqlArithmetic.MOD);</span>
+  }
+
+  /**
+   * Create an expression that returns the arithmetic negation
+   * of its argument.
+   * @param x expression
+   * @return arithmetic negation
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; neg(@Nonnull final Expression&lt;N&gt; x) {
+<span class="nc" id="L1024">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate not(@Nonnull final Expression&lt;Boolean&gt; restriction) {
+<span class="nc" id="L1029">    return new PredicateImpl.NotPredicate((SqlConvertible) restriction);</span>
+  }
+
+  /**
+   * Create a predicate for testing the arguments for inequality.
+   * @param x expression
+   * @param y expression
+   * @return inequality predicate
+   */
+  @Override
+  public Predicate notEqual(@Nonnull final Expression&lt;?&gt; x, @Nonnull final Expression&lt;?&gt; y) {
+<span class="nc" id="L1040">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.NE);</span>
+  }
+
+  /**
+   * Create a predicate for testing the arguments for inequality.
+   * @param x expression
+   * @param y object
+   * @return inequality predicate
+   */
+  @Override
+  public Predicate notEqual(@Nonnull final Expression&lt;?&gt; x, @Nonnull final Object y) {
+<span class="nc" id="L1051">    return binaryExpression(x, y, PredicateImpl.BinaryExpressionPredicate.Operation.NE);</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * does not satisfy the given pattern.
+   * @param x string expression
+   * @param pattern string expression
+   * @return not-like predicate
+   */
+  @Override
+  public Predicate notLike(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern) {
+<span class="nc" id="L1063">    return not(like(x, pattern));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * satisfies the given pattern.
+   * @param x string expression
+   * @param pattern string
+   * @param escapeChar escape character
+   * @return like predicate
+   */
+  @Override
+  public Predicate notLike(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern,
+      final char escapeChar) {
+<span class="nc" id="L1077">    return not(like(x, pattern, escapeChar));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * does not satisfy the given pattern.
+   * @param x string expression
+   * @param pattern string expression
+   * @param escapeChar escape character expression
+   * @return not-like predicate
+   */
+  @Override
+  public Predicate notLike(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;String&gt; pattern,
+      @Nonnull final Expression&lt;Character&gt; escapeChar) {
+<span class="nc" id="L1091">    return not(like(x, pattern, escapeChar));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * does not satisfy the given pattern.
+   * @param x string expression
+   * @param pattern string
+   * @return not-like predicate
+   */
+  @Override
+  public Predicate notLike(@Nonnull final Expression&lt;String&gt; x, @Nonnull final String pattern) {
+<span class="nc" id="L1103">    return not(like(x, pattern));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * does not satisfy the given pattern.
+   * @param x string expression
+   * @param pattern string
+   * @param escapeChar escape character
+   * @return not-like predicate
+   */
+  @Override
+  public Predicate notLike(@Nonnull final Expression&lt;String&gt; x, @Nonnull final String pattern,
+      final char escapeChar) {
+<span class="nc" id="L1117">    return not(like(x, pattern, escapeChar));</span>
+  }
+
+  /**
+   * Create a predicate for testing whether the expression
+   * does not satisfy the given pattern.
+   * @param x string expression
+   * @param pattern string
+   * @param escapeChar escape character expression
+   * @return not-like predicate
+   */
+  @Override
+  public Predicate notLike(@Nonnull final Expression&lt;String&gt; x, @Nonnull final String pattern,
+      @Nonnull final Expression&lt;Character&gt; escapeChar) {
+<span class="nc" id="L1131">    return not(like(x, pattern, escapeChar));</span>
+  }
+
+  /**
+   * Create an expression that tests whether its argument are
+   * equal, returning null if they are and the value of the
+   * first expression if they are not.
+   * @param x expression
+   * @param y expression
+   * @return nullif expression
+   */
+  @Override
+  public &lt;Y&gt; Expression&lt;Y&gt; nullif(@Nonnull final Expression&lt;Y&gt; x, @Nonnull final Expression&lt;?&gt; y) {
+<span class="nc" id="L1144">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an expression that tests whether its argument are
+   * equal, returning null if they are and the value of the
+   * first expression if they are not.
+   * @param x expression
+   * @param y value
+   * @return nullif expression
+   */
+  @Override
+  public &lt;Y&gt; Expression&lt;Y&gt; nullif(@Nonnull final Expression&lt;Y&gt; x, @Nonnull final Y y) {
+<span class="nc" id="L1157">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an expression for a null literal with the given type.
+   * @param resultClass type of the null literal
+   * @return null expression literal
+   */
+  @Override
+  public &lt;T&gt; Expression&lt;T&gt; nullLiteral(@Nonnull final Class&lt;T&gt; resultClass) {
+<span class="nc" id="L1167">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Predicate or(@Nonnull final Expression&lt;Boolean&gt; x, @Nonnull final Expression&lt;Boolean&gt; y) {
+<span class="nc" id="L1172">    return new PredicateImpl.OrPredicate(x, y);</span>
+  }
+
+  @Override
+  public Predicate or(final Predicate... restrictions) {
+<span class="nc" id="L1177">    return PredicateImpl.or(restrictions);</span>
+  }
+
+  /**
+   * Create a parameter expression.
+   * @param paramClass parameter class
+   * @return parameter expression
+   */
+  @Override
+  public &lt;T&gt; javax.persistence.criteria.ParameterExpression&lt;T&gt; parameter(@Nonnull final Class&lt;T&gt; paramClass) {
+<span class="nc" id="L1187">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a parameter expression with the given name.
+   * @param paramClass parameter class
+   * @param name name that can be used to refer to
+   * the parameter
+   * @return parameter expression
+   */
+  @Override
+  public &lt;T&gt; javax.persistence.criteria.ParameterExpression&lt;T&gt; parameter(@Nonnull final Class&lt;T&gt; paramClass,
+      @Nonnull final String name) {
+<span class="nc" id="L1200">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an expression that returns the product
+   * of its arguments.
+   * @param x expression
+   * @param y expression
+   * @return product
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; prod(@Nonnull final Expression&lt;? extends N&gt; x,
+      @Nonnull final Expression&lt;? extends N&gt; y) {
+<span class="nc" id="L1213">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, y, SqlArithmetic.PROD);</span>
+  }
+
+  /**
+   * Create an expression that returns the product
+   * of its arguments.
+   * @param x expression
+   * @param y value
+   * @return product
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; prod(@Nonnull final Expression&lt;? extends N&gt; x, @Nonnull final N y) {
+<span class="nc" id="L1225">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, literal(y), SqlArithmetic.PROD);</span>
+  }
+
+  /**
+   * Create an expression that returns the product
+   * of its arguments.
+   * @param x value
+   * @param y expression
+   * @return product
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; prod(@Nonnull final N x, @Nonnull final Expression&lt;? extends N&gt; y) {
+<span class="nc" id="L1237">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(literal(x), y, SqlArithmetic.PROD);</span>
+  }
+
+  /**
+   * Create an expression that returns the quotient
+   * of its arguments.
+   * @param x expression
+   * @param y expression
+   * @return quotient
+   */
+  @Override
+  public Expression&lt;Number&gt; quot(@Nonnull final Expression&lt;? extends Number&gt; x,
+      @Nonnull final Expression&lt;? extends Number&gt; y) {
+<span class="nc" id="L1250">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, y, SqlArithmetic.QUOT);</span>
+  }
+
+  /**
+   * Create an expression that returns the quotient
+   * of its arguments.
+   * @param x expression
+   * @param y value
+   * @return quotient
+   */
+  @Override
+  public Expression&lt;Number&gt; quot(@Nonnull final Expression&lt;? extends Number&gt; x, @Nonnull final Number y) {
+<span class="nc" id="L1262">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, literal(y), SqlArithmetic.QUOT);</span>
+  }
+
+  /**
+   * Create an expression that returns the quotient
+   * of its arguments.
+   * @param x value
+   * @param y expression
+   * @return quotient
+   */
+  @Override
+  public Expression&lt;Number&gt; quot(@Nonnull final Number x, @Nonnull final Expression&lt;? extends Number&gt; y) {
+<span class="nc" id="L1274">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(literal(x), y, SqlArithmetic.QUOT);</span>
+  }
+
+  /**
+   * Create a general case expression.
+   * @return general case expression
+   */
+  @Override
+  public &lt;R&gt; Case&lt;R&gt; selectCase() {
+<span class="nc" id="L1283">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a simple case expression.
+   * @param expression to be tested against the case conditions
+   * @return simple case expression
+   */
+  @Override
+  public &lt;C, R&gt; SimpleCase&lt;C, R&gt; selectCase(final Expression&lt;? extends C&gt; expression) {
+<span class="nc" id="L1293">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an expression that tests the size of a collection.
+   * @param collection collection
+   * @return size expression
+   */
+  @Override
+  public &lt;C extends Collection&lt;?&gt;&gt; Expression&lt;Integer&gt; size(@Nonnull final C collection) {
+<span class="nc" id="L1303">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an expression that tests the size of a collection.
+   * @param collection expression
+   * @return size expression
+   */
+  @Override
+  public &lt;C extends Collection&lt;?&gt;&gt; Expression&lt;Integer&gt; size(@Nonnull final Expression&lt;C&gt; collection) {
+<span class="nc" id="L1313">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a some expression over the subquery results.
+   * This expression is equivalent to an &lt;code&gt;any&lt;/code&gt; expression.
+   * @param subquery subquery
+   * @return some expression
+   */
+  @Override
+  public &lt;Y&gt; Expression&lt;Y&gt; some(@Nonnull final Subquery&lt;Y&gt; subquery) {
+<span class="nc" id="L1324">    return new ExpressionImpl.SubQuery&lt;&gt;(subquery, SqlSubQuery.SOME);</span>
+  }
+
+  @Override
+  public Expression&lt;Double&gt; sqrt(final Expression&lt;? extends Number&gt; x) {
+    // &quot;SQRT&quot;
+<span class="nc" id="L1330">    return null;</span>
+  }
+
+  /**
+   * Create an expression for substring extraction.
+   * Extracts a substring starting at the specified position
+   * through to end of the string.
+   * First position is 1.
+   * @param x string expression
+   * @param from start position expression
+   * @return expression corresponding to substring extraction
+   */
+  @Override
+  public Expression&lt;String&gt; substring(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;Integer&gt; from) {
+<span class="nc" id="L1344">    return new ExpressionImpl.SubstringExpression(x, from, null);</span>
+  }
+
+  /**
+   * Create an expression for substring extraction.
+   * Extracts a substring of given length starting at the
+   * specified position.
+   * First position is 1.
+   * @param x string expression
+   * @param from start position expression
+   * @param len length expression
+   * @return expression corresponding to substring extraction
+   */
+  @Override
+  public Expression&lt;String&gt; substring(@Nonnull final Expression&lt;String&gt; x, @Nonnull final Expression&lt;Integer&gt; from,
+      @Nonnull final Expression&lt;Integer&gt; len) {
+<span class="nc" id="L1360">    return new ExpressionImpl.SubstringExpression(x, from, len);</span>
+  }
+
+  /**
+   * Create an expression for substring extraction.
+   * Extracts a substring starting at the specified position
+   * through to end of the string.
+   * First position is 1.
+   * @param x string expression
+   * @param from start position
+   * @return expression corresponding to substring extraction
+   */
+  @Override
+  public Expression&lt;String&gt; substring(@Nonnull final Expression&lt;String&gt; x, @Nonnull final int from) {
+<span class="nc" id="L1374">    return new ExpressionImpl.SubstringExpression(x, literal(from), null);</span>
+  }
+
+  /**
+   * Create an expression for substring extraction.
+   * Extracts a substring of given length starting at the
+   * specified position.
+   * First position is 1.
+   * @param x string expression
+   * @param from start position
+   * @param len length
+   * @return expression corresponding to substring extraction
+   */
+  @Override
+  public Expression&lt;String&gt; substring(final Expression&lt;String&gt; x, final int from, final int len) {
+<span class="nc" id="L1389">    return new ExpressionImpl.SubstringExpression(x, literal(from), literal(len));</span>
+  }
+
+  /**
+   * Create an expression that returns the sum
+   * of its arguments.
+   * @param x expression
+   * @param y expression
+   * @return sum
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; sum(@Nonnull final Expression&lt;? extends N&gt; x,
+      @Nonnull final Expression&lt;? extends N&gt; y) {
+<span class="nc" id="L1402">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, y, SqlArithmetic.SUM);</span>
+  }
+
+  /**
+   * Create an expression that returns the sum
+   * of its arguments.
+   * @param x expression
+   * @param y value
+   * @return sum
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; sum(@Nonnull final Expression&lt;? extends N&gt; x, @Nonnull final N y) {
+<span class="nc" id="L1414">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(x, literal(y, x), SqlArithmetic.SUM);</span>
+  }
+
+  /**
+   * Create an aggregate expression applying the sum operation.
+   * @param x expression representing input value to sum operation
+   * @return sum expression
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; sum(@Nonnull final Expression&lt;N&gt; x) {
+<span class="nc" id="L1424">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an expression that returns the sum
+   * of its arguments.
+   * @param x value
+   * @param y expression
+   * @return sum
+   */
+  @Override
+  public &lt;N extends Number&gt; Expression&lt;N&gt; sum(@Nonnull final N x, @Nonnull final Expression&lt;? extends N&gt; y) {
+<span class="nc" id="L1436">    return new ExpressionImpl.ArithmeticExpression&lt;&gt;(literal(x), y, SqlArithmetic.SUM);</span>
+  }
+
+  /**
+   * Create an aggregate expression applying the sum operation to a
+   * Float-valued expression, returning a Double result.
+   * @param x expression representing input value to sum operation
+   * @return sum expression
+   */
+  @Override
+  public Expression&lt;Double&gt; sumAsDouble(@Nonnull final Expression&lt;Float&gt; x) {
+<span class="nc" id="L1447">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create an aggregate expression applying the sum operation to an
+   * Integer-valued expression, returning a Long result.
+   * @param x expression representing input value to sum operation
+   * @return sum expression
+   */
+  @Override
+  public Expression&lt;Long&gt; sumAsLong(@Nonnull final Expression&lt;Integer&gt; x) {
+<span class="nc" id="L1458">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;BigDecimal&gt; toBigDecimal(@Nonnull final Expression&lt;? extends Number&gt; number) {
+<span class="nc" id="L1463">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;BigInteger&gt; toBigInteger(@Nonnull final Expression&lt;? extends Number&gt; number) {
+<span class="nc" id="L1468">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;Double&gt; toDouble(@Nonnull final Expression&lt;? extends Number&gt; number) {
+<span class="nc" id="L1473">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;Float&gt; toFloat(@Nonnull final Expression&lt;? extends Number&gt; number) {
+<span class="nc" id="L1478">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;Integer&gt; toInteger(@Nonnull final Expression&lt;? extends Number&gt; number) {
+<span class="nc" id="L1483">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;Long&gt; toLong(@Nonnull final Expression&lt;? extends Number&gt; number) {
+<span class="nc" id="L1488">    throw new NotImplementedException();</span>
+  }
+
+  @Override
+  public Expression&lt;String&gt; toString(@Nonnull final Expression&lt;Character&gt; character) {
+<span class="nc" id="L1493">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Downcast CollectionJoin object to the specified type.
+   * @param join CollectionJoin object
+   * @param type type to be downcast to
+   * @return CollectionJoin object of the specified type
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;X, T, E extends T&gt; CollectionJoin&lt;X, E&gt; treat(@Nonnull final CollectionJoin&lt;X, T&gt; join,
+      @Nonnull final Class&lt;E&gt; type) {
+<span class="nc" id="L1506">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Downcast Join object to the specified type.
+   * @param join Join object
+   * @param type type to be downcast to
+   * @return Join object of the specified type
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;X, T, V extends T&gt; Join&lt;X, V&gt; treat(@Nonnull final Join&lt;X, T&gt; join, @Nonnull final Class&lt;V&gt; type) {
+<span class="nc" id="L1518">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Downcast ListJoin object to the specified type.
+   * @param join ListJoin object
+   * @param type type to be downcast to
+   * @return ListJoin object of the specified type
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;X, T, E extends T&gt; ListJoin&lt;X, E&gt; treat(@Nonnull final ListJoin&lt;X, T&gt; join, @Nonnull final Class&lt;E&gt; type) {
+<span class="nc" id="L1530">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Downcast MapJoin object to the specified type.
+   * @param join MapJoin object
+   * @param type type to be downcast to
+   * @return MapJoin object of the specified type
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;X, K, T, V extends T&gt; MapJoin&lt;X, K, V&gt; treat(@Nonnull final MapJoin&lt;X, K, T&gt; join,
+      @Nonnull final Class&lt;V&gt; type) {
+<span class="nc" id="L1543">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Downcast Path object to the specified type.
+   * @param path path
+   * @param type type to be downcast to
+   * @return Path object of the specified type
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;X, T extends X&gt; Path&lt;T&gt; treat(@Nonnull final Path&lt;X&gt; path, @Nonnull final Class&lt;T&gt; type) {
+<span class="nc" id="L1555">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Downcast Root object to the specified type.
+   * @param root root
+   * @param type type to be downcast to
+   * @return Root object of the specified type
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;X, T extends X&gt; Root&lt;T&gt; treat(@Nonnull final Root&lt;X&gt; root, @Nonnull final Class&lt;T&gt; type) {
+<span class="nc" id="L1567">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Downcast SetJoin object to the specified type.
+   * @param join SetJoin object
+   * @param type type to be downcast to
+   * @return SetJoin object of the specified type
+   * @since Java Persistence 2.1
+   */
+  @Override
+  public &lt;X, T, E extends T&gt; SetJoin&lt;X, E&gt; treat(@Nonnull final SetJoin&lt;X, T&gt; join, @Nonnull final Class&lt;E&gt; type) {
+<span class="nc" id="L1579">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create expression to trim character from both ends of
+   * a string.
+   * @param t character to be trimmed
+   * @param x expression for string to trim
+   * @return trim expression
+   */
+  @Override
+  public Expression&lt;String&gt; trim(final char t, @Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L1591">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create expression to trim character from both ends of
+   * a string.
+   * @param t expression for character to be trimmed
+   * @param x expression for string to trim
+   * @return trim expression
+   */
+  @Override
+  public Expression&lt;String&gt; trim(@Nonnull final Expression&lt;Character&gt; t, @Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L1603">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create expression to trim blanks from both ends of
+   * a string.
+   * @param x expression for string to trim
+   * @return trim expression
+   */
+  @Override
+  public Expression&lt;String&gt; trim(@Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L1614">    return new ExpressionImpl.UnaryFunctionalExpression&lt;&gt;(x, SqlStringFunctions.TRIM);</span>
+  }
+
+  /**
+   * Create expression to trim character from a string.
+   * @param ts trim specification
+   * @param t expression for character to be trimmed
+   * @param x expression for string to trim
+   * @return trim expression
+   */
+  @Override
+  public Expression&lt;String&gt; trim(@Nonnull final Trimspec ts, final char t, @Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L1626">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create expression to trim character from a string.
+   * @param ts trim specification
+   * @param t expression for character to be trimmed
+   * @param x expression for string to trim
+   * @return trim expression
+   */
+  @Override
+  public Expression&lt;String&gt; trim(@Nonnull final Trimspec ts, @Nonnull final Expression&lt;Character&gt; t,
+      @Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L1639">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create expression to trim blanks from a string.
+   * @param ts trim specification
+   * @param x expression for string to trim
+   * @return trim expression
+   */
+  @Override
+  public Expression&lt;String&gt; trim(@Nonnull final Trimspec ts, @Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L1650">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create a tuple-valued selection item.
+   * @param selections selection items
+   * @return tuple-valued compound selection
+   * @throws IllegalArgumentException if an argument is a
+   * tuple- or array-valued selection item
+   */
+  @Override
+  public CompoundSelection&lt;Tuple&gt; tuple(@Nonnull final Selection&lt;?&gt;... selections) {
+<span class="nc" id="L1662">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Create expression for converting a string to uppercase.
+   * @param x string expression
+   * @return expression to convert to uppercase
+   */
+  @Override
+  public Expression&lt;String&gt; upper(@Nonnull final Expression&lt;String&gt; x) {
+<span class="nc" id="L1672">    return new ExpressionImpl.UnaryFunctionalExpression&lt;&gt;(x, SqlStringFunctions.UPPER);</span>
+  }
+
+  @Override
+  public &lt;V, M extends Map&lt;?, V&gt;&gt; Expression&lt;Collection&lt;V&gt;&gt; values(@Nonnull final M map) {
+<span class="nc" id="L1677">    throw new NotImplementedException();</span>
+  }
+
+  /**
+   * Creates an expression for a row number function.
+   */
+  @Override
+  public WindowFunction&lt;Long&gt; rowNumber() {
+<span class="nc" id="L1685">    return new ExpressionImpl.WindowFunctionExpression&lt;&gt;(SqlWindowFunctions.ROW_NUMBER);</span>
+  }
+
+  public JPAServiceDocument getServiceDocument() {
+<span class="nc" id="L1689">    return sd;</span>
+  }
+
+  private Predicate binaryExpression(@Nonnull final Expression&lt;?&gt; x, @Nonnull final Expression&lt;?&gt; y,
+      @Nonnull final Operation p) {
+
+<span class="nc bnc" id="L1695" title="All 2 branches missed.">    if (Objects.requireNonNull(y) instanceof ParameterExpression)</span>
+<span class="nc" id="L1696">      ((ParameterExpression&lt;?, ?&gt;) y).setPath(x);</span>
+<span class="nc bnc" id="L1697" title="All 2 branches missed.">    if (Objects.requireNonNull(x) instanceof ParameterExpression)</span>
+<span class="nc" id="L1698">      ((ParameterExpression&lt;?, ?&gt;) x).setPath(y);</span>
+<span class="nc" id="L1699">    return new PredicateImpl.BinaryExpressionPredicate(p, x, y);</span>
+  }
+
+  private Predicate binaryExpression(@Nonnull final Expression&lt;?&gt; x, @Nonnull final Object y,
+      @Nonnull final Operation p) {
+<span class="nc" id="L1704">    return new PredicateImpl.BinaryExpressionPredicate(p, Objects.requireNonNull(x), literal(y, x));</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

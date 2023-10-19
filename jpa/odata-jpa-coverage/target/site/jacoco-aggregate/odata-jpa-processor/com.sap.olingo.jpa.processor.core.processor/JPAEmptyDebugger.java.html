@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAEmptyDebugger.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.processor</a> &gt; <span class="el_source">JPAEmptyDebugger.java</span></div><h1>JPAEmptyDebugger.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.processor;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.olingo.server.api.debug.RuntimeMeasurement;
+
+import com.sap.olingo.jpa.processor.core.api.JPAServiceDebugger;
+
+<span class="nc" id="L10">public final class JPAEmptyDebugger implements JPAServiceDebugger {</span>
+
+  @Override
+  public int startRuntimeMeasurement(final Object instance, final String methodName) {
+<span class="nc" id="L14">    return 0;</span>
+  }
+
+  @Override
+  public void stopRuntimeMeasurement(final int handle) {
+    // Not needed
+<span class="nc" id="L20">  }</span>
+
+  @Override
+  public List&lt;RuntimeMeasurement&gt; getRuntimeInformation() {
+<span class="nc" id="L24">    return new ArrayList&lt;&gt;();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

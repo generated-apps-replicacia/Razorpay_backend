@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAMapResult.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.modify</a> &gt; <span class="el_source">JPAMapResult.java</span></div><h1>JPAMapResult.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.modify;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Tuple;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPACollectionAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAEntityType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+import com.sap.olingo.jpa.processor.core.converter.JPAExpandResult;
+import com.sap.olingo.jpa.processor.core.converter.JPATuple;
+import com.sap.olingo.jpa.processor.core.converter.JPATupleChildConverter;
+import com.sap.olingo.jpa.processor.core.exception.ODataJPAProcessorException;
+import com.sap.olingo.jpa.processor.core.processor.JPARequestEntity;
+
+final class JPAMapResult extends JPAMapBaseResult {
+  JPAMapResult(final JPAEntityType et, final Map&lt;String, Object&gt; jpaEntity,
+      final Map&lt;String, List&lt;String&gt;&gt; requestHeaders, final JPATupleChildConverter converter)
+      throws ODataJPAModelException, ODataApplicationException {
+
+<span class="nc" id="L30">    super(et, requestHeaders);</span>
+
+<span class="nc" id="L32">    this.valuePairedResult = jpaEntity;</span>
+<span class="nc" id="L33">    this.result = createResult();</span>
+<span class="nc" id="L34">    createChildren(converter);</span>
+<span class="nc" id="L35">  }</span>
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private void createChildren(final JPATupleChildConverter converter) throws ODataJPAModelException,
+      ODataApplicationException {
+<span class="nc bnc" id="L40" title="All 2 branches missed.">    for (JPAAssociationPath path : et.getAssociationPathList()) {</span>
+<span class="nc" id="L41">      String pathPropertyName = path.getPath().get(0).getInternalName();</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">      if (valuePairedResult.get(pathPropertyName) instanceof List) {</span>
+<span class="nc" id="L43">        children.put(path,</span>
+<span class="nc" id="L44">            new JPAMapNavigationLinkResult((JPAEntityType) path.getTargetType(),</span>
+<span class="nc" id="L45">                (List&lt;JPARequestEntity&gt;) valuePairedResult.get(</span>
+                    pathPropertyName), requestHeaders, converter));
+      }
+<span class="nc" id="L48">    }</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">    for (final JPAPath path : et.getCollectionAttributesPath()) {</span>
+<span class="nc" id="L50">      Map&lt;String, Object&gt; attributes = valuePairedResult;</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">      for (JPAElement e : path.getPath()) {</span>
+<span class="nc" id="L52">        final Object value = attributes.get(e.getInternalName());</span>
+<span class="nc bnc" id="L53" title="All 8 branches missed.">        if (e instanceof JPAAttribute &amp;&amp; ((JPAAttribute) e).isComplex() &amp;&amp; !(((JPAAttribute) e).isCollection())</span>
+            &amp;&amp; value != null) {
+<span class="nc" id="L55">          attributes = (Map&lt;String, Object&gt;) value;</span>
+<span class="nc" id="L56">          continue;</span>
+        }
+<span class="nc bnc" id="L58" title="All 4 branches missed.">        if (e instanceof JPACollectionAttribute &amp;&amp; value != null) {</span>
+<span class="nc" id="L59">          final JPAAssociationPath assPath = ((JPACollectionAttribute) e).asAssociation();</span>
+<span class="nc" id="L60">          final JPAExpandResult child = new JPAMapCollectionResult(et, (Collection&lt;?&gt;) value, requestHeaders,</span>
+              (JPACollectionAttribute) e);
+<span class="nc" id="L62">          child.convert(converter);</span>
+<span class="nc" id="L63">          children.put(assPath, child);</span>
+        }
+<span class="nc" id="L65">      }</span>
+<span class="nc" id="L66">    }</span>
+
+<span class="nc" id="L68">  }</span>
+
+  private List&lt;Tuple&gt; createResult() throws ODataJPAProcessorException {
+<span class="nc" id="L71">    JPATuple tuple = new JPATuple();</span>
+<span class="nc" id="L72">    List&lt;Tuple&gt; tupleResult = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L74" title="All 2 branches missed.">    for (JPAPath path : pathList) {</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">      if (notContainsCollection(path))</span>
+<span class="nc" id="L76">        convertPathToTuple(tuple, valuePairedResult, path, 0);</span>
+<span class="nc" id="L77">    }</span>
+<span class="nc" id="L78">    tupleResult.add(tuple);</span>
+<span class="nc" id="L79">    return tupleResult;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

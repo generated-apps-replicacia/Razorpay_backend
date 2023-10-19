@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAFilterExpression.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-processor</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.processor.core.filter</a> &gt; <span class="el_source">JPAFilterExpression.java</span></div><h1>JPAFilterExpression.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.processor.core.filter;
+
+import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.uri.UriInfoResource;
+import org.apache.olingo.server.api.uri.queryoption.expression.BinaryOperatorKind;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
+import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitor;
+import org.apache.olingo.server.api.uri.queryoption.expression.Literal;
+import org.apache.olingo.server.api.uri.queryoption.expression.Member;
+
+public final class JPAFilterExpression implements JPAVisitableExpression {
+  private Literal literal;
+  private BinaryOperatorKind operator;
+  private final Member member;
+
+  public JPAFilterExpression(final Member member, final Literal literal, final BinaryOperatorKind operator) {
+<span class="nc" id="L17">    super();</span>
+<span class="nc" id="L18">    this.literal = literal;</span>
+<span class="nc" id="L19">    this.operator = operator;</span>
+<span class="nc" id="L20">    this.member = member;</span>
+<span class="nc" id="L21">  }</span>
+
+  @Override
+  public &lt;T&gt; T accept(final ExpressionVisitor&lt;T&gt; visitor) throws ExpressionVisitException, ODataApplicationException {
+<span class="nc" id="L25">    final T left = visitor.visitMember(member);</span>
+<span class="nc" id="L26">    final T right = visitor.visitLiteral(literal);</span>
+<span class="nc" id="L27">    return visitor.visitBinaryOperator(operator, left, right);</span>
+  }
+
+  @Override
+  public UriInfoResource getMember() {
+<span class="nc" id="L32">    return member.getResourcePath();</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L37">    return &quot;JPAFilterExpression [literal=&quot; + literal</span>
+        + &quot;, operator=&quot; + operator + &quot;, member=&quot;
+        + &quot;[resourcePath=&quot;
+<span class="nc" id="L40">        + member.getResourcePath().getUriResourceParts()</span>
+<span class="nc" id="L41">        + &quot;, startTypeFilter= &quot; + member.getStartTypeFilter()</span>
+<span class="nc" id="L42">        + &quot;, type= &quot; + member.getType()</span>
+        + &quot;]]&quot;;
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JPAAssociationPathImpl.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">odata-jpa-coverage</a> &gt; <a href="../index.html" class="el_bundle">odata-jpa-metadata</a> &gt; <a href="index.source.html" class="el_package">com.sap.olingo.jpa.metadata.core.edm.mapper.impl</a> &gt; <span class="el_source">JPAAssociationPathImpl.java</span></div><h1>JPAAssociationPathImpl.java</h1><pre class="source lang-java linenums">package com.sap.olingo.jpa.metadata.core.edm.mapper.impl;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import javax.annotation.Nonnull;
+import javax.persistence.metamodel.Attribute.PersistentAttributeType;
+
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAssociationPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAAttribute;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAElement;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAJoinTable;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAOnConditionItem;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAPath;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.api.JPAStructuredType;
+import com.sap.olingo.jpa.metadata.core.edm.mapper.exception.ODataJPAModelException;
+
+final class JPAAssociationPathImpl implements JPAAssociationPath {
+  private final String alias;
+  private final List&lt;JPAElement&gt; pathElements;
+  private final IntermediateStructuredType&lt;?&gt; sourceType;
+  private final IntermediateStructuredType&lt;?&gt; targetType;
+  private final List&lt;IntermediateJoinColumn&gt; joinColumns;
+  private final PersistentAttributeType cardinality;
+  private final boolean isCollection;
+  private final JPAAssociationAttribute partner;
+  private final JPAJoinTable joinTable;
+
+  JPAAssociationPathImpl(final IntermediateNavigationProperty association,
+<span class="nc" id="L32">      final IntermediateStructuredType&lt;?&gt; source) throws ODataJPAModelException {</span>
+
+<span class="nc" id="L34">    final List&lt;JPAElement&gt; pathElementsBuffer = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L35">    pathElementsBuffer.add(association);</span>
+
+<span class="nc" id="L37">    alias = association.getExternalName();</span>
+<span class="nc" id="L38">    this.sourceType = source;</span>
+<span class="nc" id="L39">    this.targetType = (IntermediateStructuredType&lt;?&gt;) association.getTargetEntity();</span>
+<span class="nc" id="L40">    this.joinColumns = association.getJoinColumns();</span>
+<span class="nc" id="L41">    this.pathElements = Collections.unmodifiableList(pathElementsBuffer);</span>
+<span class="nc" id="L42">    this.cardinality = association.getJoinCardinality();</span>
+<span class="nc" id="L43">    this.isCollection = association.isCollection();</span>
+<span class="nc" id="L44">    this.partner = association.getPartner();</span>
+<span class="nc" id="L45">    this.joinTable = association.getJoinTable();</span>
+<span class="nc" id="L46">  }</span>
+
+  JPAAssociationPathImpl(final JPAAssociationPath associationPath, final IntermediateStructuredType&lt;?&gt; source,
+<span class="nc" id="L49">      final List&lt;IntermediateJoinColumn&gt; joinColumns, final JPAAttribute attribute) throws ODataJPAModelException {</span>
+
+<span class="nc" id="L51">    final List&lt;JPAElement&gt; pathElementsBuffer = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L52">    pathElementsBuffer.add(attribute);</span>
+<span class="nc" id="L53">    pathElementsBuffer.addAll(associationPath.getPath());</span>
+
+<span class="nc" id="L55">    alias = buildNaviPropertyBindingName(associationPath, attribute);</span>
+<span class="nc" id="L56">    this.sourceType = source;</span>
+<span class="nc" id="L57">    this.targetType = (IntermediateStructuredType&lt;?&gt;) associationPath.getTargetType();</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">    if (joinColumns.isEmpty())</span>
+<span class="nc" id="L59">      this.joinColumns = ((JPAAssociationPathImpl) associationPath).getJoinColumns();</span>
+    else
+<span class="nc" id="L61">      this.joinColumns = joinColumns;</span>
+<span class="nc" id="L62">    this.pathElements = Collections.unmodifiableList(pathElementsBuffer);</span>
+<span class="nc" id="L63">    this.cardinality = ((JPAAssociationPathImpl) associationPath).getCardinality();</span>
+<span class="nc" id="L64">    this.isCollection = associationPath.isCollection();</span>
+<span class="nc" id="L65">    this.partner = associationPath.getPartner();</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">    this.joinTable = associationPath.hasJoinTable()</span>
+<span class="nc" id="L67">        ? ((IntermediateJoinTable) associationPath.getJoinTable()).withSource(source)</span>
+<span class="nc" id="L68">        : null;</span>
+
+<span class="nc" id="L70">  }</span>
+
+  /**
+   * Collection Properties
+   * @param collectionProperty
+   * @param source
+   * @param path
+   * @param joinColumns
+   * @throws ODataJPAModelException
+   */
+  public JPAAssociationPathImpl(final IntermediateCollectionProperty collectionProperty,
+      final IntermediateStructuredType&lt;?&gt; source, final JPAPath path, final List&lt;IntermediateJoinColumn&gt; joinColumns)
+<span class="nc" id="L82">      throws ODataJPAModelException {</span>
+
+<span class="nc" id="L84">    alias = path.getAlias();</span>
+<span class="nc" id="L85">    this.sourceType = source;</span>
+<span class="nc" id="L86">    this.targetType = null;</span>
+<span class="nc" id="L87">    this.joinColumns = joinColumns;</span>
+<span class="nc" id="L88">    this.pathElements = path.getPath();</span>
+<span class="nc" id="L89">    this.cardinality = PersistentAttributeType.ONE_TO_MANY;</span>
+<span class="nc" id="L90">    this.isCollection = true;</span>
+<span class="nc" id="L91">    this.partner = null;</span>
+<span class="nc" id="L92">    this.joinTable = collectionProperty.getJoinTable();</span>
+<span class="nc" id="L93">  }</span>
+
+  @Override
+  public String getAlias() {
+<span class="nc" id="L97">    return alias;</span>
+  }
+
+  @Override
+  public List&lt;JPAPath&gt; getInverseLeftJoinColumnsList() throws ODataJPAModelException {
+<span class="nc" id="L102">    final List&lt;JPAPath&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">    if (joinTable instanceof IntermediateJoinTable)</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">      for (final IntermediateJoinColumn column : ((IntermediateJoinTable) joinTable).buildInverseJoinColumns()) {</span>
+<span class="nc" id="L105">        result.add(targetType.getPathByDBField(column.getName()));</span>
+<span class="nc" id="L106">      }</span>
+<span class="nc" id="L107">    return result;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAAssociationPath#getJoinColumnsList()
+   */
+  @Override
+  public List&lt;JPAOnConditionItem&gt; getJoinColumnsList() throws ODataJPAModelException {
+<span class="nc" id="L117">    final List&lt;JPAOnConditionItem&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">    for (final IntermediateJoinColumn column : this.joinColumns) {</span>
+      // ManyToOne
+<span class="nc bnc" id="L120" title="All 4 branches missed.">      if (cardinality == PersistentAttributeType.MANY_TO_ONE</span>
+          || cardinality == PersistentAttributeType.MANY_TO_MANY)
+<span class="nc" id="L122">        result.add(new JPAOnConditionItemImpl(</span>
+<span class="nc" id="L123">            sourceType.getPathByDBField(column.getName()),</span>
+<span class="nc" id="L124">            targetType.getPathByDBField(column.getReferencedColumnName())));</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">      else if(cardinality == PersistentAttributeType.ONE_TO_MANY) {</span>
+<span class="nc" id="L126">        result.add(new JPAOnConditionItemImpl(</span>
+<span class="nc" id="L127">                sourceType.getPathByDBField(column.getReferencedColumnName()),</span>
+<span class="nc" id="L128">                targetType.getPathByDBField(column.getName())));</span>
+      } else {
+        try {
+<span class="nc" id="L131">          result.add(new JPAOnConditionItemImpl(</span>
+<span class="nc" id="L132">                  sourceType.getPathByDBField(column.getName()),</span>
+<span class="nc" id="L133">                  targetType.getPathByDBField(column.getReferencedColumnName())));</span>
+<span class="nc" id="L134">        } catch (Exception e) {</span>
+          try {
+<span class="nc" id="L136">            result.add(new JPAOnConditionItemImpl(</span>
+<span class="nc" id="L137">                    sourceType.getPathByDBField(column.getReferencedColumnName()),</span>
+<span class="nc" id="L138">                    targetType.getPathByDBField(column.getName())));</span>
+<span class="nc" id="L139">          } catch (Exception ex) {</span>
+
+<span class="nc" id="L141">          }</span>
+<span class="nc" id="L142">        }</span>
+      }
+<span class="nc" id="L144">    }</span>
+<span class="nc" id="L145">    return result;</span>
+  }
+
+  @Override
+  public JPAJoinTable getJoinTable() {
+<span class="nc" id="L150">    return joinTable;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAAssociationPath#getLeaf()
+   */
+  @Override
+  public JPAAssociationAttribute getLeaf() {
+<span class="nc" id="L160">    return (JPAAssociationAttribute) pathElements.get(pathElements.size() - 1);</span>
+  }
+
+  @Override
+  public List&lt;JPAPath&gt; getLeftColumnsList() throws ODataJPAModelException {
+<span class="nc" id="L165">    final List&lt;JPAPath&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">    for (final IntermediateJoinColumn column : this.joinColumns) {</span>
+<span class="nc" id="L167">      JPAPath columnPath = null;</span>
+<span class="nc bnc" id="L168" title="All 4 branches missed.">      if (joinTable != null || (cardinality == PersistentAttributeType.MANY_TO_ONE))</span>
+<span class="nc" id="L169">        columnPath = sourceType.getPathByDBField(column.getName());</span>
+      else
+<span class="nc" id="L171">        columnPath = sourceType.getPathByDBField(column.getReferencedColumnName());</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">      if (columnPath != null)</span>
+<span class="nc" id="L173">        result.add(columnPath);</span>
+<span class="nc" id="L174">    }</span>
+<span class="nc" id="L175">    return result;</span>
+  }
+
+  @Override
+  public JPAAssociationAttribute getPartner() {
+<span class="nc" id="L180">    return partner;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAAssociationPath#getPath()
+   */
+  @Override
+  public List&lt;JPAElement&gt; getPath() {
+<span class="nc" id="L190">    return pathElements;</span>
+  }
+
+  @Override
+  public List&lt;JPAPath&gt; getRightColumnsList() throws ODataJPAModelException {
+<span class="nc" id="L195">    final List&lt;JPAPath&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L196" title="All 2 branches missed.">    for (final IntermediateJoinColumn column : this.joinColumns) {</span>
+<span class="nc" id="L197">      JPAPath columnPath = null;</span>
+<span class="nc bnc" id="L198" title="All 4 branches missed.">      if (joinTable != null || (cardinality == PersistentAttributeType.MANY_TO_ONE))</span>
+<span class="nc" id="L199">        columnPath = targetType.getPathByDBField(column.getReferencedColumnName());</span>
+      else
+<span class="nc" id="L201">        columnPath = targetType.getPathByDBField(column.getName());</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">      if (columnPath != null)</span>
+<span class="nc" id="L203">        result.add(columnPath);</span>
+<span class="nc" id="L204">    }</span>
+<span class="nc" id="L205">    return result;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAAssociationPath#getSourceType()
+   */
+  @Override
+  public JPAStructuredType getSourceType() {
+<span class="nc" id="L215">    return sourceType;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAAssociationPath#getTargetType()
+   */
+  @Override
+  public JPAStructuredType getTargetType() {
+<span class="nc" id="L225">    return targetType;</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAAssociationPath#isCollection()
+   */
+  @Override
+  public boolean isCollection() {
+<span class="nc" id="L235">    return isCollection;</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L240">    return &quot;JPAAssociationPathImpl [alias=&quot; + alias + &quot;, pathElements=&quot; + pathElements + &quot;, sourceType=&quot; + sourceType</span>
+        + &quot;, targetType=&quot; + targetType + &quot;, joinColumns=&quot; + joinColumns + &quot;, cardinality=&quot; + cardinality
+        + &quot;, joinTable=&quot; + joinTable + &quot;]&quot;;
+  }
+
+  private PersistentAttributeType getCardinality() {
+<span class="nc" id="L246">    return cardinality;</span>
+  }
+
+  private List&lt;IntermediateJoinColumn&gt; getJoinColumns() {
+<span class="nc" id="L250">    return joinColumns;</span>
+  }
+
+  /**
+   * A navigation property binding MUST name a navigation property of the
+   * entity set’s, singleton's, or containment navigation property's entity
+   * type or one of its subtypes in the Path attribute. If the navigation
+   * property is defined on a subtype, the path attribute MUST contain the
+   * QualifiedName of the subtype, followed by a forward slash, followed by
+   * the navigation property name. If the navigation property is defined on
+   * a complex type used in the definition of the entity set’s entity type,
+   * the path attribute MUST contain a forward-slash separated list of complex
+   * property names and qualified type names that describe the path leading
+   * to the navigation property. See &lt;a
+   * href=&quot;http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part3-csdl/odata-v4.0-errata02-os-part3-csdl-complete.html#_Toc406398035&quot;&gt;
+   * Navigation Property Binding&lt;/a&gt;.
+   * @param associationPath
+   * @param parent
+   * @return non empty unique name of a Navigation Property Binding
+   */
+  // TODO respect subtype name
+  @Nonnull
+  private String buildNaviPropertyBindingName(final JPAAssociationPath associationPath, final JPAAttribute parent) {
+<span class="nc" id="L273">    final StringBuilder name = new StringBuilder();</span>
+
+<span class="nc" id="L275">    name.append(parent.getExternalName());</span>
+<span class="nc bnc" id="L276" title="All 2 branches missed.">    for (final JPAElement pathElement : associationPath.getPath()) {</span>
+<span class="nc" id="L277">      name.append(JPAPath.PATH_SEPARATOR);</span>
+<span class="nc" id="L278">      name.append(pathElement.getExternalName());</span>
+
+<span class="nc" id="L280">    }</span>
+<span class="nc" id="L281">    return name.toString();</span>
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see com.sap.olingo.jpa.metadata.core.edm.mapper.impl.JPAAssociationPath#hasJoinTable()
+   */
+  @Override
+  public boolean hasJoinTable() {
+<span class="nc bnc" id="L291" title="All 2 branches missed.">    return joinTable != null;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>
